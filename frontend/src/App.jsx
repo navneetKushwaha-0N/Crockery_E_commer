@@ -2,7 +2,7 @@
 // IMPORTS
 // ============================================================
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 import {
   BrowserRouter,
@@ -23,6 +23,7 @@ import {
   Star,
   Minus,
   Plus,
+  Check,
   Globe,
   MessageCircle,
 
@@ -39,7 +40,7 @@ import { FaInstagram } from 'react-icons/fa'
 import './styles.css'
 
 // API
-import { apiRequest, productService, orderService } from './services/api'
+import { apiRequest, productService, orderService, cmsService } from './services/api'
 
 // Authentication / Context
 import {
@@ -83,6 +84,24 @@ const logoUrl =
 const heroImage =
   'https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=1800&q=88'
 
+const defaultHeroSlides = [
+  {
+    image:
+      'https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=1800&q=88',
+    alt: 'Handmade stoneware arranged on a dining table'
+  },
+  {
+    image:
+      'https://images.unsplash.com/photo-1603199506016-b9a594b593c0?auto=format&fit=crop&w=1800&q=88',
+    alt: 'Warm dining table with handcrafted tableware'
+  },
+  {
+    image:
+      'https://images.unsplash.com/photo-1577937927133-66ef06acdf18?auto=format&fit=crop&w=1800&q=88',
+    alt: 'Elegant ceramic tableware collection'
+  }
+]
+
 const tableImage =
   'https://images.unsplash.com/photo-1603199506016-b9a594b593c0?auto=format&fit=crop&w=1200&q=86'
 
@@ -99,8 +118,31 @@ function Header() {
   // Search bar state
   const [search, setSearch] = useState(false)
 
-  // Cart item count
+  // Cart item count + premium cart micro-interaction
   const { count } = useStore()
+  const [cartBump, setCartBump] = useState(false)
+
+  useEffect(() => {
+    const handleCartAdded = () => {
+      setCartBump(true)
+
+      window.setTimeout(() => {
+        setCartBump(false)
+      }, 520)
+    }
+
+    window.addEventListener(
+      'xaaj:cart-added',
+      handleCartAdded
+    )
+
+    return () => {
+      window.removeEventListener(
+        'xaaj:cart-added',
+        handleCartAdded
+      )
+    }
+  }, [])
 
   // Announcement bar state
   const [announcementText, setAnnouncementText] = useState(
@@ -254,7 +296,10 @@ function Header() {
 
           {/* Cart */}
           <button
-            className="bag"
+            className={`bag ${
+              cartBump ? 'cart-bump' : ''
+            }`}
+            data-xaaj-cart-target="true"
             aria-label="Cart"
             onClick={() => navigate('/cart')}
           >
@@ -407,59 +452,201 @@ function Rating({
 
 
 // ============================================================
-// PRODUCT CARD
+// PRODUCT CARD — PREMIUM REDESIGN
 // ============================================================
 
 function ProductCard({
   product
 }) {
-
   const {
     add,
     wish,
     toggleWish
   } = useStore()
 
-  // Check if product is already in wishlist
-  const liked =
-    wish.includes(product.id)
+  const [wishlistPulse, setWishlistPulse] = useState(false)
+  const [cartPulse, setCartPulse] = useState(false)
+
+  // Always prefer the normalized id, with _id as a safe fallback.
+  const productId = product.id || product._id
+
+  const liked = wish.includes(productId)
+
+  // Second product image for hover.
+  const secondaryImage =
+    product.images?.[1] ||
+    product.image ||
+    ''
+
+  // ----------------------------------------------------------
+  // Wishlist
+  // ----------------------------------------------------------
+
+  const handleWishlist = event => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (!productId) return
+
+    toggleWish(productId)
+
+    setWishlistPulse(true)
+
+    window.setTimeout(() => {
+      setWishlistPulse(false)
+    }, 500)
+  }
+
+  // ----------------------------------------------------------
+  // Add to cart
+  // ----------------------------------------------------------
+
+  const handleAddToCart = event => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    const card =
+      event.currentTarget.closest('.product-card')
+
+    const image =
+      card?.querySelector('.product-image-primary')
+
+    const cartTarget =
+      document.querySelector(
+        '[data-xaaj-cart-target="true"]'
+      )
+
+    const imageRect =
+      image?.getBoundingClientRect()
+
+    const cartRect =
+      cartTarget?.getBoundingClientRect()
+
+    add(product)
+
+    setCartPulse(true)
+
+    window.setTimeout(() => {
+      setCartPulse(false)
+    }, 520)
+
+    window.dispatchEvent(
+      new CustomEvent('xaaj:cart-added')
+    )
+
+    if (!imageRect || !cartRect) return
+
+    const clone = image.cloneNode(true)
+
+    const startX = imageRect.left
+    const startY = imageRect.top
+
+    const endX =
+      cartRect.left +
+      cartRect.width / 2 -
+      25
+
+    const endY =
+      cartRect.top +
+      cartRect.height / 2 -
+      25
+
+    Object.assign(clone.style, {
+      position: 'fixed',
+      left: `${startX}px`,
+      top: `${startY}px`,
+      width: `${Math.min(imageRect.width, 82)}px`,
+      height: `${Math.min(imageRect.height, 82)}px`,
+      objectFit: 'cover',
+      borderRadius: '50%',
+      zIndex: '20000',
+      pointerEvents: 'none',
+      margin: '0',
+      boxShadow: '0 14px 40px rgba(41,40,37,.20)',
+      transform: 'translate3d(0,0,0) scale(1)',
+      opacity: '1',
+      transition:
+        'transform .78s cubic-bezier(.22,1,.36,1), opacity .78s ease'
+    })
+
+    document.body.appendChild(clone)
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        clone.style.transform =
+          `translate3d(${endX - startX}px, ${endY - startY}px, 0) scale(.12)`
+
+        clone.style.opacity = '0'
+      })
+    })
+
+    window.setTimeout(() => {
+      clone.remove()
+    }, 850)
+  }
 
   return (
     <article className="product-card">
 
+      {/* ======================================================
+          PRODUCT IMAGE
+          ====================================================== */}
 
-      {/* Product Image */}
       <div className="product-image">
 
         <Link
           to={`/product/${product.slug}`}
+          className="product-image-link"
+          aria-label={`View ${product.name}`}
         >
+
+          {/* Original image */}
           <img
+            className="product-image-primary"
             src={product.image}
             alt={product.name}
+            loading="lazy"
           />
+
+          {/* Second image appears smoothly on hover */}
+          {secondaryImage && (
+            <img
+              className="product-image-secondary"
+              src={secondaryImage}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+            />
+          )}
+
         </Link>
 
+        {/* Product tag */}
+        {product.tag && (
+          <span className="tag">
+            {product.tag}
+          </span>
+        )}
 
-        {/* Product Tag */}
-        <span className="tag">
-          {product.tag}
-        </span>
-
-
-        {/* Wishlist Button */}
+        {/* Wishlist */}
         <button
+          type="button"
           className={`heart ${
             liked ? 'liked' : ''
+          } ${
+            wishlistPulse ? 'wishlist-pop' : ''
           }`}
-          onClick={() =>
-            toggleWish(product.id)
+          onClick={handleWishlist}
+          aria-label={
+            liked
+              ? `Remove ${product.name} from wishlist`
+              : `Add ${product.name} to wishlist`
           }
-          aria-label="Add to wishlist"
+          aria-pressed={liked}
         >
-
           <Heart
-            size={17}
+            size={18}
+            strokeWidth={1.45}
             fill={
               liked
                 ? 'currentColor'
@@ -467,61 +654,114 @@ function ProductCard({
             }
           />
 
+          <span className="heart-tooltip">
+            {liked
+              ? 'Saved'
+              : 'Add to wishlist'}
+          </span>
         </button>
+
+        {/* Add to cart — kept in the original product-card position */}
+        <span className="product-image-bottom-spacer" aria-hidden="true" />
 
       </div>
 
+      {/* ======================================================
+          PRODUCT INFORMATION
+          ====================================================== */}
 
-      {/* Product Details */}
       <div className="product-copy">
+
+        <div className="product-meta">
+
+          <span className="product-category">
+            {product.category}
+          </span>
+
+          <Rating
+            count={product.rating}
+            reviews={product.reviews}
+          />
+
+        </div>
 
         <Link
           to={`/product/${product.slug}`}
+          className="product-title-link"
         >
           <h3>
             {product.name}
           </h3>
         </Link>
 
-
-        {/* Category */}
-        <p>
-          {product.category}
-        </p>
-
-
-        {/* Rating */}
-        <Rating
-          count={product.rating}
-          reviews={product.reviews}
-        />
-
-
-        {/* Price */}
         <div className="price">
 
           <strong>
             {money(product.price)}
           </strong>
 
-          {Number(product.old || 0) > Number(product.price || 0) && (
+          {Number(product.old || 0) >
+            Number(product.price || 0) && (
             <del>
               {money(product.old)}
             </del>
           )}
 
+          {Number(product.old || 0) >
+            Number(product.price || 0) && (
+            <span className="save-badge">
+              {Math.round(
+                ((Number(product.old) -
+                  Number(product.price)) /
+                  Number(product.old)) *
+                  100
+              )}
+              % off
+            </span>
+          )}
+
         </div>
 
-
-        {/* Add To Cart */}
+        {/* Premium Add to Cart button */}
         <button
-          className="add"
-          onClick={() =>
-            add(product)
+          type="button"
+          className={`add ${
+            cartPulse ? 'add-success' : ''
+          }`}
+          onClick={handleAddToCart}
+          disabled={Number(product.stock ?? 0) <= 0}
+          aria-label={
+            Number(product.stock ?? 0) <= 0
+              ? 'Out of stock'
+              : `Add ${product.name} to cart`
           }
         >
-          Add to cart
+          <span className="add-label">
+            {Number(product.stock ?? 0) <= 0
+              ? 'Out of stock'
+              : cartPulse
+                ? 'Added to cart'
+                : 'Add to cart'}
+          </span>
+
+          <span className="add-icon" aria-hidden="true">
+            {Number(product.stock ?? 0) <= 0
+              ? null
+              : cartPulse
+                ? <Check size={15} />
+                : <Plus size={15} />}
+          </span>
+
+          <span className="add-shine" aria-hidden="true" />
         </button>
+
+        {/* Subtle stock cue */}
+        {Number(product.stock ?? 0) > 0 &&
+          Number(product.stock ?? 0) <= 5 && (
+            <span className="low-stock">
+              Only {product.stock} left
+            </span>
+          )}
 
       </div>
 
@@ -585,6 +825,134 @@ function Home() {
     products: liveProducts
   } = useStore()
 
+  // ==========================================================
+  // HERO SLIDER
+  // ==========================================================
+
+  const [heroSlides, setHeroSlides] = useState(defaultHeroSlides)
+  const [heroIndex, setHeroIndex] = useState(0)
+  const [heroPaused, setHeroPaused] = useState(false)
+
+  const heroTouchStart = useRef(null)
+
+  // ==========================================================
+  // LOAD HERO SLIDES FROM CMS
+  //
+  // Admin panel se saved hero images yahan load hongi.
+  // Agar API unavailable ho ya koi slide saved na ho,
+  // default hero images automatically use hongi.
+  // ==========================================================
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadHeroSlides() {
+      try {
+        const result = await cmsService.getHero()
+        const slides = Array.isArray(result?.data?.slides)
+          ? result.data.slides
+          : []
+
+        const activeSlides = slides
+          .filter(slide => slide?.enabled !== false && slide?.image)
+          .map(slide => ({
+            image: slide.image,
+            mobileImage: slide.mobileImage || slide.image,
+            alt: slide.alt || 'XAAJ Crockery'
+          }))
+
+        if (!cancelled && activeSlides.length > 0) {
+          setHeroSlides(activeSlides)
+          setHeroIndex(0)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Hero CMS load error:', error)
+          // Keep default hero slides if CMS API is unavailable.
+        }
+      }
+    }
+
+    loadHeroSlides()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // ==========================================================
+  // HERO AUTO SLIDER
+  // ==========================================================
+
+  useEffect(() => {
+    if (heroPaused || heroSlides.length < 2) return undefined
+
+    const timer = window.setInterval(() => {
+      setHeroIndex(current =>
+        (current + 1) % heroSlides.length
+      )
+    }, 2000)
+
+    return () => window.clearInterval(timer)
+  }, [heroPaused, heroSlides.length])
+
+  // Pause the hero slider as soon as the user starts scrolling.
+  // It will remain paused for the rest of this page view.
+  useEffect(() => {
+    const handleScroll = () => {
+      setHeroPaused(true)
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+    }
+  }, [])
+
+  const goToHero = index => {
+    const total = heroSlides.length
+
+    if (!total) return
+
+    setHeroIndex(
+      ((index % total) + total) % total
+    )
+  }
+
+  // ==========================================================
+  // PREMIUM SCROLL REVEAL
+  // ==========================================================
+
+  useEffect(() => {
+    const elements = document.querySelectorAll(
+      '[data-xaaj-reveal]'
+    )
+
+    if (!elements.length) return undefined
+
+    const observer = new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return
+
+          entry.target.classList.add('xaaj-revealed')
+          observer.unobserve(entry.target)
+        })
+      },
+      {
+        threshold: 0.12,
+        rootMargin: '0px 0px -8% 0px'
+      }
+    )
+
+    elements.forEach(element => {
+      observer.observe(element)
+    })
+
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <>
 
@@ -599,15 +967,61 @@ function Home() {
             HERO SECTION
         ==================================================== */}
 
-        <section className="hero">
+        <section
+          className="hero hero-slider"
+          onTouchStart={event => {
+            heroTouchStart.current = event.touches[0]?.clientX ?? null
+          }}
+          onTouchEnd={event => {
+            const startX = heroTouchStart.current
+            const endX = event.changedTouches[0]?.clientX ?? null
 
-          <img
-            src={heroImage}
-            alt="Handmade stoneware arranged on a dining table"
-          />
+            if (startX === null || endX === null) return
+
+            const distance = startX - endX
+
+            if (Math.abs(distance) > 45) {
+              if (distance > 0) {
+                goToHero(heroIndex + 1)
+              } else {
+                goToHero(heroIndex - 1)
+              }
+            }
+
+            heroTouchStart.current = null
+          }}
+          aria-label="XAAJ featured collection"
+        >
+
+          {/* ====================================================
+              HERO IMAGES
+          ==================================================== */}
+
+          <div className="hero-slides" aria-live="polite">
+
+            {heroSlides.map((slide, index) => (
+              <img
+                key={slide.image}
+                className={`hero-slide ${
+                  index === heroIndex
+                    ? 'hero-slide-active'
+                    : ''
+                }`}
+                src={slide.image}
+                alt={slide.alt}
+                draggable="false"
+                loading={index === 0 ? 'eager' : 'lazy'}
+              />
+            ))}
+
+          </div>
 
 
-          {/* Hero Content */}
+          {/* ====================================================
+              HERO CONTENT
+              Existing text and button intentionally unchanged.
+          ==================================================== */}
+
           <div className="hero-overlay">
 
             <span className="eyebrow">
@@ -634,7 +1048,10 @@ function Home() {
           </div>
 
 
-          {/* Hero Note */}
+          {/* ====================================================
+              HERO NOTE
+          ==================================================== */}
+
           <div className="hero-note">
 
             Stores crafted
@@ -648,6 +1065,65 @@ function Home() {
 
           </div>
 
+
+          {/* ====================================================
+              HERO CONTROLS
+          ==================================================== */}
+
+          {heroSlides.length > 1 && (
+            <div className="hero-controls">
+
+              <button
+                type="button"
+                className="hero-arrow hero-arrow-prev"
+                onClick={() => goToHero(heroIndex - 1)}
+                aria-label="Previous hero slide"
+              >
+                ←
+              </button>
+
+              <div
+                className="hero-dots"
+                aria-label="Hero slide navigation"
+              >
+                {heroSlides.map((slide, index) => (
+                  <button
+                    type="button"
+                    key={`hero-dot-${index}`}
+                    className={`hero-dot ${
+                      index === heroIndex
+                        ? 'active'
+                        : ''
+                    }`}
+                    onClick={() => goToHero(index)}
+                    aria-label={`Go to hero slide ${index + 1}`}
+                    aria-current={
+                      index === heroIndex
+                        ? 'true'
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
+
+              <span className="hero-counter">
+                {String(heroIndex + 1).padStart(2, '0')}
+                {' / '}
+                {String(heroSlides.length).padStart(2, '0')}
+              </span>
+
+              <button
+                type="button"
+                className="hero-arrow hero-arrow-next"
+                onClick={() => goToHero(heroIndex + 1)}
+                aria-label="Next hero slide"
+              >
+                →
+              </button>
+
+            </div>
+          )}
+
         </section>
 
 
@@ -655,7 +1131,7 @@ function Home() {
             INTRO SECTION
         ==================================================== */}
 
-        <section className="intro">
+        <section className="intro" data-xaaj-reveal="up">
 
           <span className="eyebrow">
             The everyday, elevated
@@ -681,7 +1157,7 @@ function Home() {
             CATEGORIES SECTION
         ==================================================== */}
 
-        <section className="categories wrap">
+        <section className="categories wrap" data-xaaj-reveal="up">
 
           <SectionHeading
             eyebrow="Shop by form"
@@ -700,6 +1176,7 @@ function Home() {
               <Link
                 to={`/shop?category=${c.name}`}
                 className="category"
+                data-xaaj-reveal="up"
                 key={c.name}
               >
 
@@ -736,7 +1213,7 @@ function Home() {
             CUSTOMER FAVORITES
         ==================================================== */}
 
-        <section className="favorites">
+        <section className="favorites" data-xaaj-reveal="up">
 
           <div className="wrap">
 
@@ -774,7 +1251,7 @@ function Home() {
             FEATURE SECTION
         ==================================================== */}
 
-        <section className="feature">
+        <section className="feature" data-xaaj-reveal="up">
 
           <div className="feature-copy">
 
@@ -823,7 +1300,7 @@ function Home() {
             Secure Payments
         ==================================================== */}
 
-        <section className="trust-bar">
+        <section className="trust-bar" data-xaaj-reveal="up">
 
 
           {/* Premium Quality */}
@@ -928,7 +1405,7 @@ function Home() {
             CUSTOMER QUOTES
         ==================================================== */}
 
-        <section className="quotes">
+        <section className="quotes" data-xaaj-reveal="up">
 
           <span className="eyebrow">
             Notes from home
@@ -1006,7 +1483,7 @@ function Home() {
 function Newsletter() {
 
   return (
-    <section className="newsletter">
+    <section className="newsletter" data-xaaj-reveal="up">
 
       <span className="eyebrow">
         A little note from us
@@ -1467,6 +1944,7 @@ function Product() {
   const [loadingProduct, setLoadingProduct] = useState(true)
   const [selectedImage, setSelectedImage] = useState('')
   const [qty, setQty] = useState(1)
+  const [detailCartPulse, setDetailCartPulse] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -1723,17 +2201,57 @@ function Product() {
                 </button>
               </div>
 
-              {/* Add To Cart */}
+              {/* Add To Cart — reference-style button with premium animation */}
               <button
-                className="button full"
-                onClick={() => {
+                type="button"
+                className={`detail-add-button ${
+                  detailCartPulse ? 'detail-add-success' : ''
+                }`}
+                onClick={event => {
+                  event.preventDefault()
+
                   for (let i = 0; i < qty; i++) {
                     add(product)
                   }
+
+                  // Premium image-to-cart animation.
+                  const image = document.querySelector('.detail-image img')
+                  const cartTarget = document.querySelector(
+                    '[data-xaaj-cart-target="true"]'
+                  )
+                  const imageRect = image?.getBoundingClientRect()
+                  const cartRect = cartTarget?.getBoundingClientRect()
+
+                  if (imageRect && cartRect) {
+                    const flyingImage = image.cloneNode(true)
+                    const startX = imageRect.left + imageRect.width / 2 - 30
+                    const startY = imageRect.top + imageRect.height / 2 - 30
+                    const endX = cartRect.left + cartRect.width / 2 - 30
+                    const endY = cartRect.top + cartRect.height / 2 - 30
+
+                    flyingImage.className = 'xaaj-flying-cart-image'
+                    flyingImage.style.left = `${startX}px`
+                    flyingImage.style.top = `${startY}px`
+                    flyingImage.style.setProperty('--xaaj-x', `${endX - startX}px`)
+                    flyingImage.style.setProperty('--xaaj-y', `${endY - startY}px`)
+
+                    document.body.appendChild(flyingImage)
+                    flyingImage.addEventListener(
+                      'animationend',
+                      () => flyingImage.remove(),
+                      { once: true }
+                    )
+                  }
+
+                  window.dispatchEvent(new CustomEvent('xaaj:cart-added'))
+                  setDetailCartPulse(true)
+                  window.setTimeout(() => setDetailCartPulse(false), 650)
                 }}
               >
-                Add to cart
-                <ShoppingBag size={16} />
+                <span className="detail-add-label">
+                  ADD TO CART
+                </span>
+                <span className="detail-add-shine" aria-hidden="true" />
               </button>
 
               {/* Product Information Accordions */}

@@ -42,6 +42,13 @@ export default function Admin() {
   const [savingAnnouncement, setSavingAnnouncement] = useState(false)
 
   // =========================
+  // Hero Slides State
+  // =========================
+  const [heroSlides, setHeroSlides] = useState([])
+  const [loadingHeroSlides, setLoadingHeroSlides] = useState(false)
+  const [savingHeroSlides, setSavingHeroSlides] = useState(false)
+
+  // =========================
   // Product Form State
   // =========================
   const emptyProduct = {
@@ -73,6 +80,7 @@ export default function Admin() {
     loadProducts()
     loadOrders()
     loadAnnouncement()
+    loadHeroSlides()
   }, [user])
 
   // =========================
@@ -147,6 +155,142 @@ export default function Admin() {
       setError(err.message || 'Unable to update announcement')
     } finally {
       setSavingAnnouncement(false)
+    }
+  }
+
+  // =========================
+  // Hero Slides API
+  // =========================
+
+  const loadHeroSlides = async () => {
+    try {
+      setLoadingHeroSlides(true)
+
+      const result = await apiRequest('/cms/hero/admin')
+      const data =
+        result?.data?.slides ||
+        result?.slides ||
+        result?.data ||
+        []
+
+      setHeroSlides(
+        Array.isArray(data)
+          ? data.map((slide, index) => ({
+              image: slide?.image || slide?.imageUrl || '',
+              alt: slide?.alt || slide?.title || `Hero slide ${index + 1}`,
+              enabled:
+                slide?.enabled !== undefined
+                  ? Boolean(slide.enabled)
+                  : true
+            }))
+          : []
+      )
+    } catch (err) {
+      setError(err.message || 'Unable to load hero slides')
+    } finally {
+      setLoadingHeroSlides(false)
+    }
+  }
+
+  const addHeroSlide = () => {
+    setHeroSlides(prev => [
+      ...prev,
+      {
+        image: '',
+        alt: `Hero slide ${prev.length + 1}`,
+        enabled: true
+      }
+    ])
+  }
+
+  const updateHeroSlide = (index, field, value) => {
+    setHeroSlides(prev =>
+      prev.map((slide, slideIndex) =>
+        slideIndex === index
+          ? { ...slide, [field]: value }
+          : slide
+      )
+    )
+  }
+
+  const removeHeroSlide = index => {
+    setHeroSlides(prev =>
+      prev.filter((_, slideIndex) => slideIndex !== index)
+    )
+  }
+
+  const moveHeroSlide = (index, direction) => {
+    setHeroSlides(prev => {
+      const targetIndex = index + direction
+
+      if (
+        targetIndex < 0 ||
+        targetIndex >= prev.length
+      ) {
+        return prev
+      }
+
+      const next = [...prev]
+      const [moved] = next.splice(index, 1)
+      next.splice(targetIndex, 0, moved)
+
+      return next
+    })
+  }
+
+  const handleSaveHeroSlides = async () => {
+    const cleanedSlides = heroSlides
+      .map(slide => ({
+        image: String(slide.image || '').trim(),
+        alt: String(slide.alt || '').trim(),
+        enabled: Boolean(slide.enabled)
+      }))
+      .filter(slide => slide.image)
+
+    if (!cleanedSlides.length) {
+      setError('Please add at least one hero image.')
+      return
+    }
+
+    try {
+      setSavingHeroSlides(true)
+      setError('')
+      setMessage('')
+
+      const result = await apiRequest('/cms/hero', {
+        method: 'PUT',
+        body: JSON.stringify({
+          slides: cleanedSlides
+        })
+      })
+
+      const data =
+        result?.data?.slides ||
+        result?.slides ||
+        result?.data ||
+        cleanedSlides
+
+      setHeroSlides(
+        Array.isArray(data)
+          ? data.map((slide, index) => ({
+              image: slide?.image || slide?.imageUrl || '',
+              alt:
+                slide?.alt ||
+                slide?.title ||
+                `Hero slide ${index + 1}`,
+              enabled:
+                slide?.enabled !== undefined
+                  ? Boolean(slide.enabled)
+                  : true
+            }))
+          : cleanedSlides
+      )
+
+      setMessage('Hero images updated successfully.')
+    } catch (err) {
+      setError(err.message || 'Unable to update hero images')
+    } finally {
+      setSavingHeroSlides(false)
     }
   }
 
@@ -794,6 +938,284 @@ export default function Admin() {
                 </button>
               </div>
             </form>
+          )}
+        </section>
+
+        {/* =========================
+            Hero Images Management
+        ========================== */}
+        <section
+          style={{
+            marginBottom: '50px',
+            padding: '28px',
+            border: '1px solid #e5e5e5',
+            borderRadius: '12px'
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '20px',
+              flexWrap: 'wrap',
+              marginBottom: '24px'
+            }}
+          >
+            <div>
+              <span className="eyebrow">Website Content</span>
+              <h2>Hero Images</h2>
+              <p>
+                Change the homepage hero photos without changing
+                the existing hero text or button.
+              </p>
+            </div>
+
+            <div
+              style={{
+                padding: '8px 12px',
+                borderRadius: '999px',
+                background: '#f5f5f5',
+                color: '#555',
+                fontSize: '13px',
+                fontWeight: 600
+              }}
+            >
+              {heroSlides.length} slide{heroSlides.length === 1 ? '' : 's'}
+            </div>
+          </div>
+
+          {loadingHeroSlides ? (
+            <p>Loading hero images...</p>
+          ) : (
+            <>
+              {heroSlides.length > 0 && (
+                <div
+                  style={{
+                    display: 'grid',
+                    gap: '16px'
+                  }}
+                >
+                  {heroSlides.map((slide, index) => (
+                    <div
+                      key={`hero-slide-${index}`}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '140px 1fr auto',
+                        gap: '18px',
+                        alignItems: 'start',
+                        padding: '16px',
+                        border: '1px solid #e5e5e5',
+                        borderRadius: '10px'
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '140px',
+                          height: '90px',
+                          borderRadius: '7px',
+                          overflow: 'hidden',
+                          background: '#f5f5f5'
+                        }}
+                      >
+                        {slide.image ? (
+                          <img
+                            src={slide.image}
+                            alt={slide.alt || `Hero slide ${index + 1}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              display: 'grid',
+                              placeItems: 'center',
+                              fontSize: '11px',
+                              color: '#777'
+                            }}
+                          >
+                            Image preview
+                          </div>
+                        )}
+                      </div>
+
+                      <div
+                        style={{
+                          display: 'grid',
+                          gap: '9px'
+                        }}
+                      >
+                        <strong>Slide {index + 1}</strong>
+
+                        <input
+                          value={slide.image}
+                          onChange={e =>
+                            updateHeroSlide(
+                              index,
+                              'image',
+                              e.target.value
+                            )
+                          }
+                          placeholder="Hero image URL"
+                        />
+
+                        <input
+                          value={slide.alt}
+                          onChange={e =>
+                            updateHeroSlide(
+                              index,
+                              'alt',
+                              e.target.value
+                            )
+                          }
+                          placeholder="Image alt text"
+                        />
+
+                        <label
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={slide.enabled}
+                            onChange={e =>
+                              updateHeroSlide(
+                                index,
+                                'enabled',
+                                e.target.checked
+                              )
+                            }
+                          />
+                          Active on website
+                        </label>
+                      </div>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '7px'
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            moveHeroSlide(index, -1)
+                          }
+                          disabled={index === 0}
+                          title="Move slide up"
+                        >
+                          ↑
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            moveHeroSlide(index, 1)
+                          }
+                          disabled={
+                            index === heroSlides.length - 1
+                          }
+                          title="Move slide down"
+                        >
+                          ↓
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            removeHeroSlide(index)
+                          }
+                          title="Remove slide"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {heroSlides.length === 0 && (
+                <div
+                  style={{
+                    padding: '30px 20px',
+                    textAlign: 'center',
+                    border: '1px dashed #d9d3ca',
+                    borderRadius: '10px',
+                    marginBottom: '15px'
+                  }}
+                >
+                  <p style={{ marginTop: 0 }}>
+                    No hero images configured yet.
+                  </p>
+                </div>
+              )}
+
+              <small
+                style={{
+                  display: 'block',
+                  marginTop: '14px',
+                  color: '#777'
+                }}
+              >
+                The homepage hero text and “Explore the collection”
+                button remain unchanged. Only the hero photos are
+                managed here.
+              </small>
+
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  marginTop: '18px'
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={addHeroSlide}
+                  disabled={savingHeroSlides}
+                >
+                  + Add Hero Image
+                </button>
+
+                <button
+                  type="button"
+                  className="button"
+                  onClick={handleSaveHeroSlides}
+                  disabled={
+                    savingHeroSlides ||
+                    loadingHeroSlides
+                  }
+                >
+                  {savingHeroSlides
+                    ? 'Saving...'
+                    : 'Save Hero Images'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={loadHeroSlides}
+                  disabled={
+                    savingHeroSlides ||
+                    loadingHeroSlides
+                  }
+                >
+                  Refresh
+                </button>
+              </div>
+            </>
           )}
         </section>
 

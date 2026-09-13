@@ -35,7 +35,6 @@ const activeFilter = {
 
 // ==========================================================
 // ANNOUNCEMENT - PUBLIC GET
-// Frontend Header announcement ke liye
 // GET /api/cms/announcement
 // ==========================================================
 
@@ -48,7 +47,6 @@ router.get(
       updatedAt: -1
     })
 
-    // Agar database me announcement nahi hai
     if (!announcement) {
       return res.json({
         success: true,
@@ -64,14 +62,11 @@ router.get(
       data: {
         id: announcement._id,
 
-        // text ya message me jo available ho
         text:
           announcement.text ||
           announcement.message ||
           '',
 
-        // enabled field available ho to use karo,
-        // warna isActive use karo
         enabled: Boolean(
           announcement.enabled !== undefined
             ? announcement.enabled
@@ -84,7 +79,6 @@ router.get(
 
 // ==========================================================
 // ANNOUNCEMENT - ADMIN UPDATE
-// Admin panel se announcement save/update
 // PUT /api/cms/announcement
 // ==========================================================
 
@@ -101,7 +95,6 @@ router.put(
 
     const enabled = req.body?.enabled !== false
 
-    // Message required
     if (!text) {
       return res.status(422).json({
         success: false,
@@ -109,50 +102,346 @@ router.put(
       })
     }
 
-    // Maximum 200 characters
     if (text.length > 200) {
       return res.status(422).json({
         success: false,
-        message: 'Announcement message cannot exceed 200 characters.'
+        message:
+          'Announcement message cannot exceed 200 characters.'
       })
     }
 
-    const announcement = await Content.findOneAndUpdate(
-      {
-        type: 'announcement'
-      },
-      {
-        $set: {
-          type: 'announcement',
-          text,
-          enabled,
-          isActive: enabled,
-          order: 0,
-
-          // Announcement ko permanently active rakhne ke liye
-          startsAt: null,
-          endsAt: null
+    const announcement =
+      await Content.findOneAndUpdate(
+        {
+          type: 'announcement'
+        },
+        {
+          $set: {
+            type: 'announcement',
+            text,
+            enabled,
+            isActive: enabled,
+            order: 0,
+            startsAt: null,
+            endsAt: null
+          }
+        },
+        {
+          new: true,
+          upsert: true,
+          runValidators: true,
+          setDefaultsOnInsert: true
         }
-      },
-      {
-        new: true,
-        upsert: true,
-        runValidators: true,
-        setDefaultsOnInsert: true
-      }
-    )
+      )
 
     res.json({
       success: true,
-      message: 'Announcement updated successfully.',
+      message:
+        'Announcement updated successfully.',
       data: {
         id: announcement._id,
-        text: announcement.text || text,
+
+        text:
+          announcement.text || text,
+
         enabled: Boolean(
           announcement.enabled !== undefined
             ? announcement.enabled
             : announcement.isActive
         )
+      }
+    })
+  })
+)
+
+// ==========================================================
+// HERO SLIDER - PUBLIC GET
+// GET /api/cms/hero
+//
+// Website ko sirf active hero slides milengi.
+// ==========================================================
+
+router.get(
+  '/hero',
+  asyncHandler(async (_req, res) => {
+    const slides = await Content.find({
+      type: 'hero',
+      ...activeFilter
+    })
+      .sort({
+        order: 1,
+        createdAt: 1
+      })
+      .lean()
+
+    res.json({
+      success: true,
+      data: {
+        slides: slides.map(slide => ({
+          id: slide._id,
+
+          image:
+            slide.image || '',
+
+          mobileImage:
+            slide.mobileImage ||
+            slide.image ||
+            '',
+
+          alt:
+            slide.metadata?.alt ||
+            slide.title ||
+            'XAAJ Crockery',
+
+          order:
+            Number.isFinite(slide.order)
+              ? slide.order
+              : 0,
+
+          enabled:
+            slide.enabled !== false &&
+            slide.isActive !== false
+        }))
+      }
+    })
+  })
+)
+
+// ==========================================================
+// HERO SLIDER - ADMIN GET
+// GET /api/cms/hero/admin
+//
+// Admin ko active + inactive dono slides milengi.
+// Isse inactive image refresh ke baad gayab nahi hogi.
+// ==========================================================
+
+router.get(
+  '/hero/admin',
+  protect,
+  adminOnly,
+  asyncHandler(async (_req, res) => {
+    const slides = await Content.find({
+      type: 'hero'
+    })
+      .sort({
+        order: 1,
+        createdAt: 1
+      })
+      .lean()
+
+    res.json({
+      success: true,
+      data: {
+        slides: slides.map(slide => ({
+          id: slide._id,
+
+          image:
+            slide.image || '',
+
+          mobileImage:
+            slide.mobileImage ||
+            slide.image ||
+            '',
+
+          alt:
+            slide.metadata?.alt ||
+            slide.title ||
+            'XAAJ Crockery',
+
+          order:
+            Number.isFinite(slide.order)
+              ? slide.order
+              : 0,
+
+          enabled:
+            slide.enabled !== false &&
+            slide.isActive !== false
+        }))
+      }
+    })
+  })
+)
+
+// ==========================================================
+// HERO SLIDER - ADMIN UPDATE
+// PUT /api/cms/hero
+//
+// Admin panel se complete hero slider save hoga.
+// ==========================================================
+
+router.put(
+  '/hero',
+  protect,
+  adminOnly,
+  asyncHandler(async (req, res) => {
+    const incomingSlides =
+      Array.isArray(req.body?.slides)
+        ? req.body.slides
+        : null
+
+    if (!incomingSlides) {
+      return res.status(422).json({
+        success: false,
+        message:
+          'Hero slides must be provided as an array.'
+      })
+    }
+
+    // --------------------------------------------------------
+    // Clean + validate slides
+    // --------------------------------------------------------
+
+    const slides = incomingSlides
+      .map((slide, index) => {
+        const image = String(
+          slide?.image || ''
+        ).trim()
+
+        const mobileImage = String(
+          slide?.mobileImage ||
+          image
+        ).trim()
+
+        const alt = String(
+          slide?.alt ||
+          `XAAJ Crockery Hero ${index + 1}`
+        ).trim()
+
+        return {
+          image,
+          mobileImage,
+          alt,
+
+          enabled:
+            slide?.enabled !== false,
+
+          order: index
+        }
+      })
+      .filter(slide => slide.image)
+
+    // --------------------------------------------------------
+    // Maximum 10 hero slides
+    // --------------------------------------------------------
+
+    if (slides.length > 10) {
+      return res.status(422).json({
+        success: false,
+        message:
+          'Maximum 10 hero slides are allowed.'
+      })
+    }
+
+    // --------------------------------------------------------
+    // If slides were submitted but none has an image
+    // --------------------------------------------------------
+
+    if (
+      incomingSlides.length > 0 &&
+      slides.length === 0
+    ) {
+      return res.status(422).json({
+        success: false,
+        message:
+          'At least one valid hero image is required.'
+      })
+    }
+
+    // --------------------------------------------------------
+    // Remove old hero slides
+    //
+    // Only hero content is affected.
+    // Announcement/product/other CMS content remains safe.
+    // --------------------------------------------------------
+
+    await Content.deleteMany({
+      type: 'hero'
+    })
+
+    // --------------------------------------------------------
+    // Insert new hero slides
+    // --------------------------------------------------------
+
+    let savedSlides = []
+
+    if (slides.length > 0) {
+      savedSlides =
+        await Content.insertMany(
+          slides.map(slide => ({
+            type: 'hero',
+
+            image:
+              slide.image,
+
+            mobileImage:
+              slide.mobileImage,
+
+            title:
+              slide.alt,
+
+            enabled:
+              slide.enabled,
+
+            isActive:
+              slide.enabled,
+
+            order:
+              slide.order,
+
+            startsAt:
+              null,
+
+            endsAt:
+              null,
+
+            metadata: {
+              alt:
+                slide.alt
+            }
+          }))
+        )
+    }
+
+    // --------------------------------------------------------
+    // Return saved slides
+    // --------------------------------------------------------
+
+    res.json({
+      success: true,
+      message:
+        'Hero slides updated successfully.',
+
+      data: {
+        slides:
+          savedSlides
+            .sort(
+              (a, b) =>
+                a.order - b.order
+            )
+            .map(slide => ({
+              id:
+                slide._id,
+
+              image:
+                slide.image || '',
+
+              mobileImage:
+                slide.mobileImage ||
+                slide.image ||
+                '',
+
+              alt:
+                slide.metadata?.alt ||
+                slide.title ||
+                'XAAJ Crockery',
+
+              order:
+                slide.order,
+
+              enabled:
+                slide.enabled !== false &&
+                slide.isActive !== false
+            }))
       }
     })
   })
@@ -173,9 +462,10 @@ router.get(
       bestsellers,
       newArrivals
     ] = await Promise.all([
-      Content.find(activeFilter).sort({
-        order: 1
-      }),
+      Content.find(activeFilter)
+        .sort({
+          order: 1
+        }),
 
       Product.distinct(
         'category',
@@ -214,6 +504,7 @@ router.get(
 
     res.json({
       success: true,
+
       data: {
         content,
         categories,
@@ -235,15 +526,18 @@ router.get(
   protect,
   adminOnly,
   asyncHandler(async (req, res) => {
-    const filter = req.query.type
-      ? {
-          type: req.query.type
-        }
-      : {}
+    const filter =
+      req.query.type
+        ? {
+            type: req.query.type
+          }
+        : {}
 
-    const content = await Content.find(filter).sort({
-      order: 1
-    })
+    const content =
+      await Content.find(filter)
+        .sort({
+          order: 1
+        })
 
     res.json({
       success: true,
@@ -262,9 +556,8 @@ router.post(
   protect,
   adminOnly,
   asyncHandler(async (req, res) => {
-    const content = await Content.create(
-      req.body
-    )
+    const content =
+      await Content.create(req.body)
 
     res.status(201).json({
       success: true,
@@ -296,7 +589,8 @@ router.patch(
     if (!content) {
       return res.status(404).json({
         success: false,
-        message: 'CMS content not found.'
+        message:
+          'CMS content not found.'
       })
     }
 
@@ -325,13 +619,15 @@ router.delete(
     if (!content) {
       return res.status(404).json({
         success: false,
-        message: 'CMS content not found.'
+        message:
+          'CMS content not found.'
       })
     }
 
     res.json({
       success: true,
-      message: 'CMS content deleted successfully.'
+      message:
+        'CMS content deleted successfully.'
     })
   })
 )

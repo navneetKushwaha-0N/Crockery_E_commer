@@ -7,23 +7,23 @@ const API_URL = (
   'http://localhost:7100/api'
 ).replace(/\/$/, '')
 
-
 // ============================================================
 // COMMON API REQUEST
 // ============================================================
 
 export async function apiRequest(path, options = {}) {
-  const token =
-    window.localStorage.getItem('xaaj_token')
+  const token = window.localStorage.getItem('xaaj_token')
 
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {})
+  const headers = new Headers(options.headers || {})
+
+  // JSON Content-Type only when body exists
+  if (!headers.has('Content-Type') && options.body) {
+    headers.set('Content-Type', 'application/json')
   }
 
   // Add JWT token when user is logged in
   if (token) {
-    headers.Authorization = `Bearer ${token}`
+    headers.set('Authorization', `Bearer ${token}`)
   }
 
   const response = await fetch(
@@ -35,19 +35,25 @@ export async function apiRequest(path, options = {}) {
     }
   )
 
-  const body =
-    await response.json().catch(() => ({}))
+  const body = await response
+    .json()
+    .catch(() => ({}))
 
   if (!response.ok) {
-    throw new Error(
+    const error = new Error(
       body.message ||
-      'Something went wrong'
+      body.error ||
+      `Request failed with status ${response.status}`
     )
+
+    error.status = response.status
+    error.data = body
+
+    throw error
   }
 
   return body
 }
-
 
 // ============================================================
 // AUTH SERVICES
@@ -55,95 +61,65 @@ export async function apiRequest(path, options = {}) {
 
 export const authService = {
 
-  // ----------------------------------------------------------
   // Register new customer
-  // ----------------------------------------------------------
   register: data =>
     apiRequest('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data)
     }),
 
-
-  // ----------------------------------------------------------
   // Normal login
-  // ----------------------------------------------------------
   login: data =>
     apiRequest('/auth/login', {
       method: 'POST',
       body: JSON.stringify(data)
     }),
 
-
-  // ----------------------------------------------------------
   // Verify registration email OTP
-  // ----------------------------------------------------------
   verifyEmail: data =>
     apiRequest('/auth/verify-email', {
       method: 'POST',
       body: JSON.stringify(data)
     }),
 
-
-  // ----------------------------------------------------------
   // Resend registration email OTP
-  // ----------------------------------------------------------
   resendVerification: data =>
     apiRequest('/auth/resend-verification', {
       method: 'POST',
       body: JSON.stringify(data)
     }),
 
-
-  // ----------------------------------------------------------
   // Forgot password
-  // Sends 6-digit OTP to registered email
-  // ----------------------------------------------------------
   forgotPassword: data =>
     apiRequest('/auth/forgot-password', {
       method: 'POST',
       body: JSON.stringify(data)
     }),
 
-
-  // ----------------------------------------------------------
   // Verify password reset OTP
-  // Returns reset token after OTP verification
-  // ----------------------------------------------------------
   verifyResetOtp: data =>
     apiRequest('/auth/verify-reset-otp', {
       method: 'POST',
       body: JSON.stringify(data)
     }),
 
-
-  // ----------------------------------------------------------
   // Reset password
-  // Requires reset token after OTP verification
-  // ----------------------------------------------------------
   resetPassword: data =>
     apiRequest('/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify(data)
     }),
 
-
-  // ----------------------------------------------------------
   // Get currently logged-in user
-  // ----------------------------------------------------------
   me: () =>
     apiRequest('/auth/me'),
 
-
-  // ----------------------------------------------------------
   // Logout
-  // ----------------------------------------------------------
   logout: () =>
     apiRequest('/auth/logout', {
       method: 'POST'
     })
 }
-
 
 // ============================================================
 // PRODUCT SERVICES
@@ -162,14 +138,100 @@ export const productService = {
     )
   },
 
-
-  // Get single product by slug
-  get: slug =>
+  // Get single product by slug / identifier
+  get: identifier =>
     apiRequest(
-      `/products/${encodeURIComponent(slug)}`
+      `/products/${encodeURIComponent(identifier)}`
     )
 }
 
+// ============================================================
+// CMS SERVICES
+// ============================================================
+
+export const cmsService = {
+
+  // ----------------------------------------------------------
+  // Get announcement
+  // ----------------------------------------------------------
+
+  getAnnouncement: () =>
+    apiRequest('/cms/announcement'),
+
+  // ----------------------------------------------------------
+  // Get active hero slider slides
+  // ----------------------------------------------------------
+
+  getHero: () =>
+    apiRequest('/cms/hero'),
+
+  // ----------------------------------------------------------
+  // Get complete home CMS data
+  // ----------------------------------------------------------
+
+  getHome: () =>
+    apiRequest('/cms/home'),
+
+  // ----------------------------------------------------------
+  // Admin: get all CMS content
+  // ----------------------------------------------------------
+
+  getAll: type =>
+    apiRequest(
+      `/cms${type ? `?type=${encodeURIComponent(type)}` : ''}`
+    ),
+
+  // ----------------------------------------------------------
+  // Admin: create CMS content
+  // ----------------------------------------------------------
+
+  create: data =>
+    apiRequest('/cms', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+
+  // ----------------------------------------------------------
+  // Admin: update CMS content
+  // ----------------------------------------------------------
+
+  update: (id, data) =>
+    apiRequest(`/cms/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    }),
+
+  // ----------------------------------------------------------
+  // Admin: delete CMS content
+  // ----------------------------------------------------------
+
+  remove: id =>
+    apiRequest(`/cms/${id}`, {
+      method: 'DELETE'
+    }),
+
+  // ----------------------------------------------------------
+  // Admin: update hero slides
+  // ----------------------------------------------------------
+
+  updateHero: slides =>
+    apiRequest('/cms/hero', {
+      method: 'PUT',
+      body: JSON.stringify({
+        slides
+      })
+    }),
+
+  // ----------------------------------------------------------
+  // Admin: update announcement
+  // ----------------------------------------------------------
+
+  updateAnnouncement: data =>
+    apiRequest('/cms/announcement', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    })
+}
 
 // ============================================================
 // CART SERVICES
@@ -181,15 +243,15 @@ export const cartService = {
   get: () =>
     apiRequest('/commerce/cart'),
 
-
   // Update cart
   update: items =>
     apiRequest('/commerce/cart', {
       method: 'PUT',
-      body: JSON.stringify({ items })
+      body: JSON.stringify({
+        items
+      })
     })
 }
-
 
 // ============================================================
 // WISHLIST SERVICES
@@ -201,7 +263,6 @@ export const wishlistService = {
   get: () =>
     apiRequest('/commerce/wishlist'),
 
-
   // Add product to wishlist
   add: id =>
     apiRequest(
@@ -210,7 +271,6 @@ export const wishlistService = {
         method: 'POST'
       }
     ),
-
 
   // Remove product from wishlist
   remove: id =>
@@ -222,7 +282,6 @@ export const wishlistService = {
     )
 }
 
-
 // ============================================================
 // ORDER SERVICES
 // ============================================================
@@ -230,9 +289,14 @@ export const wishlistService = {
 export const orderService = {
 
   // Get logged-in user's orders
-  list: () =>
-    apiRequest('/orders'),
-
+  list: params =>
+    apiRequest(
+      `/orders${
+        params
+          ? `?${new URLSearchParams(params)}`
+          : ''
+      }`
+    ),
 
   // Create order
   create: data =>
@@ -241,12 +305,10 @@ export const orderService = {
       body: JSON.stringify(data)
     }),
 
-
   // Get single order
   get: id =>
     apiRequest(`/orders/${id}`)
 }
-
 
 // ============================================================
 // PAYMENT SERVICES
@@ -261,7 +323,6 @@ export const paymentService = {
       body: JSON.stringify(data)
     }),
 
-
   // Verify Razorpay payment
   verify: data =>
     apiRequest('/payment/verify', {
@@ -270,9 +331,10 @@ export const paymentService = {
     })
 }
 
-
 // ============================================================
 // EXPORT
 // ============================================================
 
-export { API_URL }
+export {
+  API_URL
+}
