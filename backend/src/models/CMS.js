@@ -1,0 +1,137 @@
+import mongoose from 'mongoose'
+
+const contentSchema = new mongoose.Schema(
+  {
+    // ==========================================================
+    // CONTENT TYPE
+    // ==========================================================
+
+    type: {
+      type: String,
+      enum: [
+        'announcement',
+        'hero',
+        'promotion',
+        'testimonial',
+        'gallery',
+        'settings'
+      ],
+      required: true,
+      index: true
+    },
+
+    // ==========================================================
+    // COMMON CONTENT FIELDS
+    // ==========================================================
+
+    title: {
+      type: String,
+      trim: true
+    },
+
+    eyebrow: {
+      type: String,
+      trim: true
+    },
+
+    body: {
+      type: String,
+      trim: true
+    },
+
+    // ==========================================================
+    // ANNOUNCEMENT
+    // ==========================================================
+
+    // Announcement bar ka text
+    text: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+      default: ''
+    },
+
+    // Announcement ko ON/OFF karne ke liye
+    enabled: {
+      type: Boolean,
+      default: true
+    },
+
+    // ==========================================================
+    // IMAGES
+    // ==========================================================
+
+    image: {
+      type: String,
+      trim: true
+    },
+
+    mobileImage: {
+      type: String,
+      trim: true
+    },
+
+    // ==========================================================
+    // BUTTON / LINK
+    // ==========================================================
+
+    buttonText: {
+      type: String,
+      trim: true
+    },
+
+    link: {
+      type: String,
+      trim: true
+    },
+
+    // ==========================================================
+    // ORDER
+    // ==========================================================
+
+    order: {
+      type: Number,
+      default: 0
+    },
+
+    // ==========================================================
+    // ACTIVE STATUS
+    // ==========================================================
+
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true
+    },
+
+    // ==========================================================
+    // SCHEDULE
+    // ==========================================================
+
+    startsAt: {
+      type: Date,
+      default: null
+    },
+
+    endsAt: {
+      type: Date,
+      default: null
+    },
+
+    // ==========================================================
+    // EXTRA DATA
+    // ==========================================================
+
+    metadata: {
+      type: mongoose.Schema.Types.Mixed
+    }
+  },
+  {
+    timestamps: true
+  }
+)
+
+export default mongoose.model(
+  'Content',
+  contentSchema
+)
