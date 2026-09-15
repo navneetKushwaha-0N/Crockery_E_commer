@@ -431,7 +431,7 @@
 
 /* ============================================================
    XAAJ PREMIUM INTERACTIONS
-   Cart â€¢ Wishlist â€¢ Product Hover â€¢ Category Reveal
+   Cart Ã¢â‚¬Â¢ Wishlist Ã¢â‚¬Â¢ Product Hover Ã¢â‚¬Â¢ Category Reveal
    ============================================================ */
 
 /* ------------------------------------------------------------
@@ -934,7 +934,7 @@
 
 
 /* ============================================================
-   XAAJ PRODUCT CARD â€” FINAL PREMIUM REDESIGN
+   XAAJ PRODUCT CARD Ã¢â‚¬â€ FINAL PREMIUM REDESIGN
    ============================================================ */
 
 .product-card {
@@ -1086,7 +1086,7 @@
   transform: translateY(-2px);
 }
 
-/* Wishlist button â€” always above image/link */
+/* Wishlist button Ã¢â‚¬â€ always above image/link */
 .product-card .heart {
   z-index: 10;
   right: 13px;
@@ -1138,7 +1138,7 @@
   transform: translate(0,-50%);
 }
 
-/* Quick Add â€” hidden until hover */
+/* Quick Add Ã¢â‚¬â€ hidden until hover */
 .quick-add {
   position: absolute;
   left: 14px;
@@ -1264,7 +1264,7 @@
   letter-spacing: .03em;
 }
 
-/* Wishlist pop â€” cleaner version */
+/* Wishlist pop Ã¢â‚¬â€ cleaner version */
 .product-card .heart.wishlist-pop {
   animation: xaajWishlistPremium .55s cubic-bezier(.34,1.56,.64,1);
 }
@@ -1361,7 +1361,7 @@
 
 
 /* ============================================================
-   XAAJ â€” ADD TO CART BUTTON POLISH
+   XAAJ Ã¢â‚¬â€ ADD TO CART BUTTON POLISH
    Keep the button in its original product-card position.
    Premium interaction lives on the button itself.
    ============================================================ */
@@ -1520,7 +1520,7 @@
 }
 
 /* ============================================================
-   XAAJ â€” ADD TO CART / REFERENCE BUTTON STYLE
+   XAAJ Ã¢â‚¬â€ ADD TO CART / REFERENCE BUTTON STYLE
    Matches the supplied reference: full-width, dark, clean,
    left-aligned uppercase label. Existing premium animations stay.
    ============================================================ */
@@ -1603,7 +1603,7 @@
 
 
 /* ============================================================
-   PRODUCT DETAIL â€” REFERENCE ADD TO CART BUTTON
+   PRODUCT DETAIL Ã¢â‚¬â€ REFERENCE ADD TO CART BUTTON
    Keep the product detail design unchanged; only the CTA gets
    the clean reference look + premium interaction.
    ============================================================ */
@@ -1698,7 +1698,7 @@
 
 
 /* ============================================================
-   FINAL POLISH â€” compact premium CTA
+   FINAL POLISH Ã¢â‚¬â€ compact premium CTA
    Remove the image "View piece" overlay and keep the CTA
    refined instead of oversized. Animations remain intact.
    ============================================================ */
@@ -1755,5 +1755,308 @@
     height: 54px;
     padding: 0 18px;
     font-size: 12px;
+  }
+}
+/* ============================================================
+   XAAJ PRODUCT CARD â€” PRO LUXURY FINISH
+   Border-radius + refined spacing + premium depth
+   ============================================================ */
+
+.product-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(41,40,37,.075);
+  border-radius: 20px;
+  background: var(--paper);
+  box-shadow:
+    0 4px 18px rgba(41,40,37,.045),
+    0 1px 2px rgba(41,40,37,.035);
+  transform: translateZ(0);
+  transition:
+    transform .45s cubic-bezier(.22,1,.36,1),
+    box-shadow .45s ease,
+    border-color .35s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-7px);
+  border-color: rgba(41,40,37,.12);
+  box-shadow:
+    0 20px 48px rgba(41,40,37,.115),
+    0 4px 12px rgba(41,40,37,.045);
+}
+
+/* Clean image frame */
+.product-card .product-image {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1 / 1.02;
+  background: #eee9e0;
+  border-radius: 19px 19px 0 0;
+}
+
+.product-card .product-image-link {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+}
+
+/* Product image hover feels smooth, not aggressive */
+.product-card .product-image-primary,
+.product-card .product-image-secondary {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition:
+    opacity .55s cubic-bezier(.22,1,.36,1),
+    transform .75s cubic-bezier(.22,1,.36,1),
+    filter .55s ease;
+}
+
+.product-card .product-image-primary {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 1;
+  transform: scale(1);
+}
+
+.product-card .product-image-secondary {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0;
+  transform: scale(1.025);
+}
+
+.product-card:hover .product-image-primary {
+  opacity: 0;
+  transform: scale(1.025);
+}
+
+.product-card:hover .product-image-secondary {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Premium image sheen */
+.product-card .product-image-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255,255,255,.16) 49%,
+    transparent 68%
+  );
+  transform: translateX(-120%);
+  transition: transform .9s cubic-bezier(.22,1,.36,1);
+}
+
+.product-card:hover .product-image-link::after {
+  transform: translateX(120%);
+}
+
+/* Refined badge */
+.product-card .tag {
+  left: 14px;
+  top: 14px;
+  z-index: 10;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(45,57,50,.94);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 5px 16px rgba(41,40,37,.10);
+  font-size: 8px;
+  letter-spacing: .13em;
+}
+
+/* Floating wishlist */
+.product-card .heart {
+  right: 14px;
+  top: 14px;
+  z-index: 12;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid rgba(41,40,37,.075);
+  border-radius: 50%;
+  background: rgba(255,253,250,.93);
+  box-shadow: 0 6px 20px rgba(41,40,37,.09);
+  backdrop-filter: blur(10px);
+  transition:
+    transform .35s cubic-bezier(.34,1.56,.64,1),
+    color .25s ease,
+    box-shadow .3s ease,
+    background .25s ease;
+}
+
+.product-card .heart:hover {
+  transform: scale(1.07);
+  color: var(--terracotta);
+  background: var(--paper);
+  box-shadow: 0 9px 24px rgba(41,40,37,.13);
+}
+
+.product-card .heart.liked {
+  color: var(--terracotta);
+}
+
+/* Product content */
+.product-card .product-copy {
+  padding: 18px 17px 19px;
+  background: var(--paper);
+}
+
+.product-card .product-meta {
+  min-height: 18px;
+  margin-bottom: 8px;
+}
+
+.product-card .product-category {
+  font-size: 9px;
+  letter-spacing: .13em;
+}
+
+.product-card .product-copy h3 {
+  min-height: 47px;
+  margin: 0;
+  font: 400 19px/1.24 'Playfair Display', serif;
+  letter-spacing: -.01em;
+  transition: color .3s ease;
+}
+
+.product-card:hover .product-copy h3 {
+  color: var(--terracotta);
+}
+
+.product-card .price {
+  min-height: 25px;
+  margin: 10px 0 0;
+  gap: 8px;
+  align-items: center;
+}
+
+.product-card .price strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.product-card .price del {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.product-card .save-badge {
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-size: 8px;
+}
+
+/* Add-to-cart: premium but still compact */
+.product-card .add {
+  min-height: 50px;
+  height: 50px;
+  margin-top: 15px;
+  padding: 0 18px;
+  border: 1px solid var(--ink);
+  border-radius: 11px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(41,40,37,.08);
+}
+
+.product-card .add:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: var(--sage);
+  border-color: var(--sage);
+  box-shadow: 0 10px 24px rgba(41,40,37,.15);
+}
+
+.product-card .add:active:not(:disabled) {
+  transform: translateY(0) scale(.985);
+}
+
+.product-card .add-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+/* Keep the card clean on touch devices */
+@media (max-width: 800px) {
+  .product-card {
+    border-radius: 15px;
+    box-shadow: 0 4px 16px rgba(41,40,37,.055);
+  }
+
+  .product-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(41,40,37,.09);
+  }
+
+  .product-card .product-image {
+    aspect-ratio: 1 / 1.03;
+    border-radius: 14px 14px 0 0;
+  }
+
+  .product-card .tag {
+    left: 10px;
+    top: 10px;
+    padding: 5px 8px;
+  }
+
+  .product-card .heart {
+    right: 10px;
+    top: 10px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .product-card .product-copy {
+    padding: 14px 12px 15px;
+  }
+
+  .product-card .product-copy h3 {
+    min-height: 42px;
+    font-size: 16px;
+    line-height: 1.3;
+  }
+
+  .product-card .price {
+    margin-top: 8px;
+  }
+
+  .product-card .add {
+    min-height: 46px;
+    height: 46px;
+    margin-top: 12px;
+    padding: 0 14px;
+    border-radius: 9px;
+    font-size: 10px;
+  }
+
+  .product-card .add-icon {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-card,
+  .product-card .product-image-primary,
+  .product-card .product-image-secondary,
+  .product-card .heart,
+  .product-card .add {
+    transition: none !important;
+    animation: none !important;
   }
 }

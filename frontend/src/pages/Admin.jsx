@@ -49,6 +49,29 @@ export default function Admin() {
   const [savingHeroSlides, setSavingHeroSlides] = useState(false)
 
   // =========================
+  // Blog Management State
+  // =========================
+  const emptyBlog = {
+    title: '',
+    slug: '',
+    coverImage: '',
+    category: 'Table Styling',
+    excerpt: '',
+    content: '',
+    author: 'XAAJ Editorial',
+    publishDate: new Date().toISOString().slice(0, 10),
+    isPublished: false
+  }
+
+  const [blogs, setBlogs] = useState([])
+  const [loadingBlogs, setLoadingBlogs] = useState(false)
+  const [savingBlog, setSavingBlog] = useState(false)
+  const [blogForm, setBlogForm] = useState(emptyBlog)
+  const [editingBlogId, setEditingBlogId] = useState(null)
+  const [showBlogForm, setShowBlogForm] = useState(false)
+  const [previewBlog, setPreviewBlog] = useState(null)
+
+  // =========================
   // Product Form State
   // =========================
   const emptyProduct = {
@@ -81,6 +104,7 @@ export default function Admin() {
     loadOrders()
     loadAnnouncement()
     loadHeroSlides()
+    loadBlogs()
   }, [user])
 
   // =========================
@@ -292,6 +316,190 @@ export default function Admin() {
     } finally {
       setSavingHeroSlides(false)
     }
+  }
+
+  // =========================
+  // Blog API
+  // =========================
+  const loadBlogs = async () => {
+    try {
+      setLoadingBlogs(true)
+      const result = await apiRequest('/blogs/admin')
+      const data = result?.data?.blogs || result?.blogs || result?.data || []
+      setBlogs(Array.isArray(data) ? data : [])
+    } catch (err) {
+      setError(err.message || 'Unable to load blogs')
+    } finally {
+      setLoadingBlogs(false)
+    }
+  }
+
+  const handleBlogChange = e => {
+    const { name, value, type, checked } = e.target
+    setBlogForm(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }))
+  }
+
+  const makeBlogSlug = value =>
+    value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+
+  const handleBlogTitleChange = e => {
+    const value = e.target.value
+    setBlogForm(prev => ({
+      ...prev,
+      title: value,
+      ...(editingBlogId || prev.slug ? {} : { slug: makeBlogSlug(value) })
+    }))
+  }
+
+  const handleAddBlog = () => {
+    setEditingBlogId(null)
+    setBlogForm({
+      ...emptyBlog,
+      publishDate: new Date().toISOString().slice(0, 10)
+    })
+    setPreviewBlog(null)
+    setError('')
+    setMessage('')
+    setShowBlogForm(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleEditBlog = blog => {
+    setEditingBlogId(blog._id)
+    setBlogForm({
+      title: blog.title || '',
+      slug: blog.slug || '',
+      coverImage: blog.coverImage || blog.image || '',
+      category: blog.category || 'Table Styling',
+      excerpt: blog.excerpt || '',
+      content: blog.content || '',
+      author: blog.author || 'XAAJ Editorial',
+      publishDate: blog.publishDate
+        ? new Date(blog.publishDate).toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10),
+      isPublished: Boolean(blog.isPublished ?? blog.published)
+    })
+    setError('')
+    setMessage('')
+    setShowBlogForm(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleCancelBlog = () => {
+    setShowBlogForm(false)
+    setEditingBlogId(null)
+    setBlogForm(emptyBlog)
+  }
+
+  const handlePreviewBlog = blog => {
+    setPreviewBlog(blog)
+  }
+
+  const handleSaveBlog = async e => {
+    e.preventDefault()
+
+    const payload = {
+      title: blogForm.title.trim(),
+      slug: makeBlogSlug(blogForm.slug || blogForm.title),
+      coverImage: blogForm.coverImage.trim(),
+      category: blogForm.category.trim(),
+      excerpt: blogForm.excerpt.trim(),
+      content: blogForm.content.trim(),
+      author: blogForm.author.trim(),
+      publishDate: blogForm.publishDate,
+      isPublished: Boolean(blogForm.isPublished)
+    }
+
+    if (!payload.title) return setError('Blog title is required.')
+    if (!payload.coverImage) return setError('Blog cover image URL is required.')
+    if (!payload.excerpt) return setError('Blog short excerpt is required.')
+    if (!payload.content) return setError('Blog article content is required.')
+    if (!payload.author) return setError('Blog author is required.')
+    if (!payload.publishDate) return setError('Publish date is required.')
+
+    try {
+      setSavingBlog(true)
+      setError('')
+      setMessage('')
+
+      if (editingBlogId) {
+        await apiRequest(`/blogs/${editingBlogId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload)
+        })
+        setMessage('Blog updated successfully.')
+      } else {
+        await apiRequest('/blogs', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        })
+        setMessage('Blog created successfully.')
+      }
+
+      setShowBlogForm(false)
+      setEditingBlogId(null)
+      setBlogForm(emptyBlog)
+      await loadBlogs()
+    } catch (err) {
+      setError(err.message || 'Unable to save blog.')
+    } finally {
+      setSavingBlog(false)
+    }
+  }
+
+  const handleToggleBlog = async blog => {
+    try {
+      setError('')
+      setMessage('')
+      await apiRequest(`/blogs/${blog._id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          isPublished: !Boolean(blog.isPublished ?? blog.published)
+        })
+      })
+      setMessage(
+        `${Boolean(blog.isPublished ?? blog.published) ? 'Blog unpublished.' : 'Blog published.'}`
+      )
+      await loadBlogs()
+    } catch (err) {
+      setError(err.message || 'Unable to change blog status.')
+    }
+  }
+
+  const handleDeleteBlog = async blog => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${blog.title}"? This action cannot be undone.`
+    )
+    if (!confirmed) return
+
+    try {
+      setError('')
+      setMessage('')
+      await apiRequest(`/blogs/${blog._id}`, { method: 'DELETE' })
+      setMessage('Blog deleted successfully.')
+      if (previewBlog?._id === blog._id) setPreviewBlog(null)
+      await loadBlogs()
+    } catch (err) {
+      setError(err.message || 'Unable to delete blog.')
+    }
+  }
+
+  const formatBlogDate = value => {
+    if (!value) return '—'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return '—'
+    return date.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    })
   }
 
   // =========================
@@ -1216,6 +1424,520 @@ export default function Admin() {
                 </button>
               </div>
             </>
+          )}
+        </section>
+
+        {/* =========================
+            Blog Management
+        ========================== */}
+        <section
+          style={{
+            marginBottom: '50px',
+            padding: '28px',
+            border: '1px solid #e5e5e5',
+            borderRadius: '12px'
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '20px',
+              flexWrap: 'wrap',
+              marginBottom: '24px'
+            }}
+          >
+            <div>
+              <span className="eyebrow">Website Content</span>
+              <h2>Blog Management</h2>
+              <p>
+                Publish stories, styling ideas and care guides for the XAAJ website.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="button"
+                onClick={handleAddBlog}
+              >
+                + Add New Blog
+              </button>
+              <button
+                type="button"
+                onClick={loadBlogs}
+                disabled={loadingBlogs || savingBlog}
+              >
+                {loadingBlogs ? 'Loading...' : 'Refresh'}
+              </button>
+            </div>
+          </div>
+
+          {showBlogForm && (
+            <form
+              onSubmit={handleSaveBlog}
+              style={{
+                padding: '22px',
+                marginBottom: '28px',
+                border: '1px solid #e5e5e5',
+                borderRadius: '10px',
+                background: '#faf9f6'
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '15px',
+                  marginBottom: '22px',
+                  flexWrap: 'wrap'
+                }}
+              >
+                <div>
+                  <span className="eyebrow">Blog Editor</span>
+                  <h3 style={{ margin: '5px 0 0' }}>
+                    {editingBlogId ? 'Edit Blog' : 'Add New Blog'}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCancelBlog}
+                  disabled={savingBlog}
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                  gap: '16px'
+                }}
+              >
+                <div>
+                  <label htmlFor="blog-title">Title *</label>
+                  <input
+                    id="blog-title"
+                    name="title"
+                    value={blogForm.title}
+                    onChange={handleBlogTitleChange}
+                    placeholder="5 Ways to Style Your Dining Table"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="blog-slug">Slug *</label>
+                  <input
+                    id="blog-slug"
+                    name="slug"
+                    value={blogForm.slug}
+                    onChange={handleBlogChange}
+                    placeholder="5-ways-to-style-your-dining-table"
+                    required
+                  />
+                  <small>Used in the blog URL.</small>
+                </div>
+
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label htmlFor="blog-cover-image">Cover Image URL *</label>
+                  <input
+                    id="blog-cover-image"
+                    name="coverImage"
+                    value={blogForm.coverImage}
+                    onChange={handleBlogChange}
+                    placeholder="https://..."
+                    required
+                  />
+                  {blogForm.coverImage && (
+                    <img
+                      src={blogForm.coverImage}
+                      alt="Blog cover preview"
+                      style={{
+                        display: 'block',
+                        width: '220px',
+                        height: '130px',
+                        objectFit: 'cover',
+                        marginTop: '12px',
+                        borderRadius: '8px'
+                      }}
+                    />
+                  )}
+                  <small>
+                    Use a high-quality landscape image URL. Image upload can be connected to the existing media service next.
+                  </small>
+                </div>
+
+                <div>
+                  <label htmlFor="blog-category">Category *</label>
+                  <select
+                    id="blog-category"
+                    name="category"
+                    value={blogForm.category}
+                    onChange={handleBlogChange}
+                    required
+                  >
+                    <option>Table Styling</option>
+                    <option>Crockery Care</option>
+                    <option>Home Decor</option>
+                    <option>Dining</option>
+                    <option>Entertaining</option>
+                    <option>Lifestyle</option>
+                    <option>XAAJ Stories</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="blog-author">Author *</label>
+                  <input
+                    id="blog-author"
+                    name="author"
+                    value={blogForm.author}
+                    onChange={handleBlogChange}
+                    placeholder="XAAJ Editorial"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="blog-date">Publish Date *</label>
+                  <input
+                    id="blog-date"
+                    type="date"
+                    name="publishDate"
+                    value={blogForm.publishDate}
+                    onChange={handleBlogChange}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      cursor: 'pointer',
+                      marginTop: '28px'
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      name="isPublished"
+                      checked={blogForm.isPublished}
+                      onChange={handleBlogChange}
+                    />
+                    Published on website
+                  </label>
+                </div>
+
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label htmlFor="blog-excerpt">Short Excerpt *</label>
+                  <textarea
+                    id="blog-excerpt"
+                    name="excerpt"
+                    value={blogForm.excerpt}
+                    onChange={handleBlogChange}
+                    placeholder="A short introduction that appears on the blog card..."
+                    rows={3}
+                    maxLength={320}
+                    required
+                  />
+                  <small>Keep this concise for the homepage card.</small>
+                </div>
+
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label htmlFor="blog-content">Full Article / Content *</label>
+                  <textarea
+                    id="blog-content"
+                    name="content"
+                    value={blogForm.content}
+                    onChange={handleBlogChange}
+                    placeholder="Write the complete article here..."
+                    rows={14}
+                    required
+                  />
+                  <small>
+                    For now this accepts plain text. Rich-text formatting can be added without changing the blog data structure.
+                  </small>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  marginTop: '20px'
+                }}
+              >
+                <button
+                  type="submit"
+                  className="button"
+                  disabled={savingBlog}
+                >
+                  {savingBlog
+                    ? 'Saving...'
+                    : editingBlogId
+                      ? 'Update Blog'
+                      : 'Save Blog'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPreviewBlog(blogForm)}
+                  disabled={!blogForm.title || !blogForm.content}
+                >
+                  Preview
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCancelBlog}
+                  disabled={savingBlog}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+
+          {loadingBlogs ? (
+            <p>Loading blogs...</p>
+          ) : blogs.length === 0 ? (
+            <div
+              style={{
+                padding: '40px 20px',
+                textAlign: 'center',
+                border: '1px dashed #d9d3ca',
+                borderRadius: '10px'
+              }}
+            >
+              <h3>No blogs yet</h3>
+              <p>Create your first blog and publish it to the website.</p>
+              <button
+                type="button"
+                className="button"
+                onClick={handleAddBlog}
+              >
+                + Add New Blog
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '14px' }}>
+              {blogs.map(blog => {
+                const published = Boolean(blog.isPublished ?? blog.published)
+
+                return (
+                  <article
+                    key={blog._id}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '150px 1fr auto',
+                      gap: '18px',
+                      alignItems: 'center',
+                      padding: '16px',
+                      border: '1px solid #e5e5e5',
+                      borderRadius: '10px'
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '150px',
+                        height: '100px',
+                        overflow: 'hidden',
+                        borderRadius: '8px',
+                        background: '#f5f5f5'
+                      }}
+                    >
+                      {blog.coverImage ? (
+                        <img
+                          src={blog.coverImage}
+                          alt={blog.title || 'Blog'}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            height: '100%',
+                            display: 'grid',
+                            placeItems: 'center',
+                            fontSize: '12px'
+                          }}
+                        >
+                          No image
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '10px',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          marginBottom: '6px'
+                        }}
+                      >
+                        <span className="eyebrow">
+                          {blog.category || 'XAAJ Stories'}
+                        </span>
+                        <span
+                          style={{
+                            padding: '5px 9px',
+                            borderRadius: '999px',
+                            background: published ? '#edf7ed' : '#f5f5f5',
+                            color: published ? '#246b2a' : '#666',
+                            fontSize: '12px',
+                            fontWeight: 600
+                          }}
+                        >
+                          {published ? 'Published' : 'Draft'}
+                        </span>
+                      </div>
+
+                      <h3 style={{ margin: '0 0 6px' }}>
+                        {blog.title}
+                      </h3>
+
+                      <p style={{ margin: '0 0 7px' }}>
+                        {blog.excerpt || 'No excerpt added.'}
+                      </p>
+
+                      <small>
+                        By {blog.author || 'XAAJ Editorial'} · {formatBlogDate(blog.publishDate)}
+                      </small>
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '8px',
+                        flexWrap: 'wrap',
+                        justifyContent: 'flex-end'
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handlePreviewBlog(blog)}
+                      >
+                        Preview
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleEditBlog(blog)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleBlog(blog)}
+                      >
+                        {published ? 'Unpublish' : 'Publish'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBlog(blog)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          )}
+
+          {previewBlog && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 1200,
+                background: 'rgba(0,0,0,.5)',
+                padding: '24px',
+                overflowY: 'auto'
+              }}
+              onClick={() => setPreviewBlog(null)}
+            >
+              <article
+                style={{
+                  maxWidth: '900px',
+                  margin: '30px auto',
+                  background: '#fff',
+                  padding: '32px',
+                  borderRadius: '14px'
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: '15px',
+                    alignItems: 'flex-start',
+                    marginBottom: '22px'
+                  }}
+                >
+                  <div>
+                    <span className="eyebrow">
+                      {previewBlog.category || 'XAAJ Stories'}
+                    </span>
+                    <h2 style={{ margin: '7px 0' }}>
+                      {previewBlog.title}
+                    </h2>
+                    <small>
+                      By {previewBlog.author || 'XAAJ Editorial'} · {formatBlogDate(previewBlog.publishDate)}
+                    </small>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewBlog(null)}
+                  >
+                    Close
+                  </button>
+                </div>
+
+                {previewBlog.coverImage && (
+                  <img
+                    src={previewBlog.coverImage}
+                    alt={previewBlog.title || 'Blog cover'}
+                    style={{
+                      width: '100%',
+                      maxHeight: '480px',
+                      objectFit: 'cover',
+                      borderRadius: '10px',
+                      marginBottom: '24px'
+                    }}
+                  />
+                )}
+
+                {previewBlog.excerpt && (
+                  <p style={{ fontSize: '18px', lineHeight: 1.6 }}>
+                    {previewBlog.excerpt}
+                  </p>
+                )}
+
+                <div
+                  style={{
+                    whiteSpace: 'pre-wrap',
+                    lineHeight: 1.8
+                  }}
+                >
+                  {previewBlog.content}
+                </div>
+              </article>
+            </div>
           )}
         </section>
 

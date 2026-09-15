@@ -35,6 +35,10 @@ const router = Router()
 // Razorpay order
 //   ↓
 // MongoDB pending order
+//
+// IMPORTANT:
+// This route is ONLY for online Razorpay payment.
+// COD orders are created through /api/orders.
 // ============================================================
 
 router.post(
@@ -51,6 +55,41 @@ router.post(
       return res.status(503).json({
         success: false,
         message: 'Razorpay is not configured'
+      })
+    }
+
+
+    // --------------------------------------------------------
+    // PAYMENT METHOD
+    //
+    // This route is only for Razorpay.
+    // COD must use POST /api/orders.
+    // --------------------------------------------------------
+
+    const paymentMethod =
+      String(
+        req.body.paymentMethod ||
+        'razorpay'
+      )
+        .trim()
+        .toLowerCase()
+
+
+    if (paymentMethod === 'cod') {
+      return res.status(400).json({
+        success: false,
+        message:
+          'COD orders must be created through the order checkout flow.'
+      })
+    }
+
+
+    if (
+      paymentMethod !== 'razorpay'
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payment method'
       })
     }
 
@@ -136,7 +175,9 @@ router.post(
           // Stock validation
           // --------------------------------------------------
 
-          if (product.stock <= 0) {
+          if (
+            product.stock <= 0
+          ) {
             throw Object.assign(
               new Error(
                 `${product.name} is out of stock`
@@ -164,9 +205,11 @@ router.post(
 
 
           return {
-            product: product._id,
+            product:
+              product._id,
 
-            name: product.name,
+            name:
+              product.name,
 
             image:
               product.images?.[0] || '',
@@ -189,7 +232,7 @@ router.post(
 
 
     // ========================================================
-    // CALCULATE TOTAL
+    // CALCULATE SUBTOTAL
     // ========================================================
 
     const subtotal =
@@ -202,14 +245,29 @@ router.post(
       )
 
 
+    // ========================================================
+    // DISCOUNT
+    // ========================================================
+
     const discount = 0
 
 
-    const shippingFee =
-      subtotal >= 5000
-        ? 0
-        : 199
+    // ========================================================
+    // SHIPPING FEE
+    //
+    // ₹1000 or above = FREE
+    // Below ₹1000 = ₹99
+    // ========================================================
 
+    const shippingFee =
+      subtotal >= 1000
+        ? 0
+        : 99
+
+
+    // ========================================================
+    // FINAL TOTAL
+    // ========================================================
 
     const total =
       subtotal -
@@ -248,6 +306,7 @@ router.post(
       if (savedAddress) {
 
         shippingAddress = {
+
           name:
             savedAddress.name || '',
 
@@ -444,11 +503,12 @@ router.post(
 // 1. Verify signature
 // 2. Find MongoDB order
 // 3. Verify ownership
-// 4. Check stock
-// 5. Decrease stock
-// 6. Mark payment paid
-// 7. Confirm order
-// 8. Send confirmation email
+// 4. Make sure order is Razorpay order
+// 5. Check stock
+// 6. Decrease stock
+// 7. Mark payment paid
+// 8. Confirm order
+// 9. Send confirmation email
 // ============================================================
 
 router.post(
@@ -538,7 +598,9 @@ router.post(
               razorpayOrderId:
                 orderId
 
-            }).session(session)
+            }).session(
+              session
+            )
 
 
           if (!order) {
@@ -549,6 +611,27 @@ router.post(
               ),
               {
                 statusCode: 404
+              }
+            )
+          }
+
+
+          // --------------------------------------------------
+          // IMPORTANT:
+          // Never verify COD order through Razorpay.
+          // --------------------------------------------------
+
+          if (
+            order.paymentProvider !==
+            'razorpay'
+          ) {
+
+            throw Object.assign(
+              new Error(
+                'This order is not a Razorpay order'
+              ),
+              {
+                statusCode: 400
               }
             )
           }
@@ -652,7 +735,8 @@ router.post(
                 },
 
                 {
-                  new: true,
+                  new:
+                    true,
 
                   session
                 }
@@ -820,7 +904,8 @@ router.post(
 
     res.json({
 
-      success: true,
+      success:
+        true,
 
       message:
         'Payment verified and stock updated successfully',

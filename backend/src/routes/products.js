@@ -1,5 +1,7 @@
 import { Router } from 'express'
 import Product from '../models/Product.js'
+import Subscriber from '../models/Subscriber.js'
+import { sendEmail } from '../services/integrations.js'
 
 import {
   asyncHandler,
@@ -10,6 +12,302 @@ import {
 } from '../middleware/index.js'
 
 const router = Router()
+
+// ============================================================
+// NEWSLETTER PRODUCT ANNOUNCEMENT
+// ============================================================
+
+const sendNewProductAnnouncement = async product => {
+  try {
+    // ----------------------------------------------------------
+    // Get all active newsletter subscribers
+    // ----------------------------------------------------------
+
+    const subscribers = await Subscriber.find({
+      isSubscribed: true
+    })
+      .select('email -_id')
+      .lean()
+
+    if (!subscribers.length) {
+      console.log(
+        '[Newsletter] No active subscribers found.'
+      )
+
+      return
+    }
+
+    // ----------------------------------------------------------
+    // Product image
+    // ----------------------------------------------------------
+
+    const productImage =
+      Array.isArray(product.images) &&
+      product.images.length > 0
+        ? product.images[0]
+        : ''
+
+    // ----------------------------------------------------------
+    // Frontend URL
+    // ----------------------------------------------------------
+
+    const clientUrl = (
+      process.env.CLIENT_URL ||
+      process.env.FRONTEND_URL ||
+      ''
+    ).replace(/\/$/, '')
+
+    const productUrl = clientUrl
+      ? `${clientUrl}/product/${encodeURIComponent(
+          product.slug || product._id
+        )}`
+      : '#'
+
+    // ----------------------------------------------------------
+    // Product details
+    // ----------------------------------------------------------
+
+    const productName =
+      String(product.name || 'A new piece').trim()
+
+    const productPrice = Number(product.price)
+
+    // ----------------------------------------------------------
+    // Product image HTML
+    // ----------------------------------------------------------
+
+    const imageHtml = productImage
+      ? `
+        <img
+          src="${productImage}"
+          alt="${productName}"
+          style="
+            display:block;
+            width:100%;
+            height:360px;
+            object-fit:cover;
+          "
+        />
+      `
+      : ''
+
+    // ----------------------------------------------------------
+    // Price HTML
+    // ----------------------------------------------------------
+
+    const priceHtml =
+      Number.isFinite(productPrice)
+        ? `
+          <p
+            style="
+              margin:24px 0;
+              font-family:Georgia,'Times New Roman',serif;
+              font-size:22px;
+              color:#292824;
+            "
+          >
+            ₹${productPrice.toLocaleString('en-IN')}
+          </p>
+        `
+        : ''
+
+    // ----------------------------------------------------------
+    // Email HTML
+    // ----------------------------------------------------------
+
+    const emailHtml = `
+      <div
+        style="
+          margin:0;
+          padding:40px 20px;
+          background:#f6f2eb;
+          font-family:Arial,Helvetica,sans-serif;
+          color:#292824;
+        "
+      >
+
+        <div
+          style="
+            max-width:600px;
+            margin:0 auto;
+            background:#ffffff;
+            border:1px solid #e8e1d7;
+            border-radius:20px;
+            overflow:hidden;
+          "
+        >
+
+          ${imageHtml}
+
+          <div
+            style="
+              padding:42px 34px;
+              text-align:center;
+            "
+          >
+
+            <!-- Eyebrow -->
+
+            <div
+              style="
+                font-size:11px;
+                letter-spacing:4px;
+                text-transform:uppercase;
+                color:#b84d32;
+                font-weight:600;
+              "
+            >
+              Just arrived at XAAJ
+            </div>
+
+            <!-- Product name -->
+
+            <h1
+              style="
+                margin:16px 0 14px;
+                font-family:Georgia,'Times New Roman',serif;
+                font-size:34px;
+                line-height:1.2;
+                font-weight:400;
+                color:#292824;
+              "
+            >
+              ${productName}
+            </h1>
+
+            <!-- Description -->
+
+            <p
+              style="
+                margin:0 auto;
+                max-width:470px;
+                font-size:15px;
+                line-height:1.8;
+                color:#706d67;
+              "
+            >
+              A new piece has found its way into the
+              XAAJ collection — thoughtfully chosen for
+              everyday rituals and beautiful moments.
+            </p>
+
+            <!-- Price -->
+
+            ${priceHtml}
+
+            <!-- Product button -->
+
+            <a
+              href="${productUrl}"
+              style="
+                display:inline-block;
+                padding:14px 24px;
+                background:#292824;
+                color:#ffffff;
+                text-decoration:none;
+                border-radius:999px;
+                font-size:13px;
+                letter-spacing:.5px;
+              "
+            >
+              Discover the piece
+            </a>
+
+            <!-- Divider -->
+
+            <div
+              style="
+                margin:32px auto;
+                width:70px;
+                height:1px;
+                background:#d8d0c5;
+              "
+            ></div>
+
+            <!-- Signature -->
+
+            <p
+              style="
+                margin:0;
+                font-family:Georgia,'Times New Roman',serif;
+                font-size:18px;
+                color:#292824;
+              "
+            >
+              With warmth,<br />
+
+              <span style="font-size:16px;">
+                Team XAAJ
+              </span>
+            </p>
+
+          </div>
+
+          <!-- Footer -->
+
+          <div
+            style="
+              padding:20px 30px;
+              text-align:center;
+              background:#f8f5ef;
+              border-top:1px solid #eee8df;
+              font-size:12px;
+              line-height:1.6;
+              color:#8a857d;
+            "
+          >
+            You’re receiving this because you subscribed
+            to XAAJ updates.
+          </div>
+
+        </div>
+      </div>
+    `
+
+    // ----------------------------------------------------------
+    // Send email to all subscribers
+    // ----------------------------------------------------------
+
+    const results = await Promise.allSettled(
+      subscribers.map(({ email }) =>
+        sendEmail({
+          to: email,
+          subject: `New at XAAJ — ${productName}`,
+          html: emailHtml
+        })
+      )
+    )
+
+    // ----------------------------------------------------------
+    // Count successful / failed emails
+    // ----------------------------------------------------------
+
+    const failed = results.filter(
+      result => result.status === 'rejected'
+    ).length
+
+    const successful =
+      subscribers.length - failed
+
+    if (failed > 0) {
+      console.error(
+        `[Newsletter] ${failed} product announcement email(s) failed.`
+      )
+    }
+
+    console.log(
+      `[Newsletter] Product announcement sent to ${successful}/${subscribers.length} subscriber(s).`
+    )
+
+  } catch (error) {
+    // Newsletter failure should NOT break product creation.
+    console.error(
+      '[Newsletter] Product announcement error:',
+      error
+    )
+  }
+}
+
 
 // ============================================================
 // GET ALL PRODUCTS
@@ -161,6 +459,7 @@ router.get(
   })
 )
 
+
 // ============================================================
 // GET SINGLE PRODUCT
 // Supports slug and MongoDB ID
@@ -209,6 +508,7 @@ router.get(
   })
 )
 
+
 // ============================================================
 // CREATE PRODUCT
 // ADMIN ONLY
@@ -252,6 +552,14 @@ router.post(
     const product =
       await Product.create(productData)
 
+    // --------------------------------------------------------
+    // Newsletter announcement
+    // --------------------------------------------------------
+    // Product is already created successfully.
+    // Newsletter failure will NOT undo the product creation.
+
+    await sendNewProductAnnouncement(product)
+
     res.status(201).json({
       success: true,
       message: 'Product created successfully',
@@ -259,6 +567,7 @@ router.post(
     })
   })
 )
+
 
 // ============================================================
 // UPDATE PRODUCT
@@ -441,6 +750,7 @@ router.patch(
   })
 )
 
+
 // ============================================================
 // DELETE / ARCHIVE PRODUCT
 // ADMIN ONLY
@@ -487,6 +797,7 @@ router.delete(
     })
   })
 )
+
 
 // ============================================================
 // EXPORT

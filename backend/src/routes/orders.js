@@ -100,6 +100,14 @@ router.get(
 // Product price frontend se trust nahi kiya jayega.
 // Price MongoDB se li jayegi.
 //
+// Shipping:
+//   ₹1000 ya above  = FREE
+//   ₹1000 se below  = ₹99
+//
+// Payment:
+//   razorpay
+//   cod
+//
 // Shipping address:
 // 1. Checkout se bheja gaya address use hoga.
 // 2. Agar nahi bheja gaya to user's saved address use hoga.
@@ -238,22 +246,60 @@ router.post(
     // --------------------------------------------------------
     // Shipping fee
     //
-    // ₹5000+ = Free shipping
-    // Below ₹5000 = ₹199
+    // ₹1000+ = Free shipping
+    // Below ₹1000 = ₹99
     // --------------------------------------------------------
 
     const shippingFee =
-      subtotal >= 5000
+      subtotal >= 1000
         ? 0
-        : 199
+        : 99
 
+
+    // --------------------------------------------------------
+    // Discount
+    // --------------------------------------------------------
 
     const discount = 0
+
+
+    // --------------------------------------------------------
+    // Final total
+    // --------------------------------------------------------
 
     const total =
       subtotal -
       discount +
       shippingFee
+
+
+    // ========================================================
+    // PAYMENT METHOD
+    // ========================================================
+
+    const paymentMethod =
+      String(
+        req.body.paymentMethod ||
+        'razorpay'
+      )
+        .trim()
+        .toLowerCase()
+
+
+    // --------------------------------------------------------
+    // Only Razorpay and COD allowed
+    // --------------------------------------------------------
+
+    if (
+      !['razorpay', 'cod'].includes(
+        paymentMethod
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payment method'
+      })
+    }
 
 
     // ========================================================
@@ -325,7 +371,9 @@ router.post(
       email: String(
         shippingAddress?.email ||
         ''
-      ).trim().toLowerCase(),
+      )
+        .trim()
+        .toLowerCase(),
 
       phone: String(
         shippingAddress?.phone || ''
@@ -377,8 +425,13 @@ router.post(
     //
     // IMPORTANT:
     // Yahan stock decrement nahi kar rahe.
+    //
+    // Razorpay:
     // Payment route successful payment ke baad
     // stock safely update karega.
+    //
+    // COD:
+    // Order pending rahega aur admin isko manage karega.
     // ========================================================
 
     const order =
@@ -401,7 +454,8 @@ router.post(
 
         paymentStatus: 'pending',
 
-        paymentProvider: 'razorpay'
+        paymentProvider:
+          paymentMethod
       })
 
 
@@ -409,6 +463,181 @@ router.post(
       success: true,
       message:
         'Order created successfully',
+      data: order
+    })
+  })
+)
+
+
+// ============================================================
+// CUSTOMER CANCEL ORDER
+//
+// Customer sirf PENDING order cancel kar sakta hai.
+//
+// Pending:
+//   Cancel allowed
+//
+// Other statuses:
+//   Online cancellation not allowed
+//   Customer Care contact karna hoga
+//
+// Customer Care:
+//   customercare@xaaj.in
+//   +91 9899446117
+// ============================================================
+
+router.patch(
+  '/:id/cancel',
+  protect,
+  asyncHandler(async (req, res) => {
+    // --------------------------------------------------------
+    // Find customer's own order
+    // --------------------------------------------------------
+
+    const order =
+      await Order.findOne({
+        _id: req.params.id,
+        user: req.user.id
+      }).populate(
+        'user',
+        'name email'
+      )
+
+
+    // --------------------------------------------------------
+    // Order not found
+    // --------------------------------------------------------
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      })
+    }
+
+
+    // --------------------------------------------------------
+    // Only pending order can be cancelled
+    // --------------------------------------------------------
+
+    if (
+      order.status !== 'pending'
+    ) {
+      return res.status(400).json({
+        success: false,
+
+        code:
+          'CANCELLATION_UNAVAILABLE',
+
+        message:
+          'This order can no longer be cancelled online. Please contact Customer Care at customercare@xaaj.in or +91 9899446117.'
+      })
+    }
+
+
+    // --------------------------------------------------------
+    // Cancel order
+    // --------------------------------------------------------
+
+    order.status =
+      'cancelled'
+
+
+    await order.save()
+
+
+    // --------------------------------------------------------
+    // Customer details
+    // --------------------------------------------------------
+
+    const customerEmail =
+      order.shippingAddress?.email ||
+      order.user?.email
+
+    const customerName =
+      order.shippingAddress?.name ||
+      order.user?.name ||
+      'Customer'
+
+
+    // --------------------------------------------------------
+    // Send cancellation email
+    // --------------------------------------------------------
+
+    if (customerEmail) {
+      await sendEmail({
+        to: customerEmail,
+
+        subject:
+          'XAAJ - Order Cancelled',
+
+        html: `
+          <div style="
+            font-family:Arial,sans-serif;
+            line-height:1.6;
+            max-width:600px;
+            margin:auto;
+            padding:20px;
+          ">
+
+            <h2>
+              Your order has been cancelled
+            </h2>
+
+            <p>
+              Hi <strong>${customerName}</strong>,
+            </p>
+
+            <p>
+              Your XAAJ order has been
+              successfully cancelled.
+            </p>
+
+            <div style="
+              margin-top:20px;
+              padding:16px;
+              border:1px solid #e5e5e5;
+              border-radius:10px;
+            ">
+
+              <p style="margin:0 0 8px;">
+                <strong>Order ID:</strong>
+                ${order._id}
+              </p>
+
+              <p style="margin:0;">
+                <strong>Order Total:</strong>
+                ₹${order.total}
+              </p>
+
+            </div>
+
+            <p style="margin-top:24px;">
+              For any assistance, contact
+              <strong>customercare@xaaj.in</strong>
+              or
+              <strong>+91 9899446117</strong>.
+            </p>
+
+            <p>
+              Thank you for shopping with
+              <strong>XAAJ</strong>.
+            </p>
+
+          </div>
+        `
+      })
+    }
+
+
+    // --------------------------------------------------------
+    // Response
+    // --------------------------------------------------------
+
+    res.json({
+      success: true,
+      message:
+        'Order cancelled successfully',
       data: order
     })
   })
@@ -566,8 +795,10 @@ router.patch(
     let emailSubject =
       'XAAJ - Order Status Updated'
 
+
     let emailTitle =
       'Your order status was updated'
+
 
     let emailMessage =
       `Your order status has been changed to ${status}.`
@@ -575,6 +806,7 @@ router.patch(
 
     switch (status) {
       case 'confirmed':
+
         emailSubject =
           'XAAJ - Order Confirmed'
 
@@ -583,10 +815,12 @@ router.patch(
 
         emailMessage =
           'Your payment has been received and your order has been confirmed.'
+
         break
 
 
       case 'processing':
+
         emailSubject =
           'XAAJ - Order Processing'
 
@@ -595,10 +829,12 @@ router.patch(
 
         emailMessage =
           'We have started processing your order.'
+
         break
 
 
       case 'packed':
+
         emailSubject =
           'XAAJ - Order Packed'
 
@@ -607,10 +843,12 @@ router.patch(
 
         emailMessage =
           'Your order has been carefully packed and is ready for dispatch.'
+
         break
 
 
       case 'shipped':
+
         emailSubject =
           'XAAJ - Order Shipped'
 
@@ -619,10 +857,12 @@ router.patch(
 
         emailMessage =
           'Your order has been shipped and is now on its way to you.'
+
         break
 
 
       case 'out_for_delivery':
+
         emailSubject =
           'XAAJ - Out for Delivery'
 
@@ -631,10 +871,12 @@ router.patch(
 
         emailMessage =
           'Your order is currently out for delivery and should reach you soon.'
+
         break
 
 
       case 'delivered':
+
         emailSubject =
           'XAAJ - Order Delivered'
 
@@ -643,10 +885,12 @@ router.patch(
 
         emailMessage =
           'Your XAAJ order has been successfully delivered.'
+
         break
 
 
       case 'cancelled':
+
         emailSubject =
           'XAAJ - Order Cancelled'
 
@@ -655,6 +899,7 @@ router.patch(
 
         emailMessage =
           'Your order has been cancelled. If you believe this was a mistake, please contact our support team.'
+
         break
     }
 
@@ -677,6 +922,7 @@ router.patch(
           background:#f7f7f7;
           border-radius:10px;
         ">
+
           <p style="margin:0 0 8px;">
             <strong>Courier:</strong>
             ${
@@ -692,6 +938,7 @@ router.patch(
               'Not provided'
             }
           </p>
+
         </div>
       `
     }
@@ -708,7 +955,8 @@ router.patch(
       await sendEmail({
         to: customerEmail,
 
-        subject: emailSubject,
+        subject:
+          emailSubject,
 
         html: `
           <div style="

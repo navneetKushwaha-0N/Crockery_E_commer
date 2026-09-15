@@ -66,7 +66,6 @@ export const uploadImage = async (
 
 export const removeImage =
   async publicId => {
-
     if (
       !cloudinaryConfigured ||
       !publicId
@@ -110,7 +109,6 @@ export const verifyRazorpaySignature = (
   paymentId,
   signature
 ) => {
-
   if (
     !process.env.RAZORPAY_KEY_SECRET ||
     !orderId ||
@@ -131,7 +129,11 @@ export const verifyRazorpaySignature = (
       )
       .digest('hex')
 
-  // timingSafeEqual ke liye same-length buffers
+  // ----------------------------------------------------------
+  // timingSafeEqual requires buffers
+  // of exactly the same length
+  // ----------------------------------------------------------
+
   const expectedBuffer =
     Buffer.from(
       expectedSignature,
@@ -168,6 +170,10 @@ const smtpConfigured = Boolean(
   process.env.SMTP_PASSWORD
 )
 
+
+// ============================================================
+// NODEMAILER
+// ============================================================
 
 export const mailer =
   smtpConfigured
@@ -209,7 +215,7 @@ export const sendEmail = async ({
 }) => {
 
   // ----------------------------------------------------------
-  // Email configuration missing
+  // SMTP configuration check
   // ----------------------------------------------------------
 
   if (!mailer) {
@@ -222,10 +228,14 @@ export const sendEmail = async ({
 
 
   // ----------------------------------------------------------
-  // Basic validation
+  // Validate email data
   // ----------------------------------------------------------
 
-  if (!to || !subject || !html) {
+  if (
+    !to ||
+    !subject ||
+    !html
+  ) {
     throw new Error(
       'Email recipient, subject and HTML are required'
     )
@@ -236,15 +246,27 @@ export const sendEmail = async ({
   // Send email
   // ----------------------------------------------------------
 
-  return mailer.sendMail({
-    from:
-      process.env.SMTP_FROM ||
-      process.env.SMTP_USER,
+  const result =
+    await mailer.sendMail({
+      from:
+        process.env.SMTP_FROM ||
+        process.env.SMTP_USER,
 
-    to,
+      to,
 
-    subject,
+      subject,
 
-    html
-  })
+      html
+    })
+
+
+  // ----------------------------------------------------------
+  // Email sent successfully
+  // ----------------------------------------------------------
+
+  console.log(
+    `[XAAJ] Email sent successfully to ${to}`
+  )
+
+  return result
 }

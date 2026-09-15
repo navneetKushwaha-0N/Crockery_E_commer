@@ -36,6 +36,8 @@ import productRoutes from './routes/products.js'
 import commerceRoutes from './routes/commerce.js'
 import orderRoutes from './routes/orders.js'
 import cmsRoutes from './routes/cms.js'
+import blogRoutes from './routes/blogs.js'
+import newsletterRoutes from './routes/newsletter.js'
 import adminRoutes from './routes/admin.js'
 import paymentRoutes from './routes/payments.js'
 import uploadRoutes from './routes/uploads.js'
@@ -190,41 +192,93 @@ app.get(
 // 16. API Routes
 // ============================================================
 
+// -------------------------
+// Authentication
+// -------------------------
 app.use(
   '/api/auth',
   authRoutes
 )
 
+
+// -------------------------
+// Products
+// -------------------------
 app.use(
   '/api/products',
   productRoutes
 )
 
+
+// -------------------------
+// Commerce
+// -------------------------
 app.use(
   '/api/commerce',
   commerceRoutes
 )
 
+
+// -------------------------
+// Orders
+// -------------------------
 app.use(
   '/api/orders',
   orderRoutes
 )
 
+
+// -------------------------
+// CMS
+// -------------------------
 app.use(
   '/api/cms',
   cmsRoutes
 )
 
+
+// -------------------------
+// Blogs
+// -------------------------
+app.use(
+  '/api/blogs',
+  blogRoutes
+)
+
+
+// -------------------------
+// Newsletter
+// -------------------------
+// Customer newsletter subscription
+// POST /api/newsletter/subscribe
+// -------------------------
+app.use(
+  '/api/newsletter',
+  newsletterRoutes
+)
+
+
+// -------------------------
+// Admin
+// -------------------------
 app.use(
   '/api/admin',
   adminRoutes
 )
 
+
+// -------------------------
+// Payments
+// -------------------------
 app.use(
   '/api/payment',
   paymentRoutes
 )
 
+
+// -------------------------
+// Uploads
+// -------------------------
 app.use(
   '/api/uploads',
   uploadRoutes
@@ -249,24 +303,29 @@ app.use(errorHandler)
 // 19. Connect Database & Start Server
 // ============================================================
 
-// Database ko turant connect karo. Vercel jaise serverless
-// environment mein app.listen() ka callback kabhi trigger
-// nahi hota, isliye connection yahan top-level pe karna
-// zaroori hai — warna production mein DB kabhi connect
-// hi nahi hoga.
+// Database ko turant connect karo.
+//
+// Vercel/serverless environment mein app.listen()
+// use nahi hota. Isliye database connection ko
+// server start hone se pehle initialize karna zaroori hai.
+
 await connectDatabase()
 
 let server
 
 if (env.nodeEnv !== 'production') {
+
   server = app.listen(
     env.port,
     () => {
+
       console.log(
         `[XAAJ] API listening on port ${env.port}`
       )
+
     }
   )
+
 }
 
 
@@ -274,11 +333,6 @@ if (env.nodeEnv !== 'production') {
 // 20. Graceful Shutdown
 // ============================================================
 
-// Server ko safely shutdown karne ke liye.
-// SIGTERM/SIGINT par:
-// 1. New requests stop
-// 2. Database disconnect
-// 3. Process exit
 async function shutdown(signal) {
 
   console.log(
@@ -286,16 +340,25 @@ async function shutdown(signal) {
   )
 
   if (server) {
+
     server.close(
       async () => {
+
         await disconnectDatabase()
+
         process.exit(0)
+
       }
     )
+
   } else {
+
     await disconnectDatabase()
+
     process.exit(0)
+
   }
+
 }
 
 
