@@ -211,7 +211,8 @@ export const mailer =
 export const sendEmail = async ({
   to,
   subject,
-  html
+  html,
+  replyTo
 }) => {
 
   // ----------------------------------------------------------
@@ -243,21 +244,43 @@ export const sendEmail = async ({
 
 
   // ----------------------------------------------------------
+  // Email options
+  // ----------------------------------------------------------
+
+  const emailOptions = {
+    from:
+      process.env.SMTP_FROM ||
+      process.env.SMTP_USER,
+
+    to,
+
+    subject,
+
+    html
+  }
+
+
+  // ----------------------------------------------------------
+  // Reply-To
+  // ----------------------------------------------------------
+  // Used by Contact Form so that when the
+  // XAAJ team clicks Reply, it goes directly
+  // to the customer.
+
+  if (replyTo) {
+    emailOptions.replyTo =
+      String(replyTo).trim().toLowerCase()
+  }
+
+
+  // ----------------------------------------------------------
   // Send email
   // ----------------------------------------------------------
 
   const result =
-    await mailer.sendMail({
-      from:
-        process.env.SMTP_FROM ||
-        process.env.SMTP_USER,
-
-      to,
-
-      subject,
-
-      html
-    })
+    await mailer.sendMail(
+      emailOptions
+    )
 
 
   // ----------------------------------------------------------

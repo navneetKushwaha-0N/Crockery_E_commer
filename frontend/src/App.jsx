@@ -41,7 +41,7 @@ import { FaInstagram, FaWhatsapp } from 'react-icons/fa'
 import './styles.css'
 
 // API
-import { apiRequest, productService, orderService, cmsService, newsletterService } from './services/api'
+import { apiRequest, productService, orderService, cmsService, newsletterService, contactService } from './services/api'
 
 // Authentication / Context
 import {
@@ -1793,6 +1793,480 @@ function Newsletter() {
 
 
 // ============================================================
+// CONTACT FORM
+// ============================================================
+
+function ContactForm() {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    message: ''
+  })
+
+  const [loading, setLoading] = useState(false)
+  const [popup, setPopup] = useState(null)
+
+  const handleChange = event => {
+    const { name, value } = event.target
+    setForm(current => ({
+      ...current,
+      [name]: value
+    }))
+  }
+
+  const handleSubmit = async event => {
+    event.preventDefault()
+
+    const name = form.name.trim()
+    const email = form.email.trim().toLowerCase()
+    const phone = form.phone.trim()
+    const message = form.message.trim()
+
+    if (!name || !email || !message) {
+      setPopup({
+        type: 'error',
+        title: 'A few details are missing',
+        message: 'Please enter your name, email address and message.'
+      })
+      return
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setPopup({
+        type: 'error',
+        title: 'Invalid email address',
+        message: 'Please enter a valid email address and try again.'
+      })
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const result = await contactService.send({
+        name,
+        email,
+        phone,
+        message
+      })
+
+      setForm({
+        name: '',
+        email: '',
+        phone: '',
+        message: ''
+      })
+
+      setPopup({
+        type: 'success',
+        title: 'Message received',
+        message:
+          result?.message ||
+          'Thank you for reaching out to XAAJ. Our team will get back to you shortly.'
+      })
+    } catch (error) {
+      setPopup({
+        type: 'error',
+        title: 'Something went wrong',
+        message:
+          error?.data?.message ||
+          error?.message ||
+          'We could not send your message right now. Please try again or contact us directly.'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <div
+        className="xaaj-contact-layout"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1.05fr) minmax(320px, .75fr)',
+          gap: '34px',
+          marginTop: '54px',
+          alignItems: 'stretch'
+        }}
+      >
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            padding: '34px',
+            border: '1px solid #e7dfd4',
+            borderRadius: '24px',
+            background: '#fffdf9',
+            boxShadow: '0 18px 55px rgba(41,40,37,.06)'
+          }}
+        >
+          <div style={{ marginBottom: '26px' }}>
+            <span className="eyebrow">Send a message</span>
+            <h2
+              style={{
+                margin: '9px 0 0',
+                fontFamily: 'Georgia, "Times New Roman", serif',
+                fontSize: '30px',
+                lineHeight: 1.2,
+                fontWeight: 400
+              }}
+            >
+              Tell us how we can help.
+            </h2>
+          </div>
+
+          <div
+            className="xaaj-contact-fields"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+              gap: '18px'
+            }}
+          >
+            <label style={{ display: 'grid', gap: '8px' }}>
+              <span className="eyebrow">Name *</span>
+              <input
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                required
+                maxLength={80}
+                autoComplete="name"
+                placeholder="Your name"
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: '14px 15px',
+                  border: '1px solid #ddd4c8',
+                  borderRadius: '12px',
+                  background: '#fff',
+                  color: '#292824',
+                  outline: 'none'
+                }}
+              />
+            </label>
+
+            <label style={{ display: 'grid', gap: '8px' }}>
+              <span className="eyebrow">Email *</span>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                maxLength={254}
+                autoComplete="email"
+                placeholder="you@example.com"
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: '14px 15px',
+                  border: '1px solid #ddd4c8',
+                  borderRadius: '12px',
+                  background: '#fff',
+                  color: '#292824',
+                  outline: 'none'
+                }}
+              />
+            </label>
+
+            <label
+              style={{
+                display: 'grid',
+                gap: '8px',
+                gridColumn: '1 / -1'
+              }}
+            >
+              <span className="eyebrow">Phone</span>
+              <input
+                type="tel"
+                name="phone"
+                value={form.phone}
+                onChange={handleChange}
+                maxLength={15}
+                autoComplete="tel"
+                placeholder="Your phone number"
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: '14px 15px',
+                  border: '1px solid #ddd4c8',
+                  borderRadius: '12px',
+                  background: '#fff',
+                  color: '#292824',
+                  outline: 'none'
+                }}
+              />
+            </label>
+
+            <label
+              style={{
+                display: 'grid',
+                gap: '8px',
+                gridColumn: '1 / -1'
+              }}
+            >
+              <span className="eyebrow">Message *</span>
+              <textarea
+                name="message"
+                value={form.message}
+                onChange={handleChange}
+                required
+                maxLength={2000}
+                rows={7}
+                placeholder="Tell us what you need help with..."
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: '14px 15px',
+                  border: '1px solid #ddd4c8',
+                  borderRadius: '12px',
+                  background: '#fff',
+                  color: '#292824',
+                  outline: 'none',
+                  resize: 'vertical',
+                  minHeight: '150px',
+                  fontFamily: 'inherit'
+                }}
+              />
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              marginTop: '24px',
+              width: '100%',
+              minHeight: '50px',
+              border: '1px solid #292824',
+              borderRadius: '999px',
+              background: '#292824',
+              color: '#fff',
+              fontSize: '13px',
+              letterSpacing: '.4px',
+              cursor: loading ? 'wait' : 'pointer',
+              opacity: loading ? .7 : 1
+            }}
+          >
+            {loading ? 'Sending message...' : 'Send message'}
+          </button>
+        </form>
+
+        <div
+          style={{
+            padding: '34px',
+            border: '1px solid #e7dfd4',
+            borderRadius: '24px',
+            background: '#f8f4ed',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between'
+          }}
+        >
+          <div>
+            <span className="eyebrow">XAAJ Care</span>
+            <h2
+              style={{
+                margin: '12px 0 14px',
+                fontFamily: 'Georgia, "Times New Roman", serif',
+                fontSize: '30px',
+                lineHeight: 1.2,
+                fontWeight: 400
+              }}
+            >
+              We're here for you.
+            </h2>
+            <p
+              style={{
+                margin: 0,
+                fontSize: '15px',
+                lineHeight: 1.8,
+                color: '#706d67'
+              }}
+            >
+              Need help with an order, delivery, product or anything else?
+              Reach out directly and our team will be happy to help.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gap: '24px', marginTop: '42px' }}>
+            <div>
+              <span className="eyebrow">Phone / WhatsApp</span>
+              <p style={{ margin: '7px 0 0' }}>
+                <a href="tel:+919899446117">+91-9899446117</a>
+              </p>
+            </div>
+
+            <div>
+              <span className="eyebrow">Email</span>
+              <p style={{ margin: '7px 0 0' }}>
+                <a href="mailto:customercare@xaaj.in">
+                  customercare@xaaj.in
+                </a>
+              </p>
+            </div>
+
+            <div>
+              <span className="eyebrow">Business address</span>
+              <p style={{ margin: '7px 0 0', lineHeight: 1.7 }}>
+                G6/4C DLF Garden City, Sector 92, Gurugram 122505
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {popup && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="xaaj-contact-popup-title"
+          onClick={event => {
+            if (event.target === event.currentTarget) {
+              setPopup(null)
+            }
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            background: 'rgba(35,32,28,.48)',
+            backdropFilter: 'blur(8px)'
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              width: 'min(100%, 480px)',
+              padding: '42px 34px 34px',
+              textAlign: 'center',
+              background: '#fffdf9',
+              border: '1px solid #e8e0d5',
+              borderRadius: '24px',
+              boxShadow: '0 30px 80px rgba(41,40,37,.22)'
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setPopup(null)}
+              aria-label="Close contact popup"
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                width: '36px',
+                height: '36px',
+                display: 'grid',
+                placeItems: 'center',
+                padding: 0,
+                border: '1px solid #e5ddd2',
+                borderRadius: '50%',
+                background: '#fff',
+                color: '#292824',
+                cursor: 'pointer'
+              }}
+            >
+              <X size={17} strokeWidth={1.5} />
+            </button>
+
+            <div
+              style={{
+                width: '54px',
+                height: '54px',
+                margin: '0 auto 20px',
+                display: 'grid',
+                placeItems: 'center',
+                borderRadius: '50%',
+                background: popup.type === 'error' ? '#f6ebe6' : '#f5eee4',
+                color: '#b84d32',
+                fontFamily: 'Georgia, serif',
+                fontSize: '23px'
+              }}
+            >
+              {popup.type === 'error' ? '!' : '♡'}
+            </div>
+
+            <span
+              style={{
+                display: 'block',
+                marginBottom: '10px',
+                fontSize: '11px',
+                letterSpacing: '3px',
+                textTransform: 'uppercase',
+                color: '#b84d32',
+                fontWeight: 600
+              }}
+            >
+              XAAJ
+            </span>
+
+            <h3
+              id="xaaj-contact-popup-title"
+              style={{
+                margin: '0 0 14px',
+                fontFamily: 'Georgia, "Times New Roman", serif',
+                fontSize: '30px',
+                lineHeight: 1.2,
+                fontWeight: 400,
+                color: '#292824'
+              }}
+            >
+              {popup.title}
+            </h3>
+
+            <p
+              style={{
+                maxWidth: '390px',
+                margin: '0 auto',
+                fontSize: '15px',
+                lineHeight: 1.75,
+                color: '#706d67'
+              }}
+            >
+              {popup.message}
+            </p>
+
+            <div
+              style={{
+                width: '54px',
+                height: '1px',
+                margin: '25px auto 24px',
+                background: '#d9d0c5'
+              }}
+            />
+
+            <button
+              type="button"
+              onClick={() => setPopup(null)}
+              style={{
+                minWidth: '150px',
+                padding: '13px 24px',
+                border: '1px solid #292824',
+                borderRadius: '999px',
+                background: '#292824',
+                color: '#fff',
+                fontSize: '13px',
+                letterSpacing: '.5px',
+                cursor: 'pointer'
+              }}
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+
+// ============================================================
 // FOOTER
 // ============================================================
 
@@ -2136,7 +2610,7 @@ function Shop() {
 
             {[
               'All',
-              'Tableware',
+              'Serveware',
               'Plates',
               'Bowls',
               'Cups & Mugs',
@@ -2205,7 +2679,10 @@ function Shop() {
 
 function Product() {
 
-  const { add } = useStore()
+  const {
+    add,
+    products: liveProducts
+  } = useStore()
   const { pathname } = useLocation()
 
   // This app uses manual pathname routing (not <Route> components),
@@ -2276,6 +2753,20 @@ function Product() {
       cancelled = true
     }
   }, [slug])
+
+  const relatedProducts = liveProducts
+    .filter(item => {
+      const sameCategory =
+        String(item.category || '').toLowerCase() ===
+        String(product?.category || '').toLowerCase()
+
+      const differentProduct =
+        String(item.id || item._id) !==
+        String(product?.id || product?._id)
+
+      return sameCategory && differentProduct
+    })
+    .slice(0, 4)
 
   if (loadingProduct) {
     return (
@@ -2584,6 +3075,30 @@ function Product() {
             </div>
 
           </div>
+
+          {relatedProducts.length > 0 && (
+            <section
+              className="wrap"
+              style={{
+                marginTop: '90px',
+                marginBottom: '30px'
+              }}
+            >
+              <SectionHeading
+                eyebrow="You may also like"
+                title="Related products"
+              />
+
+              <div className="product-grid">
+                {relatedProducts.map(relatedProduct => (
+                  <ProductCard
+                    key={relatedProduct.id || relatedProduct._id}
+                    product={relatedProduct}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
         </div>
       </main>
@@ -5108,327 +5623,203 @@ function App() {
             background: #f7f4ee;
             color: #292825;
           }
-
           .xaaj-about-hero {
             position: relative;
-            min-height: 680px;
-            display: grid;
-            align-items: end;
+            min-height: min(760px, calc(100vh - 120px));
+            display: flex;
+            align-items: flex-end;
             overflow: hidden;
             background: #292825;
           }
-
           .xaaj-about-hero-image {
             position: absolute;
             inset: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;
-            opacity: .76;
-            transform: scale(1.02);
+            transform: scale(1.035);
+            filter: saturate(.88);
           }
-
           .xaaj-about-hero-overlay {
             position: absolute;
             inset: 0;
-            background:
-              linear-gradient(180deg, rgba(20,19,17,.12) 0%, rgba(20,19,17,.2) 35%, rgba(20,19,17,.82) 100%);
+            background: linear-gradient(180deg, rgba(25,23,20,.04) 5%, rgba(25,23,20,.12) 38%, rgba(25,23,20,.88) 100%);
           }
-
           .xaaj-about-hero-content {
             position: relative;
             z-index: 1;
-            width: min(1180px, calc(100% - 40px));
+            width: min(1240px, calc(100% - 48px));
             margin: 0 auto;
-            padding: 90px 0 82px;
+            padding: 110px 0 78px;
             color: #fff;
           }
-
-          .xaaj-about-kicker {
-            display: inline-block;
-            margin-bottom: 22px;
-            font-size: 11px;
+          .xaaj-about-kicker, .xaaj-about-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 10px;
             font-weight: 700;
             letter-spacing: .28em;
             text-transform: uppercase;
-            color: #f1c2b4;
           }
-
+          .xaaj-about-kicker { color: #f1c2b4; }
+          .xaaj-about-kicker::before, .xaaj-about-label::before {
+            content: '';
+            width: 28px;
+            height: 1px;
+            background: currentColor;
+            opacity: .75;
+          }
           .xaaj-about-hero h1 {
-            max-width: 850px;
-            margin: 0;
+            max-width: 980px;
+            margin: 22px 0 0;
             font-family: Georgia, 'Times New Roman', serif;
-            font-size: clamp(58px, 8vw, 108px);
+            font-size: clamp(52px, 7.2vw, 106px);
             font-weight: 400;
             line-height: .94;
-            letter-spacing: -.045em;
+            letter-spacing: -.055em;
           }
-
           .xaaj-about-hero p {
-            max-width: 620px;
-            margin: 30px 0 0;
-            font-size: 18px;
-            line-height: 1.75;
-            color: rgba(255,255,255,.82);
+            max-width: 610px;
+            margin: 28px 0 0;
+            font-size: 16px;
+            line-height: 1.8;
+            color: rgba(255,255,255,.78);
           }
-
-          .xaaj-about-intro {
-            width: min(1180px, calc(100% - 40px));
+          .xaaj-about-hero-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-top: 36px;
+            font-size: 11px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,.58);
+          }
+          .xaaj-about-hero-meta span {
+            width: 5px; height: 5px; border-radius: 50%;
+            background: #d58b76;
+          }
+          .xaaj-about-intro, .xaaj-about-story, .xaaj-about-contact {
+            width: min(1240px, calc(100% - 48px));
             margin: 0 auto;
-            padding: 100px 0;
+          }
+          .xaaj-about-intro {
+            padding: 120px 0 110px;
             display: grid;
-            grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr);
-            gap: 90px;
+            grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr);
+            gap: 100px;
             align-items: start;
           }
-
-          .xaaj-about-label {
-            display: block;
-            margin-bottom: 18px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: .24em;
-            text-transform: uppercase;
-            color: #b54d36;
-          }
-
-          .xaaj-about-intro h2,
-          .xaaj-about-story h2 {
-            margin: 0;
+          .xaaj-about-label { color: #b54d36; }
+          .xaaj-about-intro h2, .xaaj-about-story h2 {
+            max-width: 820px;
+            margin: 20px 0 0;
             font-family: Georgia, 'Times New Roman', serif;
-            font-size: clamp(38px, 5vw, 66px);
+            font-size: clamp(40px, 5.3vw, 70px);
             font-weight: 400;
-            line-height: 1.04;
-            letter-spacing: -.035em;
+            line-height: 1.01;
+            letter-spacing: -.045em;
           }
-
-          .xaaj-about-intro-copy p {
-            margin: 28px 0 0;
-            max-width: 650px;
-            font-size: 18px;
-            line-height: 1.85;
-            color: #69645d;
+          .xaaj-about-intro-copy p, .xaaj-about-story-copy p {
+            max-width: 660px;
+            margin: 30px 0 0;
+            font-size: 16px;
+            line-height: 1.9;
+            color: #6e6961;
           }
-
           .xaaj-about-aside {
-            padding-top: 12px;
+            padding-top: 5px;
           }
-
           .xaaj-about-aside-item {
-            padding: 24px 0;
+            position: relative;
+            padding: 24px 0 24px 42px;
             border-top: 1px solid rgba(41,40,37,.14);
           }
-
-          .xaaj-about-aside-item:last-child {
-            border-bottom: 1px solid rgba(41,40,37,.14);
+          .xaaj-about-aside-item:last-child { border-bottom: 1px solid rgba(41,40,37,.14); }
+          .xaaj-about-aside-item::before {
+            content: '0' counter(xaaj-aside);
+            counter-increment: xaaj-aside;
+            position: absolute; left: 0; top: 27px;
+            font-size: 10px; letter-spacing: .15em; color: #b54d36;
           }
-
+          .xaaj-about-aside { counter-reset: xaaj-aside; }
           .xaaj-about-aside-item strong {
-            display: block;
-            margin-bottom: 7px;
+            display: block; margin-bottom: 7px;
             font-family: Georgia, 'Times New Roman', serif;
-            font-size: 23px;
-            font-weight: 400;
+            font-size: 22px; font-weight: 400;
           }
-
-          .xaaj-about-aside-item span {
-            font-size: 13px;
-            line-height: 1.6;
-            color: #777169;
-          }
-
+          .xaaj-about-aside-item span { font-size: 13px; line-height: 1.65; color: #777169; }
           .xaaj-about-story {
-            width: min(1180px, calc(100% - 40px));
-            margin: 0 auto;
-            padding: 0 0 110px;
+            padding: 0 0 125px;
             display: grid;
             grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
-            gap: 80px;
+            gap: 100px;
             align-items: center;
           }
-
           .xaaj-about-story-image {
-            width: 100%;
-            aspect-ratio: 4 / 5;
-            object-fit: cover;
-            border-radius: 24px;
-            display: block;
+            width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block;
+            border-radius: 2px; filter: saturate(.9);
           }
-
-          .xaaj-about-story-copy p {
-            margin: 28px 0 0;
-            font-size: 17px;
-            line-height: 1.85;
-            color: #69645d;
-          }
-
+          .xaaj-about-story-copy { padding-right: 30px; }
+          .xaaj-about-story-copy h2 { max-width: 700px; }
           .xaaj-about-values {
-            background: #292825;
-            color: #fff;
-            padding: 100px 0;
+            background: #292825; color: #fff; padding: 120px 0;
           }
-
-          .xaaj-about-values-inner {
-            width: min(1180px, calc(100% - 40px));
-            margin: 0 auto;
-          }
-
+          .xaaj-about-values-inner { width: min(1240px, calc(100% - 48px)); margin: 0 auto; }
           .xaaj-about-values h2 {
-            margin: 0;
-            max-width: 700px;
+            max-width: 820px; margin: 20px 0 0;
             font-family: Georgia, 'Times New Roman', serif;
-            font-size: clamp(42px, 5vw, 68px);
-            font-weight: 400;
-            line-height: 1;
-            letter-spacing: -.035em;
+            font-size: clamp(42px, 5.5vw, 76px); font-weight: 400; line-height: .98; letter-spacing: -.045em;
           }
-
           .xaaj-about-value-grid {
-            margin-top: 70px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0;
+            margin-top: 78px; display: grid; grid-template-columns: repeat(3, 1fr);
             border-top: 1px solid rgba(255,255,255,.16);
           }
-
-          .xaaj-about-value {
-            padding: 34px 34px 10px 0;
-            border-right: 1px solid rgba(255,255,255,.16);
-          }
-
-          .xaaj-about-value:not(:first-child) {
-            padding-left: 34px;
-          }
-
-          .xaaj-about-value:last-child {
-            border-right: 0;
-          }
-
-          .xaaj-about-value-number {
-            display: block;
-            margin-bottom: 45px;
-            font-size: 11px;
-            letter-spacing: .2em;
-            color: #d58b76;
-          }
-
-          .xaaj-about-value h3 {
-            margin: 0 0 12px;
-            font-family: Georgia, 'Times New Roman', serif;
-            font-size: 27px;
-            font-weight: 400;
-          }
-
-          .xaaj-about-value p {
-            margin: 0;
-            font-size: 14px;
-            line-height: 1.75;
-            color: rgba(255,255,255,.62);
-          }
-
-          .xaaj-about-contact {
-            width: min(1180px, calc(100% - 40px));
-            margin: 0 auto;
-            padding: 110px 0 120px;
-            text-align: center;
-          }
-
+          .xaaj-about-value { padding: 34px 38px 15px 0; border-right: 1px solid rgba(255,255,255,.16); }
+          .xaaj-about-value:not(:first-child) { padding-left: 38px; }
+          .xaaj-about-value:last-child { border-right: 0; }
+          .xaaj-about-value-number { display: block; margin-bottom: 52px; font-size: 10px; letter-spacing: .2em; color: #d58b76; }
+          .xaaj-about-value h3 { margin: 0 0 12px; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 400; }
+          .xaaj-about-value p { margin: 0; font-size: 14px; line-height: 1.8; color: rgba(255,255,255,.62); }
+          .xaaj-about-contact { padding: 125px 0 135px; text-align: center; }
           .xaaj-about-contact h2 {
-            margin: 0 auto;
-            max-width: 800px;
-            font-family: Georgia, 'Times New Roman', serif;
-            font-size: clamp(45px, 6vw, 78px);
-            font-weight: 400;
-            line-height: .98;
-            letter-spacing: -.04em;
+            max-width: 850px; margin: 22px auto 0;
+            font-family: Georgia, 'Times New Roman', serif; font-size: clamp(46px, 6vw, 82px);
+            font-weight: 400; line-height: .98; letter-spacing: -.05em;
           }
-
-          .xaaj-about-contact p {
-            max-width: 560px;
-            margin: 24px auto 0;
-            color: #777169;
-            line-height: 1.8;
-          }
-
-          .xaaj-about-contact-links {
-            margin-top: 34px;
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 12px;
-          }
-
+          .xaaj-about-contact p { max-width: 570px; margin: 26px auto 0; color: #777169; line-height: 1.8; }
+          .xaaj-about-contact-links { margin-top: 38px; display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
           .xaaj-about-contact-links a {
-            display: inline-flex;
-            align-items: center;
-            min-height: 46px;
-            padding: 0 20px;
-            border: 1px solid rgba(41,40,37,.18);
-            border-radius: 999px;
-            color: #292825;
-            text-decoration: none;
-            transition: .25s ease;
+            display: inline-flex; align-items: center; justify-content: center; min-height: 48px;
+            padding: 0 22px; border: 1px solid rgba(41,40,37,.18); border-radius: 999px;
+            color: #292825; text-decoration: none; font-size: 12px; letter-spacing: .02em; transition: .25s ease;
           }
-
-          .xaaj-about-contact-links a:hover {
-            background: #292825;
-            color: #fff;
-            border-color: #292825;
-            transform: translateY(-2px);
-          }
-
+          .xaaj-about-contact-links a:hover { background: #292825; color: #fff; border-color: #292825; transform: translateY(-2px); }
           @media (max-width: 800px) {
-            .xaaj-about-hero {
-              min-height: 600px;
-            }
-
-            .xaaj-about-hero-content {
-              width: min(100% - 30px, 1180px);
-              padding-bottom: 58px;
-            }
-
-            .xaaj-about-intro,
-            .xaaj-about-story {
-              width: min(100% - 30px, 1180px);
-              grid-template-columns: 1fr;
-              gap: 48px;
-              padding-top: 70px;
-              padding-bottom: 75px;
-            }
-
-            .xaaj-about-value-grid {
-              grid-template-columns: 1fr;
-            }
-
-            .xaaj-about-value,
-            .xaaj-about-value:not(:first-child) {
-              padding: 28px 0;
-              border-right: 0;
-              border-bottom: 1px solid rgba(255,255,255,.16);
-            }
-
-            .xaaj-about-value:last-child {
-              border-bottom: 0;
-            }
+            .xaaj-about-hero { min-height: 620px; }
+            .xaaj-about-hero-content, .xaaj-about-intro, .xaaj-about-story, .xaaj-about-contact, .xaaj-about-values-inner { width: min(100% - 30px, 1240px); }
+            .xaaj-about-hero-content { padding: 80px 0 58px; }
+            .xaaj-about-intro, .xaaj-about-story { grid-template-columns: 1fr; gap: 55px; padding-top: 78px; padding-bottom: 82px; }
+            .xaaj-about-story { padding-top: 0; }
+            .xaaj-about-story-copy { padding-right: 0; }
+            .xaaj-about-value-grid { grid-template-columns: 1fr; margin-top: 55px; }
+            .xaaj-about-value, .xaaj-about-value:not(:first-child) { padding: 28px 0; border-right: 0; border-bottom: 1px solid rgba(255,255,255,.16); }
+            .xaaj-about-value:last-child { border-bottom: 0; }
+            .xaaj-about-values { padding: 82px 0; }
+            .xaaj-about-contact { padding: 82px 0 90px; }
           }
         `}</style>
 
         <main className="xaaj-about-page">
           <section className="xaaj-about-hero">
-            <img
-              className="xaaj-about-hero-image"
-              src={tableImage}
-              alt="XAAJ handcrafted tableware arranged for a shared table"
-            />
+            <img className="xaaj-about-hero-image" src={tableImage} alt="XAAJ handcrafted tableware arranged for a shared table" />
             <div className="xaaj-about-hero-overlay" />
-
             <div className="xaaj-about-hero-content">
               <span className="xaaj-about-kicker">About XAAJ</span>
               <h1>Objects made to become part of your life.</h1>
-              <p>
-                Thoughtful tableware, shaped by Indian craftsmanship and
-                designed for the everyday rituals that make a house feel like home.
-              </p>
+              <p>Thoughtful tableware, shaped by Indian craftsmanship and designed for the everyday rituals that make a house feel like home.</p>
+              <div className="xaaj-about-hero-meta"><span /> Made in India <span /> Designed for everyday rituals</div>
             </div>
           </section>
 
@@ -5436,50 +5827,22 @@ function App() {
             <div className="xaaj-about-intro-copy">
               <span className="xaaj-about-label">Our philosophy</span>
               <h2>Beautiful is better when it is meant to be used.</h2>
-              <p>
-                XAAJ began with a simple belief: the things we reach for every
-                day deserve the same care as the things we keep for special moments.
-                We create pieces that feel considered without feeling precious.
-              </p>
+              <p>XAAJ began with a simple belief: the things we reach for every day deserve the same care as the things we keep for special moments. We create pieces that feel considered without feeling precious.</p>
             </div>
-
             <div className="xaaj-about-aside">
-              <div className="xaaj-about-aside-item">
-                <strong>Made in India</strong>
-                <span>Working with makers and materials rooted in local craft.</span>
-              </div>
-              <div className="xaaj-about-aside-item">
-                <strong>Small-batch thinking</strong>
-                <span>Collections designed with intention, not endless excess.</span>
-              </div>
-              <div className="xaaj-about-aside-item">
-                <strong>Everyday objects</strong>
-                <span>Pieces created to be used, washed, shared and loved.</span>
-              </div>
+              <div className="xaaj-about-aside-item"><strong>Made in India</strong><span>Working with makers and materials rooted in local craft.</span></div>
+              <div className="xaaj-about-aside-item"><strong>Small-batch thinking</strong><span>Collections designed with intention, not endless excess.</span></div>
+              <div className="xaaj-about-aside-item"><strong>Everyday objects</strong><span>Pieces created to be used, washed, shared and loved.</span></div>
             </div>
           </section>
 
           <section className="xaaj-about-story">
-            <img
-              className="xaaj-about-story-image"
-              src={tableImage}
-              alt="Warm XAAJ table setting with handcrafted tableware"
-            />
-
+            <img className="xaaj-about-story-image" src={tableImage} alt="Warm XAAJ table setting with handcrafted tableware" />
             <div className="xaaj-about-story-copy">
               <span className="xaaj-about-label">The XAAJ way</span>
               <h2>For morning tea, long lunches and everything in between.</h2>
-              <p>
-                We work with makers across India to create objects that hold
-                space for your rituals — morning tea, long lunches and the last
-                glass of wine. Each collection is designed to bring warmth,
-                texture and a quiet sense of occasion to the everyday table.
-              </p>
-              <p>
-                Natural variation is part of the character. Small differences in
-                colour, texture and form are reminders that these pieces are made
-                by people, not machines alone.
-              </p>
+              <p>We work with makers across India to create objects that hold space for your rituals — morning tea, long lunches and the last glass of wine. Each collection is designed to bring warmth, texture and a quiet sense of occasion to the everyday table.</p>
+              <p>Natural variation is part of the character. Small differences in colour, texture and form are reminders that these pieces are made by people, not machines alone.</p>
             </div>
           </section>
 
@@ -5487,23 +5850,10 @@ function App() {
             <div className="xaaj-about-values-inner">
               <span className="xaaj-about-kicker">What we believe</span>
               <h2>Less noise. More meaning. Better things.</h2>
-
               <div className="xaaj-about-value-grid">
-                <div className="xaaj-about-value">
-                  <span className="xaaj-about-value-number">01</span>
-                  <h3>Craft over clutter</h3>
-                  <p>We favour thoughtful pieces that earn their place at your table.</p>
-                </div>
-                <div className="xaaj-about-value">
-                  <span className="xaaj-about-value-number">02</span>
-                  <h3>Beauty with purpose</h3>
-                  <p>Form follows the way a piece feels in your hands and lives in your home.</p>
-                </div>
-                <div className="xaaj-about-value">
-                  <span className="xaaj-about-value-number">03</span>
-                  <h3>Made to keep</h3>
-                  <p>Our aim is simple: objects you reach for often and keep for years.</p>
-                </div>
+                <div className="xaaj-about-value"><span className="xaaj-about-value-number">01</span><h3>Craft over clutter</h3><p>We favour thoughtful pieces that earn their place at your table.</p></div>
+                <div className="xaaj-about-value"><span className="xaaj-about-value-number">02</span><h3>Beauty with purpose</h3><p>Form follows the way a piece feels in your hands and lives in your home.</p></div>
+                <div className="xaaj-about-value"><span className="xaaj-about-value-number">03</span><h3>Made to keep</h3><p>Our aim is simple: objects you reach for often and keep for years.</p></div>
               </div>
             </div>
           </section>
@@ -5511,10 +5861,7 @@ function App() {
           <section className="xaaj-about-contact">
             <span className="xaaj-about-label">Come say hello</span>
             <h2>Have a question? We are here.</h2>
-            <p>
-              For orders, products or anything else, reach out to the XAAJ team.
-              We would love to hear from you.
-            </p>
+            <p>For orders, products or anything else, reach out to the XAAJ team. We would love to hear from you.</p>
             <div className="xaaj-about-contact-links">
               <a href="mailto:customercare@xaaj.in">customercare@xaaj.in</a>
               <a href="tel:+919899446117">+91 9899446117</a>
@@ -7385,51 +7732,100 @@ function App() {
   }
 
   // ==========================================================
-  // CONTACT
+  // CONTACT — PREMIUM CONTACT EXPERIENCE
   // ==========================================================
 
   if (path === '/contact') {
     return (
-      <SimplePage
-        eyebrow="Contact XAAJ"
-        title="We'd love to hear from you."
-      >
-        <p className="lead">
-          For questions about an order, our products or anything else,
-          reach out to the XAAJ team using the details below.
-        </p>
+      <>
+        <Header />
 
-        <div
-          style={{
-            display: 'grid',
-            gap: '18px',
-            marginTop: '32px'
-          }}
-        >
-          <div>
-            <span className="eyebrow">Phone / WhatsApp</span>
-            <p>
-              <a href="tel:+919899446117">+91-9899446117</a>
-            </p>
-          </div>
+        <style>{`
+          .xaaj-contact-page { background: #f7f4ee; color: #292825; }
+          .xaaj-contact-hero {
+            width: min(1240px, calc(100% - 48px));
+            margin: 0 auto;
+            padding: 92px 0 72px;
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(280px, .65fr);
+            gap: 90px;
+            align-items: end;
+            border-bottom: 1px solid rgba(41,40,37,.12);
+          }
+          .xaaj-contact-kicker {
+            display: inline-flex; align-items: center; gap: 10px;
+            color: #b54d36; font-size: 10px; font-weight: 700;
+            letter-spacing: .28em; text-transform: uppercase;
+          }
+          .xaaj-contact-kicker::before { content: ''; width: 28px; height: 1px; background: currentColor; }
+          .xaaj-contact-hero h1 {
+            max-width: 820px; margin: 22px 0 0;
+            font-family: Georgia, 'Times New Roman', serif; font-size: clamp(54px, 7vw, 96px);
+            font-weight: 400; line-height: .94; letter-spacing: -.055em;
+          }
+          .xaaj-contact-hero h1 em { font-weight: 400; }
+          .xaaj-contact-hero-copy { max-width: 520px; padding-bottom: 8px; }
+          .xaaj-contact-hero-copy p { margin: 0; font-size: 16px; line-height: 1.85; color: #6e6961; }
+          .xaaj-contact-mini {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 25px;
+          }
+          .xaaj-contact-mini a {
+            min-height: 88px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between;
+            border: 1px solid rgba(41,40,37,.12); background: rgba(255,255,255,.35);
+            color: #292825; text-decoration: none; transition: .25s ease;
+          }
+          .xaaj-contact-mini a:hover { background: #fffdf9; transform: translateY(-2px); }
+          .xaaj-contact-mini small { font-size: 9px; text-transform: uppercase; letter-spacing: .18em; color: #9a938a; }
+          .xaaj-contact-mini strong { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; font-weight: 400; }
+          .xaaj-contact-content { width: min(1240px, calc(100% - 48px)); margin: 0 auto; padding: 58px 0 110px; }
+          .xaaj-contact-content .xaaj-contact-layout { margin-top: 0 !important; grid-template-columns: minmax(0, 1.15fr) minmax(300px, .65fr) !important; gap: 24px !important; }
+          .xaaj-contact-content .xaaj-contact-layout > form {
+            padding: 42px !important; border-radius: 2px !important; background: #fffdf9 !important;
+            border: 1px solid rgba(41,40,37,.11) !important; box-shadow: 0 20px 70px rgba(41,40,37,.055) !important;
+          }
+          .xaaj-contact-content .xaaj-contact-layout > form h2, .xaaj-contact-content .xaaj-contact-layout > div h2 { font-size: 32px !important; }
+          .xaaj-contact-content .xaaj-contact-layout > div {
+            padding: 42px !important; border-radius: 2px !important; background: #292825 !important;
+            border: 0 !important; color: #fff !important;
+          }
+          .xaaj-contact-content .xaaj-contact-layout > div p, .xaaj-contact-content .xaaj-contact-layout > div a { color: rgba(255,255,255,.76) !important; }
+          .xaaj-contact-content .xaaj-contact-layout > div .eyebrow { color: #d58b76 !important; }
+          .xaaj-contact-note {
+            margin-top: 44px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.13);
+            font-size: 12px; line-height: 1.7; color: rgba(255,255,255,.5);
+          }
+          @media (max-width: 800px) {
+            .xaaj-contact-hero, .xaaj-contact-content { width: min(100% - 30px, 1240px); }
+            .xaaj-contact-hero { grid-template-columns: 1fr; gap: 38px; padding: 68px 0 54px; }
+            .xaaj-contact-content { padding: 42px 0 80px; }
+            .xaaj-contact-content .xaaj-contact-layout { grid-template-columns: 1fr !important; }
+            .xaaj-contact-content .xaaj-contact-layout > form, .xaaj-contact-content .xaaj-contact-layout > div { padding: 26px !important; }
+          }
+        `}</style>
 
-          <div>
-            <span className="eyebrow">Email</span>
-            <p>
-              <a href="mailto:customercare@xaaj.in">
-                customercare@xaaj.in
-              </a>
-            </p>
-          </div>
+        <main className="xaaj-contact-page">
+          <section className="xaaj-contact-hero">
+            <div>
+              <span className="xaaj-contact-kicker">Contact XAAJ</span>
+              <h1>We'd love to <em>hear from you.</em></h1>
+            </div>
+            <div className="xaaj-contact-hero-copy">
+              <p>For questions about an order, our products, or simply to say hello, reach out to the XAAJ team. We’re always happy to hear from you.</p>
+              <div className="xaaj-contact-mini">
+                <a href="mailto:customercare@xaaj.in"><small>Email</small><strong>Write to us ↗</strong></a>
+                <a href="tel:+919899446117"><small>Phone / WhatsApp</small><strong>Talk to us ↗</strong></a>
+              </div>
+            </div>
+          </section>
 
-          <div>
-            <span className="eyebrow">Business address</span>
-            <p>
-              G6/4C DLF Garden City, Sector 92, Gurugram 122505
-            </p>
-          </div>
-        </div>
-      </SimplePage>
+          <section className="xaaj-contact-content">
+            <ContactForm />
+          </section>
+        </main>
+
+        <Newsletter />
+        <Footer />
+      </>
     )
   }
 

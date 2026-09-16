@@ -12,10 +12,14 @@ const API_URL = (
 // COMMON API REQUEST
 // ============================================================
 
-export async function apiRequest(path, options = {}) {
-  const token = window.localStorage.getItem(
-    'xaaj_token'
-  )
+export async function apiRequest(
+  path,
+  options = {}
+) {
+  const token =
+    window.localStorage.getItem(
+      'xaaj_token'
+    )
 
   const headers = new Headers(
     options.headers || {}
@@ -49,9 +53,10 @@ export async function apiRequest(path, options = {}) {
     }
   )
 
-  const body = await response
-    .json()
-    .catch(() => ({}))
+  const body =
+    await response
+      .json()
+      .catch(() => ({}))
 
   if (!response.ok) {
     const error = new Error(
@@ -60,7 +65,9 @@ export async function apiRequest(path, options = {}) {
       `Request failed with status ${response.status}`
     )
 
-    error.status = response.status
+    error.status =
+      response.status
+
     error.data = body
 
     throw error
@@ -81,10 +88,13 @@ export const authService = {
   // ----------------------------------------------------------
 
   register: data =>
-    apiRequest('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    }),
+    apiRequest(
+      '/auth/register',
+      {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -92,10 +102,13 @@ export const authService = {
   // ----------------------------------------------------------
 
   login: data =>
-    apiRequest('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    }),
+    apiRequest(
+      '/auth/login',
+      {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -103,10 +116,13 @@ export const authService = {
   // ----------------------------------------------------------
 
   verifyEmail: data =>
-    apiRequest('/auth/verify-email', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    }),
+    apiRequest(
+      '/auth/verify-email',
+      {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -114,10 +130,13 @@ export const authService = {
   // ----------------------------------------------------------
 
   resendVerification: data =>
-    apiRequest('/auth/resend-verification', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    }),
+    apiRequest(
+      '/auth/resend-verification',
+      {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -125,10 +144,13 @@ export const authService = {
   // ----------------------------------------------------------
 
   forgotPassword: data =>
-    apiRequest('/auth/forgot-password', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    }),
+    apiRequest(
+      '/auth/forgot-password',
+      {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -136,10 +158,13 @@ export const authService = {
   // ----------------------------------------------------------
 
   verifyResetOtp: data =>
-    apiRequest('/auth/verify-reset-otp', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    }),
+    apiRequest(
+      '/auth/verify-reset-otp',
+      {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -147,10 +172,13 @@ export const authService = {
   // ----------------------------------------------------------
 
   resetPassword: data =>
-    apiRequest('/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    }),
+    apiRequest(
+      '/auth/reset-password',
+      {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -166,9 +194,12 @@ export const authService = {
   // ----------------------------------------------------------
 
   logout: () =>
-    apiRequest('/auth/logout', {
-      method: 'POST'
-    })
+    apiRequest(
+      '/auth/logout',
+      {
+        method: 'POST'
+      }
+    )
 }
 
 
@@ -183,12 +214,17 @@ export const productService = {
   // ----------------------------------------------------------
 
   list: params => {
-    const query = new URLSearchParams(
-      params || {}
-    ).toString()
+    const query =
+      new URLSearchParams(
+        params || {}
+      ).toString()
 
     return apiRequest(
-      `/products${query ? `?${query}` : ''}`
+      `/products${
+        query
+          ? `?${query}`
+          : ''
+      }`
     )
   },
 
@@ -199,7 +235,9 @@ export const productService = {
 
   get: identifier =>
     apiRequest(
-      `/products/${encodeURIComponent(identifier)}`
+      `/products/${encodeURIComponent(
+        identifier
+      )}`
     )
 }
 
@@ -215,7 +253,9 @@ export const cmsService = {
   // ----------------------------------------------------------
 
   getAnnouncement: () =>
-    apiRequest('/cms/announcement'),
+    apiRequest(
+      '/cms/announcement'
+    ),
 
 
   // ----------------------------------------------------------
@@ -242,7 +282,9 @@ export const cmsService = {
     apiRequest(
       `/cms${
         type
-          ? `?type=${encodeURIComponent(type)}`
+          ? `?type=${encodeURIComponent(
+              type
+            )}`
           : ''
       }`
     ),
@@ -253,10 +295,13 @@ export const cmsService = {
   // ----------------------------------------------------------
 
   create: data =>
-    apiRequest('/cms', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    }),
+    apiRequest(
+      '/cms',
+      {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -264,10 +309,13 @@ export const cmsService = {
   // ----------------------------------------------------------
 
   update: (id, data) =>
-    apiRequest(`/cms/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data)
-    }),
+    apiRequest(
+      `/cms/${id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -275,9 +323,12 @@ export const cmsService = {
   // ----------------------------------------------------------
 
   remove: id =>
-    apiRequest(`/cms/${id}`, {
-      method: 'DELETE'
-    }),
+    apiRequest(
+      `/cms/${id}`,
+      {
+        method: 'DELETE'
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -285,12 +336,15 @@ export const cmsService = {
   // ----------------------------------------------------------
 
   updateHero: slides =>
-    apiRequest('/cms/hero', {
-      method: 'PUT',
-      body: JSON.stringify({
-        slides
-      })
-    }),
+    apiRequest(
+      '/cms/hero',
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          slides
+        })
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -298,10 +352,13 @@ export const cmsService = {
   // ----------------------------------------------------------
 
   updateAnnouncement: data =>
-    apiRequest('/cms/announcement', {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    })
+    apiRequest(
+      '/cms/announcement',
+      {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      }
+    )
 }
 
 
@@ -317,12 +374,17 @@ export const blogService = {
   // ----------------------------------------------------------
 
   list: params => {
-    const query = new URLSearchParams(
-      params || {}
-    ).toString()
+    const query =
+      new URLSearchParams(
+        params || {}
+      ).toString()
 
     return apiRequest(
-      `/blogs${query ? `?${query}` : ''}`
+      `/blogs${
+        query
+          ? `?${query}`
+          : ''
+      }`
     )
   },
 
@@ -334,7 +396,9 @@ export const blogService = {
 
   get: slug =>
     apiRequest(
-      `/blogs/${encodeURIComponent(slug)}`
+      `/blogs/${encodeURIComponent(
+        slug
+      )}`
     ),
 
 
@@ -353,10 +417,13 @@ export const blogService = {
   // ----------------------------------------------------------
 
   create: data =>
-    apiRequest('/blogs', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    }),
+    apiRequest(
+      '/blogs',
+      {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -365,10 +432,13 @@ export const blogService = {
   // ----------------------------------------------------------
 
   update: (id, data) =>
-    apiRequest(`/blogs/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data)
-    }),
+    apiRequest(
+      `/blogs/${id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -377,9 +447,12 @@ export const blogService = {
   // ----------------------------------------------------------
 
   remove: id =>
-    apiRequest(`/blogs/${id}`, {
-      method: 'DELETE'
-    }),
+    apiRequest(
+      `/blogs/${id}`,
+      {
+        method: 'DELETE'
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -387,13 +460,19 @@ export const blogService = {
   // PATCH /api/blogs/:id/publish
   // ----------------------------------------------------------
 
-  publish: (id, isPublished) =>
-    apiRequest(`/blogs/${id}/publish`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        isPublished
-      })
-    })
+  publish: (
+    id,
+    isPublished
+  ) =>
+    apiRequest(
+      `/blogs/${id}/publish`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          isPublished
+        })
+      }
+    )
 }
 
 
@@ -409,14 +488,60 @@ export const newsletterService = {
   // ----------------------------------------------------------
 
   subscribe: email =>
-    apiRequest('/newsletter/subscribe', {
-      method: 'POST',
-      body: JSON.stringify({
-        email: String(email || '')
-          .trim()
-          .toLowerCase()
-      })
-    })
+    apiRequest(
+      '/newsletter/subscribe',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          email: String(
+            email || ''
+          )
+            .trim()
+            .toLowerCase()
+        })
+      }
+    )
+}
+
+
+// ============================================================
+// CONTACT SERVICES
+// ============================================================
+
+export const contactService = {
+
+  // ----------------------------------------------------------
+  // Send customer contact enquiry
+  // POST /api/contact
+  // ----------------------------------------------------------
+
+  send: data =>
+    apiRequest(
+      '/contact',
+      {
+        method: 'POST',
+
+        body: JSON.stringify({
+          name: String(
+            data?.name || ''
+          ).trim(),
+
+          email: String(
+            data?.email || ''
+          )
+            .trim()
+            .toLowerCase(),
+
+          phone: String(
+            data?.phone || ''
+          ).trim(),
+
+          message: String(
+            data?.message || ''
+          ).trim()
+        })
+      }
+    )
 }
 
 
@@ -431,7 +556,9 @@ export const cartService = {
   // ----------------------------------------------------------
 
   get: () =>
-    apiRequest('/commerce/cart'),
+    apiRequest(
+      '/commerce/cart'
+    ),
 
 
   // ----------------------------------------------------------
@@ -439,12 +566,15 @@ export const cartService = {
   // ----------------------------------------------------------
 
   update: items =>
-    apiRequest('/commerce/cart', {
-      method: 'PUT',
-      body: JSON.stringify({
-        items
-      })
-    })
+    apiRequest(
+      '/commerce/cart',
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          items
+        })
+      }
+    )
 }
 
 
@@ -459,7 +589,9 @@ export const wishlistService = {
   // ----------------------------------------------------------
 
   get: () =>
-    apiRequest('/commerce/wishlist'),
+    apiRequest(
+      '/commerce/wishlist'
+    ),
 
 
   // ----------------------------------------------------------
@@ -503,7 +635,9 @@ export const orderService = {
     apiRequest(
       `/orders${
         params
-          ? `?${new URLSearchParams(params)}`
+          ? `?${new URLSearchParams(
+              params
+            )}`
           : ''
       }`
     ),
@@ -518,10 +652,13 @@ export const orderService = {
   // ----------------------------------------------------------
 
   create: data =>
-    apiRequest('/orders', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    }),
+    apiRequest(
+      '/orders',
+      {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -530,7 +667,9 @@ export const orderService = {
 
   get: id =>
     apiRequest(
-      `/orders/${encodeURIComponent(id)}`
+      `/orders/${encodeURIComponent(
+        id
+      )}`
     ),
 
 
@@ -543,7 +682,9 @@ export const orderService = {
 
   cancel: id =>
     apiRequest(
-      `/orders/${encodeURIComponent(id)}/cancel`,
+      `/orders/${encodeURIComponent(
+        id
+      )}/cancel`,
       {
         method: 'PATCH'
       }
@@ -565,14 +706,19 @@ export const paymentService = {
   // ----------------------------------------------------------
 
   createOrder: data =>
-    apiRequest('/payment/create-order', {
-      method: 'POST',
-      body: JSON.stringify({
-        ...data,
-        paymentMethod:
-          data?.paymentMethod || 'razorpay'
-      })
-    }),
+    apiRequest(
+      '/payment/create-order',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          ...data,
+
+          paymentMethod:
+            data?.paymentMethod ||
+            'razorpay'
+        })
+      }
+    ),
 
 
   // ----------------------------------------------------------
@@ -580,10 +726,13 @@ export const paymentService = {
   // ----------------------------------------------------------
 
   verify: data =>
-    apiRequest('/payment/verify', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    })
+    apiRequest(
+      '/payment/verify',
+      {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }
+    )
 }
 
 

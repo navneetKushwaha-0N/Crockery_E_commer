@@ -38,6 +38,7 @@ import orderRoutes from './routes/orders.js'
 import cmsRoutes from './routes/cms.js'
 import blogRoutes from './routes/blogs.js'
 import newsletterRoutes from './routes/newsletter.js'
+import contactRoutes from './routes/contact.js'
 import adminRoutes from './routes/admin.js'
 import paymentRoutes from './routes/payments.js'
 import uploadRoutes from './routes/uploads.js'
@@ -138,9 +139,14 @@ app.use((req, _res, next) => {
     req.query
   ]) {
 
-    if (source && typeof source === 'object') {
+    if (
+      source &&
+      typeof source === 'object'
+    ) {
 
-      for (const key of Object.keys(source)) {
+      for (
+        const key of Object.keys(source)
+      ) {
 
         if (
           key.startsWith('$') ||
@@ -181,7 +187,8 @@ app.get(
     res.json({
       success: true,
       service: 'xaaj-api',
-      timestamp: new Date().toISOString()
+      timestamp:
+        new Date().toISOString()
     })
 
   }
@@ -250,11 +257,29 @@ app.use(
 // Newsletter
 // -------------------------
 // Customer newsletter subscription
+//
 // POST /api/newsletter/subscribe
 // -------------------------
 app.use(
   '/api/newsletter',
   newsletterRoutes
+)
+
+
+// -------------------------
+// Contact
+// -------------------------
+// Customer contact form
+//
+// POST /api/contact
+//
+// This sends:
+// 1. Customer enquiry → XAAJ admin
+// 2. Thank-you email → Customer
+// -------------------------
+app.use(
+  '/api/contact',
+  contactRoutes
 )
 
 
@@ -303,17 +328,19 @@ app.use(errorHandler)
 // 19. Connect Database & Start Server
 // ============================================================
 
-// Database ko turant connect karo.
+// Vercel/serverless environment mein
+// app.listen() use nahi hota.
 //
-// Vercel/serverless environment mein app.listen()
-// use nahi hota. Isliye database connection ko
-// server start hone se pehle initialize karna zaroori hai.
+// Database connection ko server start
+// hone se pehle initialize karna zaroori hai.
 
 await connectDatabase()
 
 let server
 
-if (env.nodeEnv !== 'production') {
+if (
+  env.nodeEnv !== 'production'
+) {
 
   server = app.listen(
     env.port,
