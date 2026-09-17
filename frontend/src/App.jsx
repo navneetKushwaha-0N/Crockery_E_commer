@@ -3115,7 +3115,6 @@ function Product() {
 function Cart({
   wishlist = false
 }) {
-
   const {
     products: liveProducts,
     cart,
@@ -3123,297 +3122,210 @@ function Cart({
     change,
     total,
     wish,
-    toggleWish
+    toggleWish,
+    add
   } = useStore()
 
-
-  // If wishlist page, show wishlist products.
-  // Otherwise show cart products.
   const items = wishlist
-    ? liveProducts.filter(
-        product =>
-          wish.includes(product.id)
-      )
+    ? liveProducts.filter(product => wish.includes(product.id || product._id))
     : cart
 
+  const getProduct = item =>
+    liveProducts.find(
+      product =>
+        String(product.id || product._id) === String(item.id || item._id)
+    ) || item
+
+  const getProductUrl = item => {
+    const product = getProduct(item)
+    const identifier = product.slug || item.slug || product.id || product._id
+    return `/product/${encodeURIComponent(String(identifier || ''))}`
+  }
+
+  const shippingFee = total >= 1000 ? 0 : 99
+  const grandTotal = total + shippingFee
+  const freeShippingProgress = Math.min(100, (total / 1000) * 100)
+  const remainingForFreeShipping = Math.max(0, 1000 - total)
 
   return (
     <>
-
       <Header />
 
-
-      <main className="page">
-
-        <div className="wrap narrow">
-
-
-          {/* Breadcrumbs */}
+      <main className={`page xaaj-cart-page ${wishlist ? 'xaaj-wishlist-page' : ''}`}>
+        <div className="wrap">
           <div className="breadcrumbs">
-
-            Home
-
-            <span>
-              /
-            </span>
-
-            {wishlist
-              ? 'Wishlist'
-              : 'Your cart'}
-
+            Home <span>/</span> {wishlist ? 'Wishlist' : 'Your cart'}
           </div>
 
-
-          {/* Page Heading */}
-          <div className="shop-title">
-
+          <header className="xaaj-cart-heading">
             <div>
-
               <span className="eyebrow">
-
-                {wishlist
-                  ? 'Saved for later'
-                  : 'Your selections'}
-
+                {wishlist ? 'Saved with intention' : 'Your selections'}
               </span>
-
-              <h1>
-
-                {wishlist
-                  ? 'Your wishlist'
-                  : 'Your cart'}
-
-              </h1>
-
-            </div>
-
-          </div>
-
-
-          {/* Empty State */}
-          {items.length === 0 ? (
-
-            <div className="empty">
-
-              <Heart
-                size={35}
-              />
-
-              <h2>
-
-                {wishlist
-                  ? 'Nothing saved yet'
-                  : 'Your cart is waiting'}
-
-              </h2>
-
+              <h1>{wishlist ? 'Your wishlist' : 'Your cart'}</h1>
               <p>
-                Find something beautiful
-                for your everyday.
+                {wishlist
+                  ? 'Pieces you loved enough to keep close.'
+                  : 'A considered collection of pieces for your table.'}
               </p>
-
-              <Button to="/shop">
-                Explore the collection
-              </Button>
-
             </div>
+            <div className="xaaj-cart-count">
+              <span>{items.length}</span>
+              <small>{items.length === 1 ? 'piece' : 'pieces'}</small>
+            </div>
+          </header>
 
+          {items.length === 0 ? (
+            <div className="xaaj-empty-state">
+              <div className="xaaj-empty-mark">
+                {wishlist ? <Heart size={25} strokeWidth={1.25} /> : <ShoppingBag size={25} strokeWidth={1.25} />}
+              </div>
+              <span className="eyebrow">
+                {wishlist ? 'Nothing saved yet' : 'Your collection is waiting'}
+              </span>
+              <h2>
+                {wishlist ? 'Keep something beautiful close.' : 'Start with something beautiful.'}
+              </h2>
+              <p>
+                Explore XAAJ and find pieces made to become part of everyday rituals.
+              </p>
+              <Button to="/shop">Explore the collection</Button>
+            </div>
           ) : (
+            <div className="xaaj-shopping-layout">
+              <section className="xaaj-shopping-items">
+                {!wishlist && (
+                  <div className="xaaj-shipping-progress">
+                    <div className="xaaj-shipping-copy">
+                      <span>
+                        {remainingForFreeShipping > 0
+                          ? <>Add <strong>{money(remainingForFreeShipping)}</strong> more for complimentary shipping.</>
+                          : <>Your order qualifies for <strong>complimentary shipping.</strong></>}
+                      </span>
+                      <span>{Math.round(freeShippingProgress)}%</span>
+                    </div>
+                    <div className="xaaj-progress-track">
+                      <span style={{ width: `${freeShippingProgress}%` }} />
+                    </div>
+                  </div>
+                )}
 
+                <div className="xaaj-items-header">
+                  <span>{wishlist ? 'Saved pieces' : 'Your pieces'}</span>
+                  <span>{items.length} {items.length === 1 ? 'item' : 'items'}</span>
+                </div>
 
-            /* Cart Layout */
-            <div className="cart-layout">
+                <div className="xaaj-item-list">
+                  {items.map(item => {
+                    const product = getProduct(item)
+                    const qty = item.qty || 1
+                    const productUrl = getProductUrl(item)
+                    const image = product.image || item.image
+                    const name = product.name || item.name
+                    const category = product.category || item.category
+                    const price = Number(product.price ?? item.price ?? 0)
 
+                    return (
+                      <article className="xaaj-shopping-item" key={item.id || item._id}>
+                        <Link
+                          to={productUrl}
+                          className="xaaj-shopping-image"
+                          aria-label={`View ${name}`}
+                        >
+                          <img src={image} alt={name} />
+                          <span>View piece <ArrowRight size={13} /></span>
+                        </Link>
 
-              {/* Cart Items */}
-              <div className="cart-items">
+                        <div className="xaaj-shopping-info">
+                          <div className="xaaj-item-topline">
+                            <span>{category || 'XAAJ Collection'}</span>
+                            <button
+                              type="button"
+                              className="xaaj-item-remove"
+                              aria-label={`Remove ${name}`}
+                              onClick={() => wishlist ? toggleWish(item.id || item._id) : remove(item.id || item._id)}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
 
-                {items.map(item => (
+                          <Link to={productUrl} className="xaaj-shopping-title">
+                            <h2>{name}</h2>
+                          </Link>
 
-                  <div
-                    className="cart-item"
-                    key={item.id}
-                  >
+                          <p className="xaaj-item-price">{money(price)}</p>
 
+                          <div className="xaaj-item-actions">
+                            {!wishlist ? (
+                              <div className="xaaj-quantity-control" aria-label={`Quantity for ${name}`}>
+                                <button type="button" onClick={() => change(item.id || item._id, -1)} aria-label="Decrease quantity">
+                                  <Minus size={13} />
+                                </button>
+                                <span>{qty}</span>
+                                <button type="button" onClick={() => change(item.id || item._id, 1)} aria-label="Increase quantity">
+                                  <Plus size={13} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                className="xaaj-text-action"
+                                onClick={() => add(product)}
+                              >
+                                <ShoppingBag size={14} /> Add to cart
+                              </button>
+                            )}
 
-                    {/* Product Image */}
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                    />
-
-
-                    {/* Product Information */}
-                    <div>
-
-                      <h3>
-                        {item.name}
-                      </h3>
-
-                      <p>
-                        {item.category}
-                      </p>
-
-
-                      {/* Quantity */}
-                      {!wishlist && (
-
-                        <div className="quantity">
-
-                          <button
-                            onClick={() =>
-                              change(
-                                item.id,
-                                -1
-                              )
-                            }
-                          >
-                            <Minus
-                              size={13}
-                            />
-                          </button>
-
-                          <span>
-                            {item.qty}
-                          </span>
-
-                          <button
-                            onClick={() =>
-                              change(
-                                item.id,
-                                1
-                              )
-                            }
-                          >
-                            <Plus
-                              size={13}
-                            />
-                          </button>
-
+                            <Link to={productUrl} className="xaaj-view-link">
+                              View details <ArrowRight size={14} />
+                            </Link>
+                          </div>
                         </div>
 
-                      )}
+                        <strong className="xaaj-item-total">
+                          {money(price * qty)}
+                        </strong>
+                      </article>
+                    )
+                  })}
+                </div>
+              </section>
 
-                    </div>
-
-
-                    {/* Price */}
-                    <strong>
-
-                      {money(
-                        item.price *
-                        (item.qty || 1)
-                      )}
-
-                    </strong>
-
-
-                    {/* Remove */}
-                    <button
-                      className="remove"
-                      onClick={() =>
-                        wishlist
-                          ? toggleWish(item.id)
-                          : remove(item.id)
-                      }
-                    >
-                      <X
-                        size={16}
-                      />
-                    </button>
-
-                  </div>
-
-                ))}
-
-              </div>
-
-
-              {/* Order Summary */}
               {!wishlist && (
+                <aside className="xaaj-order-summary">
+                  <div className="xaaj-summary-kicker">XAAJ / ORDER</div>
+                  <h2>Order summary</h2>
+                  <p className="xaaj-summary-intro">Thoughtfully packed and prepared for its journey to you.</p>
 
-                <aside className="summary">
-
-                  <h2>
-                    Order summary
-                  </h2>
-
-
-                  {/* Subtotal */}
-                  <div>
-
-                    <span>
-                      Subtotal
-                    </span>
-
-                    <strong>
-                      {money(total)}
-                    </strong>
-
+                  <div className="xaaj-summary-lines">
+                    <div><span>Subtotal</span><strong>{money(total)}</strong></div>
+                    <div>
+                      <span>Shipping</span>
+                      <strong>{shippingFee === 0 ? 'Complimentary' : money(shippingFee)}</strong>
+                    </div>
                   </div>
 
-
-                  {/* Shipping */}
-                  <div>
-
-                    <span>
-                      Shipping
-                    </span>
-
-                    <span>
-
-                      {total >= 1000
-                        ? 'FREE'
-                        : money(99)}
-
-                    </span>
-
+                  <div className="xaaj-summary-total">
+                    <span>Total</span>
+                    <strong>{money(grandTotal)}</strong>
                   </div>
 
-
-                  <hr />
-
-
-                  {/* Total */}
-                  <div className="summary-total">
-
-                    <span>
-                      Total
-                    </span>
-
-                    <strong>
-
-                      {money(
-                        total >= 1000
-                          ? total
-                          : total + 99
-                      )}
-
-                    </strong>
-
-                  </div>
-
-
-                  {/* Checkout */}
-                  <Button to="/checkout">
-                    Checkout securely
+                  <Button to="/checkout" className="xaaj-checkout-button">
+                    Continue to checkout
                   </Button>
 
+                  <div className="xaaj-summary-note">
+                    <ShieldCheck size={16} />
+                    <span>Secure checkout · Carefully packed · Damage support within 48 hours</span>
+                  </div>
                 </aside>
-
               )}
-
             </div>
-
           )}
-
         </div>
-
       </main>
 
-
       <Footer />
-
     </>
   )
 }

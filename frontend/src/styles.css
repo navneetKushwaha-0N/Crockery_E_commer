@@ -431,7 +431,7 @@
 
 /* ============================================================
    XAAJ PREMIUM INTERACTIONS
-   Cart Ã¢â‚¬Â¢ Wishlist Ã¢â‚¬Â¢ Product Hover Ã¢â‚¬Â¢ Category Reveal
+   Cart ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Wishlist ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Product Hover ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Category Reveal
    ============================================================ */
 
 /* ------------------------------------------------------------
@@ -934,7 +934,7 @@
 
 
 /* ============================================================
-   XAAJ PRODUCT CARD Ã¢â‚¬â€ FINAL PREMIUM REDESIGN
+   XAAJ PRODUCT CARD ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FINAL PREMIUM REDESIGN
    ============================================================ */
 
 .product-card {
@@ -1086,7 +1086,7 @@
   transform: translateY(-2px);
 }
 
-/* Wishlist button Ã¢â‚¬â€ always above image/link */
+/* Wishlist button ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â always above image/link */
 .product-card .heart {
   z-index: 10;
   right: 13px;
@@ -1138,7 +1138,7 @@
   transform: translate(0,-50%);
 }
 
-/* Quick Add Ã¢â‚¬â€ hidden until hover */
+/* Quick Add ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â hidden until hover */
 .quick-add {
   position: absolute;
   left: 14px;
@@ -1264,7 +1264,7 @@
   letter-spacing: .03em;
 }
 
-/* Wishlist pop Ã¢â‚¬â€ cleaner version */
+/* Wishlist pop ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â cleaner version */
 .product-card .heart.wishlist-pop {
   animation: xaajWishlistPremium .55s cubic-bezier(.34,1.56,.64,1);
 }
@@ -1361,7 +1361,7 @@
 
 
 /* ============================================================
-   XAAJ Ã¢â‚¬â€ ADD TO CART BUTTON POLISH
+   XAAJ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ADD TO CART BUTTON POLISH
    Keep the button in its original product-card position.
    Premium interaction lives on the button itself.
    ============================================================ */
@@ -1520,7 +1520,7 @@
 }
 
 /* ============================================================
-   XAAJ Ã¢â‚¬â€ ADD TO CART / REFERENCE BUTTON STYLE
+   XAAJ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ADD TO CART / REFERENCE BUTTON STYLE
    Matches the supplied reference: full-width, dark, clean,
    left-aligned uppercase label. Existing premium animations stay.
    ============================================================ */
@@ -1603,7 +1603,7 @@
 
 
 /* ============================================================
-   PRODUCT DETAIL Ã¢â‚¬â€ REFERENCE ADD TO CART BUTTON
+   PRODUCT DETAIL ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â REFERENCE ADD TO CART BUTTON
    Keep the product detail design unchanged; only the CTA gets
    the clean reference look + premium interaction.
    ============================================================ */
@@ -1698,7 +1698,7 @@
 
 
 /* ============================================================
-   FINAL POLISH Ã¢â‚¬â€ compact premium CTA
+   FINAL POLISH ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â compact premium CTA
    Remove the image "View piece" overlay and keep the CTA
    refined instead of oversized. Animations remain intact.
    ============================================================ */
@@ -1758,7 +1758,7 @@
   }
 }
 /* ============================================================
-   XAAJ PRODUCT CARD â€” PRO LUXURY FINISH
+   XAAJ PRODUCT CARD Ã¢â‚¬â€ PRO LUXURY FINISH
    Border-radius + refined spacing + premium depth
    ============================================================ */
 
@@ -2059,4 +2059,118 @@
     transition: none !important;
     animation: none !important;
   }
+}
+
+/* ============================================================
+   XAAJ â€” PREMIUM CART & WISHLIST
+   ============================================================ */
+.xaaj-cart-page{padding-top:42px;padding-bottom:110px;background:var(--ivory)}
+.xaaj-cart-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:30px;padding:35px 0 48px;border-bottom:1px solid var(--line)}
+.xaaj-cart-heading h1{font:400 clamp(48px,6vw,78px)/.98 'Playfair Display',serif;letter-spacing:-.045em;margin:14px 0 13px}
+.xaaj-cart-heading p{margin:0;color:var(--muted);font-size:13px;max-width:430px}
+.xaaj-cart-count{display:flex;align-items:baseline;gap:8px;padding-bottom:5px;color:var(--muted)}
+.xaaj-cart-count span{font:400 42px/1 'Playfair Display',serif;color:var(--ink)}
+.xaaj-cart-count small{font-size:10px;text-transform:uppercase;letter-spacing:.14em}
+.xaaj-shopping-layout{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:70px;padding-top:38px;align-items:start}
+.xaaj-shopping-items{min-width:0}
+.xaaj-shipping-progress{background:var(--paper);border:1px solid rgba(41,40,37,.07);padding:17px 19px;margin-bottom:25px}
+.xaaj-shipping-copy{display:flex;justify-content:space-between;gap:20px;font-size:11px;color:var(--muted);margin-bottom:10px}
+.xaaj-shipping-copy strong{color:var(--ink);font-weight:600}
+.xaaj-progress-track{height:3px;background:#e7e1d8;overflow:hidden}
+.xaaj-progress-track span{display:block;height:100%;background:var(--terracotta);transition:width .7s cubic-bezier(.22,1,.36,1)}
+.xaaj-items-header{display:flex;justify-content:space-between;align-items:center;padding:0 0 13px;border-bottom:1px solid var(--ink);font-size:10px;text-transform:uppercase;letter-spacing:.15em}
+.xaaj-items-header span:last-child{color:var(--muted);letter-spacing:.08em}
+.xaaj-item-list{border-bottom:1px solid var(--line)}
+.xaaj-shopping-item{position:relative;display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:25px;padding:25px 0;border-bottom:1px solid var(--line);min-width:0}
+.xaaj-shopping-item:last-child{border-bottom:0}
+.xaaj-shopping-image{position:relative;display:block;aspect-ratio:1/1.05;background:#eee9e0;overflow:hidden}
+.xaaj-shopping-image img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .7s cubic-bezier(.22,1,.36,1)}
+.xaaj-shopping-image::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(41,40,37,.2));pointer-events:none}
+.xaaj-shopping-image span{position:absolute;z-index:2;left:12px;right:12px;bottom:11px;display:flex;align-items:center;justify-content:space-between;color:#fff;font-size:9px;text-transform:uppercase;letter-spacing:.1em;opacity:0;transform:translateY(8px);transition:.35s ease}
+.xaaj-shopping-image:hover img{transform:scale(1.055)}
+.xaaj-shopping-image:hover span{opacity:1;transform:translateY(0)}
+.xaaj-shopping-info{min-width:0;padding:3px 0}
+.xaaj-item-topline{display:flex;justify-content:space-between;align-items:center;gap:15px}
+.xaaj-item-topline>span{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.13em}
+.xaaj-item-remove{display:grid;place-items:center;width:30px;height:30px;border:0;background:transparent;color:var(--muted);padding:0;transition:.25s ease}
+.xaaj-item-remove:hover{color:var(--terracotta);transform:rotate(5deg)}
+.xaaj-shopping-title{display:block;margin-top:17px}
+.xaaj-shopping-title h2{font:400 26px/1.15 'Playfair Display',serif;margin:0;transition:color .25s ease}
+.xaaj-shopping-title:hover h2{color:var(--terracotta)}
+.xaaj-item-price{font-size:12px;margin:9px 0 22px;color:var(--ink)}
+.xaaj-item-actions{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.xaaj-quantity-control{display:flex;align-items:center;border:1px solid var(--line);height:38px;background:var(--paper)}
+.xaaj-quantity-control button{width:36px;height:100%;display:grid;place-items:center;border:0;background:transparent;color:var(--ink)}
+.xaaj-quantity-control button:hover{background:#f0ebe3}
+.xaaj-quantity-control span{min-width:30px;text-align:center;font-size:11px}
+.xaaj-text-action,.xaaj-view-link{display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;padding:0;font-size:10px;text-transform:uppercase;letter-spacing:.1em}
+.xaaj-text-action{color:var(--ink)}
+.xaaj-text-action:hover{color:var(--terracotta)}
+.xaaj-view-link{color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:4px}
+.xaaj-view-link:hover{color:var(--ink);border-color:var(--ink)}
+.xaaj-item-total{align-self:start;padding-top:39px;font-size:13px;white-space:nowrap}
+.xaaj-order-summary{position:sticky;top:155px;background:#eee8de;padding:30px 28px 27px;border:1px solid rgba(41,40,37,.045)}
+.xaaj-summary-kicker{font-size:9px;letter-spacing:.17em;color:var(--terracotta);margin-bottom:13px}
+.xaaj-order-summary h2{font:400 31px/1.1 'Playfair Display',serif;margin:0}
+.xaaj-summary-intro{font:12px/1.65;color:var(--muted);margin:12px 0 27px}
+.xaaj-summary-lines{border-top:1px solid rgba(41,40,37,.12)}
+.xaaj-summary-lines>div{display:flex;justify-content:space-between;gap:20px;padding:13px 0;font-size:11px;border-bottom:1px solid rgba(41,40,37,.09)}
+.xaaj-summary-lines strong{font-weight:500}
+.xaaj-summary-total{display:flex;justify-content:space-between;align-items:baseline;padding:20px 0 18px;font-size:12px}
+.xaaj-summary-total strong{font:400 25px 'Playfair Display',serif}
+.xaaj-checkout-button{width:100%;justify-content:space-between;margin-top:3px;padding:15px 17px}
+.xaaj-summary-note{display:flex;align-items:flex-start;gap:9px;margin-top:20px;color:var(--muted);font-size:9px;line-height:1.55}
+.xaaj-summary-note svg{flex:0 0 auto;color:var(--sage)}
+.xaaj-empty-state{max-width:690px;margin:70px auto 20px;text-align:center;padding:75px 30px;background:var(--paper);border:1px solid rgba(41,40,37,.07)}
+.xaaj-empty-mark{width:62px;height:62px;margin:0 auto 25px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;color:var(--terracotta)}
+.xaaj-empty-state h2{font:400 clamp(32px,4vw,48px)/1.08 'Playfair Display',serif;margin:13px auto 12px;letter-spacing:-.025em}
+.xaaj-empty-state p{max-width:420px;margin:0 auto 25px;color:var(--muted);font-size:13px}
+.xaaj-empty-state .button{margin-top:0}
+.xaaj-wishlist-page .xaaj-shopping-layout{grid-template-columns:1fr}
+.xaaj-wishlist-page .xaaj-shopping-item{grid-template-columns:180px minmax(0,1fr) auto}
+.xaaj-wishlist-page .xaaj-shopping-image{aspect-ratio:1/1}
+.xaaj-wishlist-page .xaaj-item-price{margin-bottom:25px}
+
+@media(max-width:800px){
+  .xaaj-cart-page{padding-top:25px;padding-bottom:75px}
+  .xaaj-cart-heading{padding:25px 0 30px;align-items:flex-end}
+  .xaaj-cart-heading h1{font-size:49px;margin:11px 0}
+  .xaaj-cart-heading p{font-size:11px;max-width:300px}
+  .xaaj-cart-count{display:none}
+  .xaaj-shopping-layout,.xaaj-wishlist-page .xaaj-shopping-layout{display:block;padding-top:25px}
+  .xaaj-order-summary{position:static;margin-top:30px;padding:24px 20px}
+  .xaaj-shopping-item,.xaaj-wishlist-page .xaaj-shopping-item{grid-template-columns:92px minmax(0,1fr);gap:14px;padding:18px 0}
+  .xaaj-shopping-image,.xaaj-wishlist-page .xaaj-shopping-image{grid-row:1;aspect-ratio:1/1.05}
+  .xaaj-shopping-info{padding:0}
+  .xaaj-shopping-title{margin-top:10px}
+  .xaaj-shopping-title h2{font-size:19px}
+  .xaaj-item-price{margin:7px 0 14px}
+  .xaaj-item-total{position:absolute;left:106px;bottom:18px;padding:0;font-size:11px}
+  .xaaj-item-actions{gap:14px;padding-bottom:22px}
+  .xaaj-item-remove{width:27px;height:27px}
+  .xaaj-shipping-progress{padding:14px;margin-bottom:20px}
+  .xaaj-shipping-copy{font-size:9px}
+  .xaaj-empty-state{margin-top:40px;padding:55px 22px}
+  .xaaj-empty-state h2{font-size:34px}
+  .xaaj-view-link{font-size:9px}
+  .xaaj-text-action{font-size:9px}
+}
+
+/* ============================================================
+   CART â€” CLEAN, NATURAL PRICE TYPOGRAPHY
+   Keep currency amounts simple and easy to read.
+   ============================================================ */
+.xaaj-summary-total strong{
+  font-family:'DM Sans',sans-serif;
+  font-size:24px;
+  font-weight:600;
+  line-height:1.2;
+  letter-spacing:0;
+}
+.xaaj-summary-lines strong,
+.xaaj-item-total,
+.xaaj-item-price{
+  font-family:'DM Sans',sans-serif;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:0;
 }
