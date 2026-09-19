@@ -4397,9 +4397,12 @@ function BlogPage() {
 
       <main className="xaaj-blog-shell">
         <section className="xaaj-blog-hero">
-          {heroPost?.coverImage && (
-            <img className="xaaj-blog-hero-bg" src={heroPost.coverImage} alt="" aria-hidden="true" />
-          )}
+          <img
+            className="xaaj-blog-hero-bg"
+            src={heroImage}
+            alt="Handcrafted XAAJ tableware arranged for an everyday table"
+            aria-hidden="true"
+          />
           <div className="xaaj-blog-hero-content xaaj-blog-fade">
             <span className="xaaj-blog-kicker">The XAAJ Blog</span>
             <h1>Beautiful things.<br />Thoughtfully lived.</h1>
