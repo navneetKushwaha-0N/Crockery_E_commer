@@ -41,7 +41,7 @@ import { FaInstagram, FaWhatsapp } from 'react-icons/fa'
 import './styles.css'
 
 // API
-import { apiRequest, productService, orderService, cmsService, newsletterService, contactService } from './services/api'
+import { apiRequest, productService, orderService, reviewService, cmsService, newsletterService, contactService } from './services/api'
 
 // Authentication / Context
 import {
@@ -499,23 +499,38 @@ function Button({
 // ============================================================
 
 function Rating({
-  count = 5,
-  reviews
+  rating = 0,
+  reviews = 0
 }) {
-  const rating = Math.max(
+  const numericRating = Math.max(
     0,
-    Math.min(5, Number(count) || 0)
+    Math.min(5, Number(rating) || 0)
   )
 
+  const reviewCount = Number(reviews) || 0
+
+  const fullStars = Math.floor(numericRating)
+
+  const hasHalfStar =
+    numericRating - fullStars >= 0.5
+
+  const emptyStars =
+    5 - fullStars - (hasHalfStar ? 1 : 0)
+
   return (
-    <span className="rating">
-      <span>
-        {'★'.repeat(rating)}
+    <span
+      className="rating"
+      aria-label={`${numericRating.toFixed(1)} out of 5 stars, ${reviewCount} reviews`}
+    >
+      <span className="rating-stars">
+        {'★'.repeat(fullStars)}
+        {hasHalfStar && '★'}
+        {'☆'.repeat(emptyStars)}
       </span>
 
-      {reviews > 0 ? (
+      {reviewCount > 0 ? (
         <small>
-          ({reviews})
+          {numericRating.toFixed(1)} ({reviewCount})
         </small>
       ) : (
         <small>
@@ -530,6 +545,19 @@ function Rating({
 // ============================================================
 // PRODUCT CARD — PREMIUM REDESIGN
 // ============================================================
+
+let adminPreviewSessionActive = false
+
+const isAdminPreviewMode = () => {
+  try {
+    return (
+      new URLSearchParams(window.location.search).get('xaajPreview') === '1' ||
+      adminPreviewSessionActive
+    )
+  } catch {
+    return adminPreviewSessionActive
+  }
+}
 
 function ProductCard({
   product
@@ -580,6 +608,13 @@ function ProductCard({
   const handleAddToCart = event => {
     event.preventDefault()
     event.stopPropagation()
+
+    if (isAdminPreviewMode()) {
+      window.alert(
+        'Admin Preview Mode: adding products to cart is disabled.'
+      )
+      return
+    }
 
     const card =
       event.currentTarget.closest('.product-card')
@@ -749,87 +784,83 @@ function ProductCard({
       <div className="product-copy">
 
         <div className="product-meta">
-
           <span className="product-category">
             {product.category}
           </span>
-
-          <Rating
-            count={product.rating}
-            reviews={product.reviews}
-          />
-
         </div>
 
         <Link
           to={`/product/${product.slug}`}
           className="product-title-link"
         >
-          <h3>
-            {product.name}
-          </h3>
+          <h3>{product.name}</h3>
         </Link>
 
-        <div className="price">
+        <p className="product-description">
+          {product.description ||
+            product.desc ||
+            product.shortDescription ||
+            'Beautifully crafted for everyday use.'}
+        </p>
 
-          <strong>
-            {money(product.price)}
-          </strong>
-
-          {Number(product.old || 0) >
-            Number(product.price || 0) && (
-            <del>
-              {money(product.old)}
-            </del>
-          )}
-
-          {Number(product.old || 0) >
-            Number(product.price || 0) && (
-            <span className="save-badge">
-              {Math.round(
-                ((Number(product.old) -
-                  Number(product.price)) /
-                  Number(product.old)) *
-                  100
-              )}
-              % off
-            </span>
-          )}
-
-        </div>
-
-        {/* Premium Add to Cart button */}
-        <button
-          type="button"
-          className={`add ${
-            cartPulse ? 'add-success' : ''
-          }`}
-          onClick={handleAddToCart}
-          disabled={Number(product.stock ?? 0) <= 0}
-          aria-label={
-            Number(product.stock ?? 0) <= 0
-              ? 'Out of stock'
-              : `Add ${product.name} to cart`
+        <Rating
+          rating={product.rating}
+          reviews={
+            product.reviewCount ??
+            product.reviews ??
+            0
           }
-        >
-          <span className="add-label">
-            {Number(product.stock ?? 0) <= 0
-              ? 'Out of stock'
-              : cartPulse
-                ? 'Added to cart'
-                : 'Add to cart'}
-          </span>
+        />
 
-          <span className="add-icon" aria-hidden="true">
-            {Number(product.stock ?? 0) <= 0
-              ? null
-              : cartPulse
-                ? <Check size={15} />
-                : <Plus size={15} />}
-          </span>
+        <div className="product-bottom-row">
+          <div className="price">
+            <strong>{money(product.price)}</strong>
 
-          <span className="add-shine" aria-hidden="true" />
-        </button>
+            {Number(product.old || 0) > Number(product.price || 0) && (
+              <del>{money(product.old)}</del>
+            )}
+
+            {Number(product.old || 0) > Number(product.price || 0) && (
+              <span className="save-badge">
+                {Math.round(
+                  ((Number(product.old) - Number(product.price)) /
+                    Number(product.old)) *
+                    100
+                )}% off
+              </span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className={`add ${cartPulse ? 'add-success' : ''}`}
+            onClick={handleAddToCart}
+            disabled={Number(product.stock ?? 0) <= 0}
+            aria-label={
+              Number(product.stock ?? 0) <= 0
+                ? 'Out of stock'
+                : `Add ${product.name} to cart`
+            }
+          >
+            <span className="add-label">
+              {Number(product.stock ?? 0) <= 0
+                ? 'Out of stock'
+                : cartPulse
+                  ? 'Added to cart'
+                  : 'Add to Cart'}
+            </span>
+
+            <span className="add-icon" aria-hidden="true">
+              {Number(product.stock ?? 0) <= 0
+                ? null
+                : cartPulse
+                  ? <Check size={15} />
+                  : null}
+            </span>
+
+            <span className="add-shine" aria-hidden="true" />
+          </button>
+        </div>
 
         {/* Subtle stock cue */}
         {Number(product.stock ?? 0) > 0 &&
@@ -898,7 +929,9 @@ function Home() {
 
   // Get live products from store
   const {
-    products: liveProducts
+    products: liveProducts,
+    bestSellingProducts,
+    newArrivals
   } = useStore()
 
   // ==========================================================
@@ -933,6 +966,10 @@ function Home() {
           .filter(slide => slide?.enabled !== false && slide?.image)
           .map(slide => ({
             image: slide.image,
+            mediaType:
+              slide.mediaType === 'video'
+                ? 'video'
+                : 'image',
             mobileImage: slide.mobileImage || slide.image,
             alt: slide.alt || 'XAAJ Crockery'
           }))
@@ -1075,20 +1112,40 @@ function Home() {
 
           <div className="hero-slides" aria-live="polite">
 
-            {heroSlides.map((slide, index) => (
-              <img
-                key={slide.image}
-                className={`hero-slide ${
-                  index === heroIndex
-                    ? 'hero-slide-active'
-                    : ''
-                }`}
-                src={slide.image}
-                alt={slide.alt}
-                draggable="false"
-                loading={index === 0 ? 'eager' : 'lazy'}
-              />
-            ))}
+            {heroSlides.map((slide, index) => {
+              const isVideo = slide.mediaType === 'video'
+
+              return isVideo ? (
+                <video
+                  key={`${slide.image}-${index}`}
+                  className={`hero-slide ${
+                    index === heroIndex
+                      ? 'hero-slide-active'
+                      : ''
+                  }`}
+                  src={slide.image}
+                  muted
+                  autoPlay
+                  loop
+                  playsInline
+                  preload={index === 0 ? 'auto' : 'metadata'}
+                  aria-label={slide.alt || 'XAAJ Crockery'}
+                />
+              ) : (
+                <img
+                  key={`${slide.image}-${index}`}
+                  className={`hero-slide ${
+                    index === heroIndex
+                      ? 'hero-slide-active'
+                      : ''
+                  }`}
+                  src={slide.image}
+                  alt={slide.alt}
+                  draggable="false"
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                />
+              )
+            })}
 
           </div>
 
@@ -1286,7 +1343,56 @@ function Home() {
 
 
         {/* ====================================================
-            CUSTOMER FAVORITES
+            BEST-SELLING PRODUCTS
+        ==================================================== */}
+
+        <section
+          className="favorites"
+          data-xaaj-reveal="up"
+        >
+
+          <div className="wrap">
+
+            <SectionHeading
+              eyebrow="Loved by our customers"
+              title="Best-selling products"
+              action={{
+                label: 'View all',
+                to: '/shop'
+              }}
+            />
+
+            <div className="product-grid">
+
+              {bestSellingProducts.length > 0 ? (
+                bestSellingProducts.map(product => (
+                  <ProductCard
+                    product={product}
+                    key={product.id}
+                  />
+                ))
+              ) : (
+                <div
+                  style={{
+                    gridColumn: '1 / -1',
+                    padding: '30px 0',
+                    color: '#706d67',
+                    fontSize: '14px'
+                  }}
+                >
+                  Customer favourites will appear here as reviews come in.
+                </div>
+              )}
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {/* ====================================================
+            NEW ARRIVALS
         ==================================================== */}
 
         <section
@@ -1299,27 +1405,22 @@ function Home() {
           <div className="wrap">
 
             <SectionHeading
-              eyebrow="Made to be used"
-              title="Customer favorites"
+              eyebrow="Just added to XAAJ"
+              title="New Arrivals"
               action={{
                 label: 'View all',
                 to: '/shop'
               }}
             />
 
-
             <div className="product-grid">
 
-              {liveProducts
-                .slice(0, 4)
-                .map(product => (
-
-                  <ProductCard
-                    product={product}
-                    key={product.id}
-                  />
-
-                ))}
+              {newArrivals.map(product => (
+                <ProductCard
+                  product={product}
+                  key={product.id}
+                />
+              ))}
 
             </div>
 
@@ -1365,10 +1466,21 @@ function Home() {
           </div>
 
 
-          <img
-            src={tableImage}
-            alt="A warm dinner table with handmade tableware"
-          />
+          <video
+  src="https://res.cloudinary.com/kswukbpp/video/upload/v1789806424/19605262-hd_1080_1920_60fps.mp4"
+  autoPlay
+  muted
+  loop
+  playsInline
+  preload="metadata"
+  aria-label="XAAJ handmade crockery"
+  style={{
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    display: 'block'
+  }}
+/>
 
         </section>
 
@@ -2118,6 +2230,11 @@ function ContactForm() {
         </div>
       </div>
 
+      <div className="xaaj-contact-response-note">
+        We usually respond within 1–2 working days. For urgent order support,
+        you can reach us directly by phone or WhatsApp.
+      </div>
+
       {popup && (
         <div
           role="dialog"
@@ -2443,7 +2560,9 @@ function Footer() {
 function Shop() {
 
   const {
-    products: liveProducts
+    products: liveProducts,
+    bestSellingProducts,
+    newArrivals
   } = useStore()
 
   // Read URL query parameters
@@ -2733,7 +2852,9 @@ function Product() {
           images: productImages,
           old: raw.mrp ?? raw.compareAtPrice ?? null,
           tag: raw.tags?.[0] || 'New',
-          reviews: raw.reviewCount || 0
+          rating: Number(raw.rating || 0),
+          reviews: Number(raw.reviewCount || 0),
+          reviewCount: Number(raw.reviewCount || 0)
         })
 
         setSelectedImage(productImages[0] || '')
@@ -2913,8 +3034,12 @@ function Product() {
 
               {/* Rating */}
               <Rating
-                count={Number(product.rating) || 0}
-                reviews={product.reviews}
+                rating={Number(product.rating) || 0}
+                reviews={Number(
+                  product.reviewCount ??
+                  product.reviews ??
+                  0
+                )}
               />
 
               {/* Selling Price + MRP */}
@@ -2974,6 +3099,13 @@ function Product() {
                 }`}
                 onClick={event => {
                   event.preventDefault()
+
+                  if (isAdminPreviewMode()) {
+                    window.alert(
+                      'Admin Preview Mode: adding products to cart is disabled.'
+                    )
+                    return
+                  }
 
                   for (let i = 0; i < qty; i++) {
                     add(product)
@@ -3270,7 +3402,16 @@ function Cart({
                               <button
                                 type="button"
                                 className="xaaj-text-action"
-                                onClick={() => add(product)}
+                                onClick={() => {
+                                 if (isAdminPreviewMode()) {
+                                   window.alert(
+                                     'Admin Preview Mode: adding products to cart is disabled.'
+                                   )
+                                   return
+                                 }
+
+                                 add(product)
+                               }}
                               >
                                 <ShoppingBag size={14} /> Add to cart
                               </button>
@@ -4447,10 +4588,24 @@ function App() {
     user
   } = useAuth()
 
-  const { cart, total } = useStore()
+  const { cart, total, clearCart, loadProducts } = useStore()
   const location = useLocation()
   const path = location.pathname
   const navigate = useNavigate()
+
+  const previewQueryActive =
+    new URLSearchParams(location.search).get('xaajPreview') === '1'
+
+  const isAdminPreview =
+    previewQueryActive || adminPreviewSessionActive
+
+  useEffect(() => {
+    if (previewQueryActive) {
+      // Preview state is kept only in this loaded app instance.
+      // It does not persist to normal users or other browser tabs.
+      adminPreviewSessionActive = true
+    }
+  }, [previewQueryActive])
 
   // ==========================================================
   // LOGIN STATE
@@ -4533,6 +4688,108 @@ function App() {
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [ordersError, setOrdersError] = useState('')
   const [cancellingOrderId, setCancellingOrderId] = useState('')
+
+  // ==========================================================
+  // PRODUCT REVIEW / FEEDBACK STATE
+  // ==========================================================
+
+  const [reviewingItem, setReviewingItem] = useState(null)
+  const [reviewRating, setReviewRating] = useState(0)
+  const [reviewComment, setReviewComment] = useState('')
+  const [reviewLoading, setReviewLoading] = useState(false)
+  const [reviewError, setReviewError] = useState('')
+  const [reviewMessage, setReviewMessage] = useState('')
+
+  const openReviewForm = (order, item) => {
+    setReviewingItem({
+      orderId: order?._id || order?.id,
+      productId: item?.product,
+      productName: item?.name || 'Product',
+      image: item?.image || ''
+    })
+    setReviewRating(0)
+    setReviewComment('')
+    setReviewError('')
+    setReviewMessage('')
+  }
+
+  const closeReviewForm = () => {
+    if (reviewLoading) return
+    setReviewingItem(null)
+    setReviewRating(0)
+    setReviewComment('')
+    setReviewError('')
+    setReviewMessage('')
+  }
+
+  const handleSubmitReview = async event => {
+    event.preventDefault()
+
+    if (!reviewingItem?.orderId || !reviewingItem?.productId) return
+
+    if (!reviewRating) {
+      setReviewError('Please select a rating from 1 to 5 stars.')
+      return
+    }
+
+    try {
+      setReviewLoading(true)
+      setReviewError('')
+      setReviewMessage('')
+
+      const result = await reviewService.create({
+        orderId: reviewingItem.orderId,
+        productId: reviewingItem.productId,
+        rating: reviewRating,
+        comment: reviewComment
+      })
+
+      setOrders(currentOrders =>
+        currentOrders.map(order => {
+          const orderId = order?._id || order?.id
+          if (String(orderId) !== String(reviewingItem.orderId)) return order
+
+          return {
+            ...order,
+            items: Array.isArray(order.items)
+              ? order.items.map(item =>
+                  String(item.product) === String(reviewingItem.productId)
+                    ? {
+                        ...item,
+                        reviewSubmitted: true,
+                        reviewId: result?.review?._id || result?.data?.review?._id || null,
+                        reviewedAt: new Date().toISOString()
+                      }
+                    : item
+                )
+              : order.items
+          }
+        })
+      )
+
+      // Refresh products so the latest rating/review count appears immediately
+      // on Product Cards and Best-selling/New Arrivals sections.
+      await loadProducts()
+
+      setReviewMessage(result?.message || 'Thank you. Your review has been submitted.')
+
+      window.setTimeout(() => {
+        setReviewingItem(null)
+        setReviewRating(0)
+        setReviewComment('')
+        setReviewMessage('')
+      }, 900)
+    } catch (error) {
+      console.error('Review submission error:', error)
+      setReviewError(
+        error?.data?.message ||
+        error?.message ||
+        'Unable to submit your review. Please try again.'
+      )
+    } finally {
+      setReviewLoading(false)
+    }
+  }
 
   // ==========================================================
   // CANCEL ORDER
@@ -4692,6 +4949,14 @@ function App() {
 
   const handleCheckoutPayment = async e => {
     e.preventDefault()
+
+    if (isAdminPreview) {
+      setPaymentError(
+        'Admin Preview Mode: checkout and ordering are disabled.'
+      )
+      return
+    }
+
     setPaymentError('')
 
     // --------------------------------------------------------
@@ -4812,6 +5077,9 @@ function App() {
           JSON.stringify(orderResult.data)
         )
 
+        // Clear cart only after the COD order is successfully created.
+        clearCart()
+
         navigate('/order-confirmation')
         return
       }
@@ -4904,6 +5172,9 @@ function App() {
               'xaaj-last-order',
               JSON.stringify(verifyResult.data)
             )
+
+            // Clear cart only after Razorpay payment is verified successfully.
+            clearCart()
 
             navigate('/order-confirmation')
           } catch (verifyError) {
@@ -5522,7 +5793,8 @@ function App() {
   }
 
   // ==========================================================
-  // ABOUT US — PREMIUM EDITORIAL DESIGN
+  // ==========================================================
+  // ABOUT US — PREMIUM BRAND EXPERIENCE
   // ==========================================================
 
   if (path === '/about') {
@@ -5531,255 +5803,856 @@ function App() {
         <Header />
 
         <style>{`
-          .xaaj-about-page {
-            background: #f7f4ee;
-            color: #292825;
-          }
-          .xaaj-about-hero {
-            position: relative;
-            min-height: min(760px, calc(100vh - 120px));
-            display: flex;
-            align-items: flex-end;
+          .xaaj-about {
+            --ink: #25231f;
+            --muted: #756f66;
+            --paper: #f5f1e9;
+            --paper-2: #ebe5da;
+            --line: rgba(37,35,31,.14);
+            --accent: #a84d35;
+            background: var(--paper);
+            color: var(--ink);
             overflow: hidden;
-            background: #292825;
           }
-          .xaaj-about-hero-image {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transform: scale(1.035);
-            filter: saturate(.88);
+
+          .xaaj-about *,
+          .xaaj-about *::before,
+          .xaaj-about *::after {
+            box-sizing: border-box;
           }
-          .xaaj-about-hero-overlay {
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(180deg, rgba(25,23,20,.04) 5%, rgba(25,23,20,.12) 38%, rgba(25,23,20,.88) 100%);
+
+          /* ================= HERO ================= */
+
+          .xaaj-about-hero {
+            width: min(1380px, calc(100% - 32px));
+            min-height: 720px;
+            margin: 16px auto 0;
+            display: grid;
+            grid-template-columns: .84fr 1.16fr;
+            background: #e9e1d5;
+            overflow: hidden;
           }
-          .xaaj-about-hero-content {
+
+          .xaaj-about-hero-copy {
             position: relative;
-            z-index: 1;
-            width: min(1240px, calc(100% - 48px));
-            margin: 0 auto;
-            padding: 110px 0 78px;
-            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 74px clamp(34px, 6vw, 92px);
           }
-          .xaaj-about-kicker, .xaaj-about-label {
-            display: inline-flex;
+
+          .xaaj-about-eyebrow {
+            display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            margin-bottom: 28px;
+            color: var(--accent);
             font-size: 10px;
             font-weight: 700;
             letter-spacing: .28em;
             text-transform: uppercase;
           }
-          .xaaj-about-kicker { color: #f1c2b4; }
-          .xaaj-about-kicker::before, .xaaj-about-label::before {
+
+          .xaaj-about-eyebrow::before {
             content: '';
-            width: 28px;
+            width: 30px;
             height: 1px;
             background: currentColor;
-            opacity: .75;
           }
+
           .xaaj-about-hero h1 {
-            max-width: 980px;
-            margin: 22px 0 0;
+            max-width: 620px;
+            margin: 0;
             font-family: Georgia, 'Times New Roman', serif;
-            font-size: clamp(52px, 7.2vw, 106px);
+            font-size: clamp(55px, 6.5vw, 94px);
             font-weight: 400;
-            line-height: .94;
-            letter-spacing: -.055em;
+            line-height: .91;
+            letter-spacing: -.06em;
           }
-          .xaaj-about-hero p {
-            max-width: 610px;
-            margin: 28px 0 0;
-            font-size: 16px;
-            line-height: 1.8;
-            color: rgba(255,255,255,.78);
+
+          .xaaj-about-hero h1 em {
+            color: var(--accent);
+            font-style: italic;
           }
-          .xaaj-about-hero-meta {
-            display: flex;
+
+          .xaaj-about-hero-description {
+            max-width: 475px;
+            margin: 31px 0 0;
+            color: #666057;
+            font-size: 14px;
+            line-height: 1.9;
+          }
+
+          .xaaj-about-hero-link {
+            display: inline-flex;
             align-items: center;
-            gap: 20px;
-            margin-top: 36px;
+            gap: 9px;
+            width: fit-content;
+            margin-top: 32px;
+            padding-bottom: 9px;
+            border-bottom: 1px solid var(--ink);
+            color: var(--ink);
+            text-decoration: none;
             font-size: 11px;
+            font-weight: 700;
             letter-spacing: .12em;
             text-transform: uppercase;
-            color: rgba(255,255,255,.58);
           }
-          .xaaj-about-hero-meta span {
-            width: 5px; height: 5px; border-radius: 50%;
-            background: #d58b76;
+
+          .xaaj-about-hero-link svg {
+            transition: transform .25s ease;
           }
-          .xaaj-about-intro, .xaaj-about-story, .xaaj-about-contact {
-            width: min(1240px, calc(100% - 48px));
-            margin: 0 auto;
+
+          .xaaj-about-hero-link:hover svg {
+            transform: translateX(4px);
           }
-          .xaaj-about-intro {
-            padding: 120px 0 110px;
-            display: grid;
-            grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr);
-            gap: 100px;
-            align-items: start;
-          }
-          .xaaj-about-label { color: #b54d36; }
-          .xaaj-about-intro h2, .xaaj-about-story h2 {
-            max-width: 820px;
-            margin: 20px 0 0;
+
+          .xaaj-about-hero-number {
+            position: absolute;
+            right: 30px;
+            bottom: 25px;
+            color: rgba(37,35,31,.20);
             font-family: Georgia, 'Times New Roman', serif;
-            font-size: clamp(40px, 5.3vw, 70px);
-            font-weight: 400;
-            line-height: 1.01;
-            letter-spacing: -.045em;
+            font-size: 74px;
+            line-height: 1;
           }
-          .xaaj-about-intro-copy p, .xaaj-about-story-copy p {
-            max-width: 660px;
-            margin: 30px 0 0;
-            font-size: 16px;
-            line-height: 1.9;
-            color: #6e6961;
-          }
-          .xaaj-about-aside {
-            padding-top: 5px;
-          }
-          .xaaj-about-aside-item {
+
+          .xaaj-about-hero-visual {
             position: relative;
-            padding: 24px 0 24px 42px;
-            border-top: 1px solid rgba(41,40,37,.14);
+            min-height: 720px;
+            overflow: hidden;
           }
-          .xaaj-about-aside-item:last-child { border-bottom: 1px solid rgba(41,40,37,.14); }
-          .xaaj-about-aside-item::before {
-            content: '0' counter(xaaj-aside);
-            counter-increment: xaaj-aside;
-            position: absolute; left: 0; top: 27px;
-            font-size: 10px; letter-spacing: .15em; color: #b54d36;
+
+          .xaaj-about-hero-visual img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+            object-position: center;
+            filter: saturate(.82);
+            transition: transform 1.2s cubic-bezier(.22,1,.36,1);
           }
-          .xaaj-about-aside { counter-reset: xaaj-aside; }
-          .xaaj-about-aside-item strong {
-            display: block; margin-bottom: 7px;
-            font-family: Georgia, 'Times New Roman', serif;
-            font-size: 22px; font-weight: 400;
+
+          .xaaj-about-hero:hover .xaaj-about-hero-visual img {
+            transform: scale(1.035);
           }
-          .xaaj-about-aside-item span { font-size: 13px; line-height: 1.65; color: #777169; }
-          .xaaj-about-story {
-            padding: 0 0 125px;
+
+          .xaaj-about-hero-badge {
+            position: absolute;
+            left: 28px;
+            bottom: 28px;
+            width: 112px;
+            height: 112px;
             display: grid;
-            grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
-            gap: 100px;
-            align-items: center;
+            place-items: center;
+            border: 1px solid rgba(255,255,255,.58);
+            border-radius: 50%;
+            background: rgba(37,35,31,.78);
+            color: #fff;
+            text-align: center;
+            font-size: 8px;
+            line-height: 1.55;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            backdrop-filter: blur(7px);
           }
-          .xaaj-about-story-image {
-            width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block;
-            border-radius: 2px; filter: saturate(.9);
-          }
-          .xaaj-about-story-copy { padding-right: 30px; }
-          .xaaj-about-story-copy h2 { max-width: 700px; }
-          .xaaj-about-values {
-            background: #292825; color: #fff; padding: 120px 0;
-          }
-          .xaaj-about-values-inner { width: min(1240px, calc(100% - 48px)); margin: 0 auto; }
-          .xaaj-about-values h2 {
-            max-width: 820px; margin: 20px 0 0;
+
+          .xaaj-about-hero-badge strong {
+            display: block;
+            margin-bottom: 2px;
             font-family: Georgia, 'Times New Roman', serif;
-            font-size: clamp(42px, 5.5vw, 76px); font-weight: 400; line-height: .98; letter-spacing: -.045em;
+            font-size: 20px;
+            font-weight: 400;
+            letter-spacing: 0;
           }
+
+          /* ================= INTRO ================= */
+
+          .xaaj-about-intro {
+            width: min(1180px, calc(100% - 42px));
+            margin: 0 auto;
+            padding: 125px 0 118px;
+            display: grid;
+            grid-template-columns: .55fr 1.45fr;
+            gap: 55px;
+          }
+
+          .xaaj-about-section-label {
+            padding-top: 8px;
+            color: var(--accent);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .25em;
+            text-transform: uppercase;
+          }
+
+          .xaaj-about-intro h2 {
+            max-width: 870px;
+            margin: 0;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: clamp(40px, 5.4vw, 72px);
+            font-weight: 400;
+            line-height: .99;
+            letter-spacing: -.055em;
+          }
+
+          .xaaj-about-intro h2 em {
+            font-style: italic;
+          }
+
+          .xaaj-about-intro-text {
+            max-width: 620px;
+            margin-top: 30px;
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.9;
+          }
+
+          .xaaj-about-stat-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            margin-top: 52px;
+            border-top: 1px solid var(--line);
+            border-bottom: 1px solid var(--line);
+          }
+
+          .xaaj-about-stat {
+            padding: 24px 22px 25px 0;
+            border-right: 1px solid var(--line);
+          }
+
+          .xaaj-about-stat:not(:first-child) {
+            padding-left: 22px;
+          }
+
+          .xaaj-about-stat:last-child {
+            border-right: 0;
+          }
+
+          .xaaj-about-stat strong {
+            display: block;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 25px;
+            font-weight: 400;
+          }
+
+          .xaaj-about-stat span {
+            display: block;
+            margin-top: 7px;
+            color: #817a70;
+            font-size: 10px;
+            line-height: 1.55;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+          }
+
+          /* ================= STORY IMAGE STRIP ================= */
+
+          .xaaj-about-story {
+            background: var(--ink);
+            color: #fff;
+            padding: 0;
+          }
+
+          .xaaj-about-story-grid {
+            width: min(1380px, 100%);
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1.08fr .92fr;
+            min-height: 690px;
+          }
+
+          .xaaj-about-story-image {
+            min-height: 690px;
+            overflow: hidden;
+          }
+
+          .xaaj-about-story-image img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+            filter: saturate(.75);
+          }
+
+          .xaaj-about-story-copy {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 80px clamp(38px, 7vw, 100px);
+          }
+
+          .xaaj-about-story-copy .xaaj-about-section-label {
+            color: #d58b76;
+          }
+
+          .xaaj-about-story-copy h2 {
+            max-width: 590px;
+            margin: 22px 0 0;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: clamp(42px, 5vw, 68px);
+            font-weight: 400;
+            line-height: .98;
+            letter-spacing: -.055em;
+          }
+
+          .xaaj-about-story-copy h2 em {
+            font-style: italic;
+          }
+
+          .xaaj-about-story-copy p {
+            max-width: 530px;
+            margin: 27px 0 0;
+            color: rgba(255,255,255,.61);
+            font-size: 14px;
+            line-height: 1.9;
+          }
+
+          .xaaj-about-story-signature {
+            margin-top: 38px;
+            color: rgba(255,255,255,.38);
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 22px;
+            font-style: italic;
+          }
+
+          /* ================= VALUES ================= */
+
+          .xaaj-about-values {
+            width: min(1180px, calc(100% - 42px));
+            margin: 0 auto;
+            padding: 125px 0 130px;
+          }
+
+          .xaaj-about-values-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 50px;
+            padding-bottom: 48px;
+            border-bottom: 1px solid var(--line);
+          }
+
+          .xaaj-about-values h2 {
+            max-width: 760px;
+            margin: 18px 0 0;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: clamp(43px, 5.5vw, 73px);
+            font-weight: 400;
+            line-height: .97;
+            letter-spacing: -.055em;
+          }
+
+          .xaaj-about-values-head p {
+            max-width: 250px;
+            margin: 0;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.75;
+          }
+
           .xaaj-about-value-grid {
-            margin-top: 78px; display: grid; grid-template-columns: repeat(3, 1fr);
-            border-top: 1px solid rgba(255,255,255,.16);
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
           }
-          .xaaj-about-value { padding: 34px 38px 15px 0; border-right: 1px solid rgba(255,255,255,.16); }
-          .xaaj-about-value:not(:first-child) { padding-left: 38px; }
-          .xaaj-about-value:last-child { border-right: 0; }
-          .xaaj-about-value-number { display: block; margin-bottom: 52px; font-size: 10px; letter-spacing: .2em; color: #d58b76; }
-          .xaaj-about-value h3 { margin: 0 0 12px; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 400; }
-          .xaaj-about-value p { margin: 0; font-size: 14px; line-height: 1.8; color: rgba(255,255,255,.62); }
-          .xaaj-about-contact { padding: 125px 0 135px; text-align: center; }
-          .xaaj-about-contact h2 {
-            max-width: 850px; margin: 22px auto 0;
-            font-family: Georgia, 'Times New Roman', serif; font-size: clamp(46px, 6vw, 82px);
-            font-weight: 400; line-height: .98; letter-spacing: -.05em;
+
+          .xaaj-about-value {
+            position: relative;
+            min-height: 280px;
+            padding: 30px 38px 25px 0;
+            border-right: 1px solid var(--line);
           }
-          .xaaj-about-contact p { max-width: 570px; margin: 26px auto 0; color: #777169; line-height: 1.8; }
-          .xaaj-about-contact-links { margin-top: 38px; display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
-          .xaaj-about-contact-links a {
-            display: inline-flex; align-items: center; justify-content: center; min-height: 48px;
-            padding: 0 22px; border: 1px solid rgba(41,40,37,.18); border-radius: 999px;
-            color: #292825; text-decoration: none; font-size: 12px; letter-spacing: .02em; transition: .25s ease;
+
+          .xaaj-about-value:not(:first-child) {
+            padding-left: 38px;
           }
-          .xaaj-about-contact-links a:hover { background: #292825; color: #fff; border-color: #292825; transform: translateY(-2px); }
+
+          .xaaj-about-value:last-child {
+            border-right: 0;
+          }
+
+          .xaaj-about-value-number {
+            color: var(--accent);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .2em;
+          }
+
+          .xaaj-about-value h3 {
+            margin: 80px 0 11px;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 27px;
+            font-weight: 400;
+          }
+
+          .xaaj-about-value p {
+            max-width: 270px;
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.8;
+          }
+
+          /* ================= CTA ================= */
+
+          .xaaj-about-cta {
+            position: relative;
+            padding: 120px 20px 130px;
+            background: #e8e0d4;
+            text-align: center;
+            overflow: hidden;
+          }
+
+          .xaaj-about-cta::before {
+            content: 'XAAJ';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -53%);
+            color: rgba(37,35,31,.045);
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: clamp(150px, 27vw, 400px);
+            line-height: 1;
+            white-space: nowrap;
+            pointer-events: none;
+          }
+
+          .xaaj-about-cta-inner {
+            position: relative;
+            z-index: 1;
+          }
+
+          .xaaj-about-cta h2 {
+            max-width: 850px;
+            margin: 20px auto 0;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: clamp(48px, 6.3vw, 84px);
+            font-weight: 400;
+            line-height: .94;
+            letter-spacing: -.06em;
+          }
+
+          .xaaj-about-cta h2 em {
+            color: var(--accent);
+            font-style: italic;
+          }
+
+          .xaaj-about-cta p {
+            max-width: 500px;
+            margin: 25px auto 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.8;
+          }
+
+          .xaaj-about-cta-links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 9px;
+            margin-top: 34px;
+          }
+
+          .xaaj-about-cta-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 46px;
+            padding: 0 20px;
+            border: 1px solid rgba(37,35,31,.22);
+            border-radius: 999px;
+            color: var(--ink);
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            transition: .25s ease;
+          }
+
+          .xaaj-about-cta-links a:hover {
+            background: var(--ink);
+            border-color: var(--ink);
+            color: #fff;
+            transform: translateY(-2px);
+          }
+
+          /* ================= MOBILE ================= */
+
           @media (max-width: 800px) {
-            .xaaj-about-hero { min-height: 620px; }
-            .xaaj-about-hero-content, .xaaj-about-intro, .xaaj-about-story, .xaaj-about-contact, .xaaj-about-values-inner { width: min(100% - 30px, 1240px); }
-            .xaaj-about-hero-content { padding: 80px 0 58px; }
-            .xaaj-about-intro, .xaaj-about-story { grid-template-columns: 1fr; gap: 55px; padding-top: 78px; padding-bottom: 82px; }
-            .xaaj-about-story { padding-top: 0; }
-            .xaaj-about-story-copy { padding-right: 0; }
-            .xaaj-about-value-grid { grid-template-columns: 1fr; margin-top: 55px; }
-            .xaaj-about-value, .xaaj-about-value:not(:first-child) { padding: 28px 0; border-right: 0; border-bottom: 1px solid rgba(255,255,255,.16); }
-            .xaaj-about-value:last-child { border-bottom: 0; }
-            .xaaj-about-values { padding: 82px 0; }
-            .xaaj-about-contact { padding: 82px 0 90px; }
+            .xaaj-about-hero {
+              width: calc(100% - 20px);
+              margin-top: 10px;
+              min-height: auto;
+              grid-template-columns: 1fr;
+            }
+
+            .xaaj-about-hero-copy {
+              min-height: 520px;
+              padding: 65px 28px 55px;
+            }
+
+            .xaaj-about-hero h1 {
+              font-size: clamp(51px, 15vw, 70px);
+            }
+
+            .xaaj-about-hero-visual {
+              min-height: 430px;
+            }
+
+            .xaaj-about-hero-badge {
+              left: 20px;
+              bottom: 20px;
+            }
+
+            .xaaj-about-intro {
+              width: calc(100% - 30px);
+              padding: 78px 0 75px;
+              grid-template-columns: 1fr;
+              gap: 28px;
+            }
+
+            .xaaj-about-intro h2 {
+              font-size: clamp(40px, 12vw, 55px);
+            }
+
+            .xaaj-about-stat-row {
+              grid-template-columns: 1fr;
+            }
+
+            .xaaj-about-stat,
+            .xaaj-about-stat:not(:first-child) {
+              padding: 20px 0;
+              border-right: 0;
+              border-bottom: 1px solid var(--line);
+            }
+
+            .xaaj-about-stat:last-child {
+              border-bottom: 0;
+            }
+
+            .xaaj-about-story-grid {
+              grid-template-columns: 1fr;
+            }
+
+            .xaaj-about-story-image {
+              min-height: 480px;
+            }
+
+            .xaaj-about-story-copy {
+              min-height: 560px;
+              padding: 72px 28px;
+            }
+
+            .xaaj-about-story-copy h2 {
+              font-size: clamp(42px, 12vw, 56px);
+            }
+
+            .xaaj-about-values {
+              width: calc(100% - 30px);
+              padding: 78px 0 82px;
+            }
+
+            .xaaj-about-values-head {
+              display: block;
+            }
+
+            .xaaj-about-values-head p {
+              margin-top: 25px;
+            }
+
+            .xaaj-about-value-grid {
+              grid-template-columns: 1fr;
+            }
+
+            .xaaj-about-value,
+            .xaaj-about-value:not(:first-child) {
+              min-height: auto;
+              padding: 27px 0 32px;
+              border-right: 0;
+              border-bottom: 1px solid var(--line);
+            }
+
+            .xaaj-about-value:last-child {
+              border-bottom: 0;
+            }
+
+            .xaaj-about-value h3 {
+              margin-top: 35px;
+            }
+
+            .xaaj-about-cta {
+              padding: 82px 18px 90px;
+            }
           }
         `}</style>
 
-        <main className="xaaj-about-page">
+        <main className="xaaj-about">
+
+          {/* HERO */}
           <section className="xaaj-about-hero">
-            <img className="xaaj-about-hero-image" src={tableImage} alt="XAAJ handcrafted tableware arranged for a shared table" />
-            <div className="xaaj-about-hero-overlay" />
-            <div className="xaaj-about-hero-content">
-              <span className="xaaj-about-kicker">About XAAJ</span>
-              <h1>Objects made to become part of your life.</h1>
-              <p>Thoughtful tableware, shaped by Indian craftsmanship and designed for the everyday rituals that make a house feel like home.</p>
-              <div className="xaaj-about-hero-meta"><span /> Made in India <span /> Designed for everyday rituals</div>
-            </div>
-          </section>
 
-          <section className="xaaj-about-intro">
-            <div className="xaaj-about-intro-copy">
-              <span className="xaaj-about-label">Our philosophy</span>
-              <h2>Beautiful is better when it is meant to be used.</h2>
-              <p>XAAJ began with a simple belief: the things we reach for every day deserve the same care as the things we keep for special moments. We create pieces that feel considered without feeling precious.</p>
-            </div>
-            <div className="xaaj-about-aside">
-              <div className="xaaj-about-aside-item"><strong>Made in India</strong><span>Working with makers and materials rooted in local craft.</span></div>
-              <div className="xaaj-about-aside-item"><strong>Small-batch thinking</strong><span>Collections designed with intention, not endless excess.</span></div>
-              <div className="xaaj-about-aside-item"><strong>Everyday objects</strong><span>Pieces created to be used, washed, shared and loved.</span></div>
-            </div>
-          </section>
+            <div className="xaaj-about-hero-copy">
+              <span className="xaaj-about-eyebrow">
+                The XAAJ story
+              </span>
 
-          <section className="xaaj-about-story">
-            <img className="xaaj-about-story-image" src={tableImage} alt="Warm XAAJ table setting with handcrafted tableware" />
-            <div className="xaaj-about-story-copy">
-              <span className="xaaj-about-label">The XAAJ way</span>
-              <h2>For morning tea, long lunches and everything in between.</h2>
-              <p>We work with makers across India to create objects that hold space for your rituals — morning tea, long lunches and the last glass of wine. Each collection is designed to bring warmth, texture and a quiet sense of occasion to the everyday table.</p>
-              <p>Natural variation is part of the character. Small differences in colour, texture and form are reminders that these pieces are made by people, not machines alone.</p>
-            </div>
-          </section>
+              <h1>
+                Everyday
+                <br />
+                objects,
+                <br />
+                <em>beautifully lived.</em>
+              </h1>
 
-          <section className="xaaj-about-values">
-            <div className="xaaj-about-values-inner">
-              <span className="xaaj-about-kicker">What we believe</span>
-              <h2>Less noise. More meaning. Better things.</h2>
-              <div className="xaaj-about-value-grid">
-                <div className="xaaj-about-value"><span className="xaaj-about-value-number">01</span><h3>Craft over clutter</h3><p>We favour thoughtful pieces that earn their place at your table.</p></div>
-                <div className="xaaj-about-value"><span className="xaaj-about-value-number">02</span><h3>Beauty with purpose</h3><p>Form follows the way a piece feels in your hands and lives in your home.</p></div>
-                <div className="xaaj-about-value"><span className="xaaj-about-value-number">03</span><h3>Made to keep</h3><p>Our aim is simple: objects you reach for often and keep for years.</p></div>
+              <p className="xaaj-about-hero-description">
+                We believe the objects around your table should
+                bring a little more warmth to ordinary moments.
+                XAAJ creates thoughtful crockery for the way
+                people actually live, gather and celebrate.
+              </p>
+
+              <Link className="xaaj-about-hero-link" to="/shop">
+                Explore the collection
+                <ArrowRight size={14} />
+              </Link>
+
+              <span className="xaaj-about-hero-number">
+                01
+              </span>
+            </div>
+
+            <div className="xaaj-about-hero-visual">
+              <img
+                src={heroImage}
+                alt="XAAJ tableware arranged on a warm dining table"
+              />
+
+              <div className="xaaj-about-hero-badge">
+                <div>
+                  <strong>XAAJ</strong>
+                  Made for
+                  <br />
+                  everyday rituals
+                </div>
               </div>
             </div>
+
           </section>
 
-          <section className="xaaj-about-contact">
-            <span className="xaaj-about-label">Come say hello</span>
-            <h2>Have a question? We are here.</h2>
-            <p>For orders, products or anything else, reach out to the XAAJ team. We would love to hear from you.</p>
-            <div className="xaaj-about-contact-links">
-              <a href="mailto:customercare@xaaj.in">customercare@xaaj.in</a>
-              <a href="tel:+919899446117">+91 9899446117</a>
-              <Link to="/contact">Contact us <ArrowRight size={14} style={{ marginLeft: 7 }} /></Link>
+          {/* PHILOSOPHY */}
+          <section className="xaaj-about-intro">
+
+            <div className="xaaj-about-section-label">
+              02 — Our philosophy
             </div>
+
+            <div>
+              <h2>
+                The everyday deserves
+                <em> beautiful things.</em>
+              </h2>
+
+              <p className="xaaj-about-intro-text">
+                XAAJ began with a simple idea: beauty should not
+                be reserved for special occasions. From the first
+                cup of tea in the morning to a table shared with
+                people you love, the pieces we use every day
+                can make ordinary rituals feel meaningful.
+              </p>
+
+              <div className="xaaj-about-stat-row">
+
+                <div className="xaaj-about-stat">
+                  <strong>01</strong>
+                  <span>Thoughtful design</span>
+                </div>
+
+                <div className="xaaj-about-stat">
+                  <strong>02</strong>
+                  <span>Indian craft</span>
+                </div>
+
+                <div className="xaaj-about-stat">
+                  <strong>03</strong>
+                  <span>Made to be lived with</span>
+                </div>
+
+              </div>
+            </div>
+
           </section>
+
+          {/* STORY */}
+          <section className="xaaj-about-story">
+
+            <div className="xaaj-about-story-grid">
+
+              <div className="xaaj-about-story-image">
+                <img
+                  src={tableImage}
+                  alt="Warm table setting with handcrafted crockery"
+                />
+              </div>
+
+              <div className="xaaj-about-story-copy">
+
+                <span className="xaaj-about-section-label">
+                  03 — The XAAJ way
+                </span>
+
+                <h2>
+                  For morning tea,
+                  <br />
+                  long lunches &
+                  <br />
+                  <em>everything between.</em>
+                </h2>
+
+                <p>
+                  We work with makers and draw inspiration from
+                  the textures, colours and quiet character of
+                  Indian craft. Our collections are designed
+                  to feel contemporary while still carrying
+                  a sense of warmth and familiarity.
+                </p>
+
+                <p>
+                  Small variations in colour, texture and form
+                  are part of the charm. They are little reminders
+                  that the objects on your table have a human story.
+                </p>
+
+                <div className="xaaj-about-story-signature">
+                  — with care, XAAJ
+                </div>
+
+              </div>
+
+            </div>
+
+          </section>
+
+          {/* VALUES */}
+          <section className="xaaj-about-values">
+
+            <div className="xaaj-about-values-head">
+
+              <div>
+                <span className="xaaj-about-section-label">
+                  04 — What we believe
+                </span>
+
+                <h2>
+                  Less clutter.
+                  <br />
+                  More <em>meaning.</em>
+                </h2>
+              </div>
+
+              <p>
+                Every collection starts with the same question:
+                will this make the everyday table feel a little
+                more special?
+              </p>
+
+            </div>
+
+            <div className="xaaj-about-value-grid">
+
+              <div className="xaaj-about-value">
+                <span className="xaaj-about-value-number">
+                  01
+                </span>
+
+                <h3>
+                  Craft over clutter
+                </h3>
+
+                <p>
+                  Thoughtful pieces that earn their place
+                  at your table.
+                </p>
+              </div>
+
+              <div className="xaaj-about-value">
+                <span className="xaaj-about-value-number">
+                  02
+                </span>
+
+                <h3>
+                  Beauty with purpose
+                </h3>
+
+                <p>
+                  Form, texture and function working together
+                  naturally.
+                </p>
+              </div>
+
+              <div className="xaaj-about-value">
+                <span className="xaaj-about-value-number">
+                  03
+                </span>
+
+                <h3>
+                  Made to keep
+                </h3>
+
+                <p>
+                  Objects you reach for often, share freely
+                  and enjoy for years.
+                </p>
+              </div>
+
+            </div>
+
+          </section>
+
+          {/* CTA */}
+          <section className="xaaj-about-cta">
+
+            <div className="xaaj-about-cta-inner">
+
+              <span className="xaaj-about-section-label">
+                05 — Come say hello
+              </span>
+
+              <h2>
+                Your table tells a story.
+                <br />
+                <em>Make it yours.</em>
+              </h2>
+
+              <p>
+                Questions about an order, a product or simply
+                want to say hello? Our team is always happy to help.
+              </p>
+
+              <div className="xaaj-about-cta-links">
+
+                <a href="mailto:customercare@xaaj.in">
+                  Email us
+                </a>
+
+                <a href="tel:+919899446117">
+                  +91 9899446117
+                </a>
+
+                <Link to="/contact">
+                  Contact us
+                  <ArrowRight
+                    size={13}
+                    style={{ marginLeft: 7 }}
+                  />
+                </Link>
+
+              </div>
+
+            </div>
+
+          </section>
+
         </main>
 
         <Newsletter />
@@ -5788,11 +6661,38 @@ function App() {
     )
   }
 
+
   // ==========================================================
   // CHECKOUT
   // ==========================================================
 
   if (path === '/checkout') {
+
+    if (isAdminPreview) {
+      return (
+        <SimplePage
+          eyebrow="Admin Preview Mode"
+          title="Checkout is disabled."
+        >
+          <p className="lead">
+            You are viewing the XAAJ storefront from the
+            Admin Live Store preview. Product purchasing,
+            checkout and payment are disabled in this mode.
+          </p>
+
+          <Button
+            to="/"
+            onClick={() => {
+              window.sessionStorage.removeItem(
+                'xaaj-admin-preview'
+              )
+            }}
+          >
+            Back to store
+          </Button>
+        </SimplePage>
+      )
+    }
 
     // Checkout requires login.
     if (!user) {
@@ -6768,6 +7668,99 @@ function App() {
                       font-weight: 600;
                     }
 
+                    .xaaj-feedback-list {
+                      display: grid;
+                      gap: 10px;
+                      width: 100%;
+                      margin-top: 4px;
+                      padding-top: 4px;
+                    }
+
+                    .xaaj-feedback-item {
+                      display: flex;
+                      align-items: center;
+                      justify-content: space-between;
+                      gap: 14px;
+                      padding: 12px 13px;
+                      border: 1px solid rgba(41,40,37,.08);
+                      border-radius: 15px;
+                      background: rgba(255,255,255,.72);
+                    }
+
+                    .xaaj-feedback-product {
+                      display: flex;
+                      align-items: center;
+                      gap: 11px;
+                      min-width: 0;
+                    }
+
+                    .xaaj-feedback-product img,
+                    .xaaj-feedback-placeholder {
+                      width: 46px;
+                      height: 46px;
+                      flex: 0 0 46px;
+                      border-radius: 10px;
+                      object-fit: cover;
+                      background: #f0ece5;
+                    }
+
+                    .xaaj-feedback-placeholder {
+                      display: grid;
+                      place-items: center;
+                      font-size: 9px;
+                      letter-spacing: .12em;
+                      color: #77736b;
+                    }
+
+                    .xaaj-feedback-product strong {
+                      display: block;
+                      max-width: 280px;
+                      overflow: hidden;
+                      text-overflow: ellipsis;
+                      white-space: nowrap;
+                      font-size: 13px;
+                    }
+
+                    .xaaj-feedback-product small {
+                      display: block;
+                      margin-top: 3px;
+                      color: #77736b;
+                      font-size: 11px;
+                    }
+
+                    .xaaj-feedback-button {
+                      display: inline-flex;
+                      align-items: center;
+                      justify-content: center;
+                      gap: 7px;
+                      min-height: 38px;
+                      padding: 0 14px;
+                      border: 1px solid rgba(41,40,37,.18);
+                      border-radius: 999px;
+                      background: #292824;
+                      color: #fff;
+                      font: inherit;
+                      font-size: 11px;
+                      font-weight: 700;
+                      cursor: pointer;
+                      white-space: nowrap;
+                    }
+
+                    .xaaj-reviewed-badge {
+                      display: inline-flex;
+                      align-items: center;
+                      gap: 6px;
+                      min-height: 36px;
+                      padding: 0 12px;
+                      border: 1px solid rgba(61,105,77,.18);
+                      border-radius: 999px;
+                      background: rgba(61,105,77,.07);
+                      color: #3d694d;
+                      font-size: 11px;
+                      font-weight: 700;
+                      white-space: nowrap;
+                    }
+
                     @media (max-width: 640px) {
                       .xaaj-order-card {
                         padding: 18px;
@@ -6920,6 +7913,42 @@ function App() {
                                 <a href="tel:+919899446117">+91 9899446117</a>
                               </p>
                             )}
+
+                            {status === 'delivered' && Array.isArray(order.items) && (
+                              <div className="xaaj-feedback-list">
+                                {order.items.map((item, itemIndex) => (
+                                  <div className="xaaj-feedback-item" key={`${orderId}-${item.product || itemIndex}`}>
+                                    <div className="xaaj-feedback-product">
+                                      {item.image ? (
+                                        <img src={item.image} alt={item.name || 'Product'} />
+                                      ) : (
+                                        <div className="xaaj-feedback-placeholder">XAAJ</div>
+                                      )}
+                                      <div>
+                                        <strong>{item.name || 'Product'}</strong>
+                                        <small>Qty: {item.quantity || 1}</small>
+                                      </div>
+                                    </div>
+
+                                    {item.reviewSubmitted ? (
+                                      <span className="xaaj-reviewed-badge">
+                                        <Check size={14} />
+                                        Reviewed
+                                      </span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="xaaj-feedback-button"
+                                        onClick={() => openReviewForm(order, item)}
+                                      >
+                                        <Star size={14} />
+                                        Give Feedback
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </article>
                       )
@@ -6928,6 +7957,92 @@ function App() {
                 </>
               )}
           </div>
+
+          {reviewingItem && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="xaaj-review-title"
+              onClick={event => {
+                if (event.target === event.currentTarget) closeReviewForm()
+              }}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 99999, display: 'flex',
+                alignItems: 'center', justifyContent: 'center', padding: '20px',
+                background: 'rgba(35,32,28,.48)', backdropFilter: 'blur(8px)'
+              }}
+            >
+              <div style={{
+                position: 'relative', width: 'min(100%, 480px)', padding: '30px',
+                border: '1px solid #e8e0d5', borderRadius: '24px',
+                background: '#fffdf9', boxShadow: '0 30px 80px rgba(41,40,37,.22)'
+              }}>
+                <button
+                  type="button" onClick={closeReviewForm} disabled={reviewLoading}
+                  aria-label="Close review"
+                  style={{
+                    position: 'absolute', top: '15px', right: '15px', width: '35px', height: '35px',
+                    display: 'grid', placeItems: 'center', border: '1px solid #e5ddd2',
+                    borderRadius: '50%', background: '#fff', color: '#292824', cursor: 'pointer'
+                  }}
+                >
+                  <X size={16} strokeWidth={1.5} />
+                </button>
+
+                <span className="eyebrow">Your experience</span>
+                <h2 id="xaaj-review-title" style={{
+                  margin: '9px 45px 8px 0', fontFamily: 'Georgia, "Times New Roman", serif',
+                  fontSize: '30px', lineHeight: 1.2, fontWeight: 400
+                }}>
+                  How did you like it?
+                </h2>
+                <p style={{ margin: '0 0 20px', color: '#706d67', fontSize: '14px' }}>
+                  {reviewingItem.productName}
+                </p>
+
+                <form onSubmit={handleSubmitReview}>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', margin: '8px 0 18px' }}>
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <button
+                        key={star} type="button" onClick={() => setReviewRating(star)}
+                        aria-label={`${star} star${star > 1 ? 's' : ''}`}
+                        style={{
+                          width: '42px', height: '42px', border: 0, background: 'transparent',
+                          color: star <= reviewRating ? '#b84d32' : '#c9c1b7',
+                          cursor: 'pointer', fontSize: '29px', lineHeight: 1
+                        }}
+                      >★</button>
+                    ))}
+                  </div>
+
+                  <p style={{ minHeight: '20px', margin: '-5px 0 16px', textAlign: 'center', fontSize: '12px', color: '#77736b' }}>
+                    {reviewRating ? `${reviewRating} out of 5` : 'Select your rating'}
+                  </p>
+
+                  <textarea
+                    value={reviewComment}
+                    onChange={event => setReviewComment(event.target.value)}
+                    maxLength={1000} rows={5}
+                    placeholder="Tell us a little about your experience (optional)"
+                    disabled={reviewLoading}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', padding: '14px 15px',
+                      border: '1px solid #ddd4c8', borderRadius: '14px', background: '#fff',
+                      color: '#292824', outline: 'none', resize: 'vertical', font: 'inherit', lineHeight: 1.6
+                    }}
+                  />
+
+                  {reviewError && <p style={{ margin: '12px 0 0', color: '#b42318', fontSize: '13px' }}>{reviewError}</p>}
+                  {reviewMessage && <p style={{ margin: '12px 0 0', color: '#3d694d', fontSize: '13px' }}>{reviewMessage}</p>}
+
+                  <button type="submit" className="button" disabled={reviewLoading} style={{ width: '100%', marginTop: '18px', justifyContent: 'center' }}>
+                    {reviewLoading ? 'Submitting...' : 'Submit review'}
+                    {!reviewLoading && <ArrowRight size={15} />}
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
         </SimplePage>
       )
     }
@@ -7653,65 +8768,281 @@ function App() {
         <Header />
 
         <style>{`
-          .xaaj-contact-page { background: #f7f4ee; color: #292825; }
+          /* ==========================================================
+             XAAJ CONTACT — COMPACT PREMIUM REDESIGN
+             ========================================================== */
+
+          .xaaj-contact-page {
+            background: #f7f4ee;
+            color: #292825;
+            overflow: hidden;
+          }
+
           .xaaj-contact-hero {
-            width: min(1240px, calc(100% - 48px));
+            width: min(1180px, calc(100% - 48px));
             margin: 0 auto;
-            padding: 92px 0 72px;
+            padding: 68px 0 52px;
             display: grid;
-            grid-template-columns: minmax(0, 1.15fr) minmax(280px, .65fr);
-            gap: 90px;
-            align-items: end;
-            border-bottom: 1px solid rgba(41,40,37,.12);
+            grid-template-columns: minmax(0, 1.08fr) minmax(360px, .82fr);
+            gap: 72px;
+            align-items: center;
+            border-bottom: 1px solid rgba(41,40,37,.10);
           }
+
           .xaaj-contact-kicker {
-            display: inline-flex; align-items: center; gap: 10px;
-            color: #b54d36; font-size: 10px; font-weight: 700;
-            letter-spacing: .28em; text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: #b54d36;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .25em;
+            line-height: 1;
+            text-transform: uppercase;
           }
-          .xaaj-contact-kicker::before { content: ''; width: 28px; height: 1px; background: currentColor; }
+
+          .xaaj-contact-kicker::before {
+            content: '';
+            width: 26px;
+            height: 1px;
+            background: currentColor;
+          }
+
           .xaaj-contact-hero h1 {
-            max-width: 820px; margin: 22px 0 0;
-            font-family: Georgia, 'Times New Roman', serif; font-size: clamp(54px, 7vw, 96px);
-            font-weight: 400; line-height: .94; letter-spacing: -.055em;
+            max-width: 690px;
+            margin: 18px 0 0;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: clamp(48px, 5.8vw, 78px);
+            font-weight: 400;
+            line-height: .94;
+            letter-spacing: -.052em;
           }
-          .xaaj-contact-hero h1 em { font-weight: 400; }
-          .xaaj-contact-hero-copy { max-width: 520px; padding-bottom: 8px; }
-          .xaaj-contact-hero-copy p { margin: 0; font-size: 16px; line-height: 1.85; color: #6e6961; }
+
+          .xaaj-contact-hero h1 em {
+            font-weight: 400;
+          }
+
+          .xaaj-contact-hero-copy {
+            max-width: 500px;
+          }
+
+          .xaaj-contact-hero-copy p {
+            margin: 0;
+            font-size: 15px;
+            line-height: 1.75;
+            color: #6e6961;
+          }
+
           .xaaj-contact-mini {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 25px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 22px;
           }
+
           .xaaj-contact-mini a {
-            min-height: 88px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between;
-            border: 1px solid rgba(41,40,37,.12); background: rgba(255,255,255,.35);
-            color: #292825; text-decoration: none; transition: .25s ease;
+            min-height: 78px;
+            padding: 15px 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 1px solid rgba(41,40,37,.11);
+            background: rgba(255,255,255,.42);
+            color: #292825;
+            text-decoration: none;
+            transition: transform .22s ease, background .22s ease, border-color .22s ease;
           }
-          .xaaj-contact-mini a:hover { background: #fffdf9; transform: translateY(-2px); }
-          .xaaj-contact-mini small { font-size: 9px; text-transform: uppercase; letter-spacing: .18em; color: #9a938a; }
-          .xaaj-contact-mini strong { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; font-weight: 400; }
-          .xaaj-contact-content { width: min(1240px, calc(100% - 48px)); margin: 0 auto; padding: 58px 0 110px; }
-          .xaaj-contact-content .xaaj-contact-layout { margin-top: 0 !important; grid-template-columns: minmax(0, 1.15fr) minmax(300px, .65fr) !important; gap: 24px !important; }
+
+          .xaaj-contact-mini a:hover {
+            background: #fffdf9;
+            border-color: rgba(41,40,37,.20);
+            transform: translateY(-2px);
+          }
+
+          .xaaj-contact-mini small {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: .16em;
+            color: #999187;
+          }
+
+          .xaaj-contact-mini strong {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 16px;
+            font-weight: 400;
+          }
+
+          .xaaj-contact-content {
+            width: min(1180px, calc(100% - 48px));
+            margin: 0 auto;
+            padding: 42px 0 58px;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout {
+            margin-top: 0 !important;
+            grid-template-columns: minmax(0, 1.18fr) minmax(310px, .82fr) !important;
+            gap: 22px !important;
+            align-items: start !important;
+          }
+
           .xaaj-contact-content .xaaj-contact-layout > form {
-            padding: 42px !important; border-radius: 2px !important; background: #fffdf9 !important;
-            border: 1px solid rgba(41,40,37,.11) !important; box-shadow: 0 20px 70px rgba(41,40,37,.055) !important;
+            padding: 32px !important;
+            border-radius: 18px !important;
+            background: #fffdf9 !important;
+            border: 1px solid rgba(41,40,37,.10) !important;
+            box-shadow: 0 18px 55px rgba(41,40,37,.055) !important;
           }
-          .xaaj-contact-content .xaaj-contact-layout > form h2, .xaaj-contact-content .xaaj-contact-layout > div h2 { font-size: 32px !important; }
+
+          .xaaj-contact-content .xaaj-contact-layout > form h2,
+          .xaaj-contact-content .xaaj-contact-layout > div h2 {
+            font-size: 28px !important;
+            letter-spacing: -.025em;
+          }
+
           .xaaj-contact-content .xaaj-contact-layout > div {
-            padding: 42px !important; border-radius: 2px !important; background: #292825 !important;
-            border: 0 !important; color: #fff !important;
+            padding: 32px !important;
+            border-radius: 18px !important;
+            background: #292825 !important;
+            border: 1px solid #292825 !important;
+            color: #fff !important;
+            min-height: 0 !important;
           }
-          .xaaj-contact-content .xaaj-contact-layout > div p, .xaaj-contact-content .xaaj-contact-layout > div a { color: rgba(255,255,255,.76) !important; }
-          .xaaj-contact-content .xaaj-contact-layout > div .eyebrow { color: #d58b76 !important; }
-          .xaaj-contact-note {
-            margin-top: 44px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.13);
-            font-size: 12px; line-height: 1.7; color: rgba(255,255,255,.5);
+
+          .xaaj-contact-content .xaaj-contact-layout > div p,
+          .xaaj-contact-content .xaaj-contact-layout > div a {
+            color: rgba(255,255,255,.74) !important;
           }
-          @media (max-width: 800px) {
-            .xaaj-contact-hero, .xaaj-contact-content { width: min(100% - 30px, 1240px); }
-            .xaaj-contact-hero { grid-template-columns: 1fr; gap: 38px; padding: 68px 0 54px; }
-            .xaaj-contact-content { padding: 42px 0 80px; }
-            .xaaj-contact-content .xaaj-contact-layout { grid-template-columns: 1fr !important; }
-            .xaaj-contact-content .xaaj-contact-layout > form, .xaaj-contact-content .xaaj-contact-layout > div { padding: 26px !important; }
+
+          .xaaj-contact-content .xaaj-contact-layout > div .eyebrow {
+            color: #d58b76 !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > div > div:last-child {
+            margin-top: 30px !important;
+            gap: 20px !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-fields {
+            gap: 14px !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-fields input,
+          .xaaj-contact-content .xaaj-contact-fields textarea {
+            border-radius: 10px !important;
+            border-color: #ded6cb !important;
+            transition: border-color .2s ease, box-shadow .2s ease;
+          }
+
+          .xaaj-contact-content .xaaj-contact-fields input:focus,
+          .xaaj-contact-content .xaaj-contact-fields textarea:focus {
+            border-color: #292825 !important;
+            box-shadow: 0 0 0 3px rgba(41,40,37,.06);
+          }
+
+          .xaaj-contact-content .xaaj-contact-fields textarea {
+            min-height: 120px !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > form > button {
+            margin-top: 18px !important;
+            min-height: 48px !important;
+          }
+
+          .xaaj-contact-response-note {
+            margin-top: 22px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(41,40,37,.10);
+            color: #918b82;
+            font-size: 11px;
+            line-height: 1.65;
+          }
+
+          @media (max-width: 900px) {
+            .xaaj-contact-hero {
+              grid-template-columns: 1fr;
+              gap: 34px;
+              padding: 56px 0 44px;
+            }
+
+            .xaaj-contact-hero h1 {
+              max-width: 620px;
+            }
+
+            .xaaj-contact-hero-copy {
+              max-width: 650px;
+            }
+
+            .xaaj-contact-content {
+              padding: 34px 0 48px;
+            }
+
+            .xaaj-contact-content .xaaj-contact-layout {
+              grid-template-columns: 1fr !important;
+            }
+          }
+
+          @media (max-width: 560px) {
+            .xaaj-contact-hero,
+            .xaaj-contact-content {
+              width: min(100% - 30px, 1180px);
+            }
+
+            .xaaj-contact-hero {
+              padding: 44px 0 36px;
+              gap: 28px;
+            }
+
+            .xaaj-contact-hero h1 {
+              font-size: clamp(43px, 13vw, 58px);
+              line-height: .95;
+            }
+
+            .xaaj-contact-hero-copy p {
+              font-size: 14px;
+              line-height: 1.7;
+            }
+
+            .xaaj-contact-mini {
+              grid-template-columns: 1fr;
+              gap: 8px;
+              margin-top: 18px;
+            }
+
+            .xaaj-contact-mini a {
+              min-height: 70px;
+            }
+
+            .xaaj-contact-content {
+              padding: 26px 0 38px;
+            }
+
+            .xaaj-contact-content .xaaj-contact-layout {
+              gap: 14px !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-layout > form,
+            .xaaj-contact-content .xaaj-contact-layout > div {
+              padding: 22px !important;
+              border-radius: 14px !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-layout > form h2,
+            .xaaj-contact-content .xaaj-contact-layout > div h2 {
+              font-size: 25px !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-fields {
+              grid-template-columns: 1fr !important;
+              gap: 12px !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-fields label {
+              grid-column: 1 / -1 !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-fields textarea {
+              min-height: 115px !important;
+            }
           }
         `}</style>
 
@@ -7719,13 +9050,25 @@ function App() {
           <section className="xaaj-contact-hero">
             <div>
               <span className="xaaj-contact-kicker">Contact XAAJ</span>
-              <h1>We'd love to <em>hear from you.</em></h1>
+              <h1>Let’s make <em>something clear.</em></h1>
             </div>
+
             <div className="xaaj-contact-hero-copy">
-              <p>For questions about an order, our products, or simply to say hello, reach out to the XAAJ team. We’re always happy to hear from you.</p>
+              <p>
+                Have a question about an order, a product, delivery, or simply
+                want to say hello? Our team is here and happy to help.
+              </p>
+
               <div className="xaaj-contact-mini">
-                <a href="mailto:customercare@xaaj.in"><small>Email</small><strong>Write to us ↗</strong></a>
-                <a href="tel:+919899446117"><small>Phone / WhatsApp</small><strong>Talk to us ↗</strong></a>
+                <a href="mailto:customercare@xaaj.in">
+                  <small>Email</small>
+                  <strong>Write to us ↗</strong>
+                </a>
+
+                <a href="tel:+919899446117">
+                  <small>Phone / WhatsApp</small>
+                  <strong>Talk to us ↗</strong>
+                </a>
               </div>
             </div>
           </section>

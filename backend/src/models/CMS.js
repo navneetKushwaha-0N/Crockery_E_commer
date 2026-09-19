@@ -58,12 +58,22 @@ const contentSchema = new mongoose.Schema(
     },
 
     // ==========================================================
-    // IMAGES
+    // HERO MEDIA
     // ==========================================================
 
+    // Image URL OR Video URL
     image: {
       type: String,
       trim: true
+    },
+
+    // Hero media ka type
+    // image = JPG, PNG, WEBP etc.
+    // video = MP4, WEBM etc.
+    mediaType: {
+      type: String,
+      enum: ['image', 'video'],
+      default: 'image'
     },
 
     mobileImage: {

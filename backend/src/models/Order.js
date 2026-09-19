@@ -76,26 +76,39 @@ const itemSchema = new mongoose.Schema(
       required: true
     },
 
-    // Product name snapshot
+    // =================================================
+    // PRODUCT NAME SNAPSHOT
+    // =================================================
+
     name: {
       type: String,
       required: true,
       trim: true
     },
 
-    // Product image snapshot
+    // =================================================
+    // PRODUCT IMAGE SNAPSHOT
+    // =================================================
+
     image: {
       type: String,
       default: '',
       trim: true
     },
 
-    // Product price at the time of purchase
+    // =================================================
+    // PRODUCT PRICE SNAPSHOT
+    // =================================================
+
     price: {
       type: Number,
       required: true,
       min: 0
     },
+
+    // =================================================
+    // QUANTITY
+    // =================================================
 
     quantity: {
       type: Number,
@@ -105,6 +118,39 @@ const itemSchema = new mongoose.Schema(
         validator: Number.isInteger,
         message: 'Quantity must be a whole number'
       }
+    },
+
+    // =================================================
+    // PRODUCT REVIEW
+    // =================================================
+    // Review har order item ke level par track hoga.
+    //
+    // Example:
+    //
+    // Order:
+    //   Product A -> reviewed
+    //   Product B -> not reviewed
+    //
+    // User ko Product A ke liye review dobara option
+    // nahi milega, lekin Product B ke liye milega.
+    // =====================================================
+
+    reviewSubmitted: {
+      type: Boolean,
+      default: false
+    },
+
+    // Review document ka reference
+    reviewId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Review',
+      default: null
+    },
+
+    // Review submit hone ka time
+    reviewedAt: {
+      type: Date,
+      default: null
     }
   },
   {
@@ -254,6 +300,10 @@ const orderSchema = new mongoose.Schema(
     // =================================================
     // SHIPPING / DELIVERY
     // =================================================
+    // Manual fallback fields.
+    // Agar Velocity se data nahi aata to admin manually
+    // courier aur tracking update kar sakta hai.
+    // =================================================
 
     courierName: {
       type: String,
@@ -267,6 +317,73 @@ const orderSchema = new mongoose.Schema(
       default: '',
       trim: true,
       maxlength: 150
+    },
+
+    // =================================================
+    // VELOCITY SHIPPING
+    // =================================================
+
+    // Velocity order/shipment reference
+    velocityOrderId: {
+      type: String,
+      default: '',
+      trim: true,
+      index: true
+    },
+
+    velocityShipmentId: {
+      type: String,
+      default: '',
+      trim: true,
+      index: true
+    },
+
+    // Velocity AWB / tracking number
+    velocityAwb: {
+      type: String,
+      default: '',
+      trim: true,
+      index: true
+    },
+
+    // Velocity assigned courier ID
+    velocityCarrierId: {
+      type: String,
+      default: '',
+      trim: true
+    },
+
+    // Tracking URL provided by Velocity
+    velocityTrackingUrl: {
+      type: String,
+      default: '',
+      trim: true
+    },
+
+    // Raw/current status received from Velocity
+    velocityStatus: {
+      type: String,
+      default: '',
+      trim: true
+    },
+
+    // More specific Velocity sub-status
+    velocitySubStatus: {
+      type: String,
+      default: '',
+      trim: true
+    },
+
+    // Expected delivery date from Velocity
+    velocityExpectedDelivery: {
+      type: Date,
+      default: null
+    },
+
+    // Last time Velocity tracking/status was synced
+    velocityLastSyncedAt: {
+      type: Date,
+      default: null
     },
 
     // =================================================
@@ -309,8 +426,32 @@ orderSchema.index({
   createdAt: -1
 })
 
+orderSchema.index({
+  velocityAwb: 1
+})
+
+orderSchema.index({
+  velocityShipmentId: 1
+})
+
+// =====================================================
+// REVIEW-RELATED INDEX
+// =====================================================
+// Delivered orders aur review eligibility ko efficiently
+// query karne ke liye.
+// =====================================================
+
+orderSchema.index({
+  user: 1,
+  status: 1,
+  createdAt: -1
+})
+
 // =====================================================
 // EXPORT
 // =====================================================
 
-export default mongoose.model('Order', orderSchema)
+export default mongoose.model(
+  'Order',
+  orderSchema
+)

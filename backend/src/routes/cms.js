@@ -180,8 +180,16 @@ router.get(
         slides: slides.map(slide => ({
           id: slide._id,
 
+          // Image URL OR Video URL
           image:
             slide.image || '',
+
+          // New field:
+          // image / video
+          mediaType:
+            slide.mediaType === 'video'
+              ? 'video'
+              : 'image',
 
           mobileImage:
             slide.mobileImage ||
@@ -212,7 +220,7 @@ router.get(
 // GET /api/cms/hero/admin
 //
 // Admin ko active + inactive dono slides milengi.
-// Isse inactive image refresh ke baad gayab nahi hogi.
+// Isse inactive slide refresh ke baad gayab nahi hogi.
 // ==========================================================
 
 router.get(
@@ -235,8 +243,15 @@ router.get(
         slides: slides.map(slide => ({
           id: slide._id,
 
+          // Image URL OR Video URL
           image:
             slide.image || '',
+
+          // New field
+          mediaType:
+            slide.mediaType === 'video'
+              ? 'video'
+              : 'image',
 
           mobileImage:
             slide.mobileImage ||
@@ -293,9 +308,17 @@ router.put(
 
     const slides = incomingSlides
       .map((slide, index) => {
+        // Same field is used for image URL
+        // OR video URL
         const image = String(
           slide?.image || ''
         ).trim()
+
+        // New media type
+        const mediaType =
+          slide?.mediaType === 'video'
+            ? 'video'
+            : 'image'
 
         const mobileImage = String(
           slide?.mobileImage ||
@@ -309,7 +332,11 @@ router.put(
 
         return {
           image,
+
+          mediaType,
+
           mobileImage,
+
           alt,
 
           enabled:
@@ -333,7 +360,7 @@ router.put(
     }
 
     // --------------------------------------------------------
-    // If slides were submitted but none has an image
+    // If slides were submitted but none has media URL
     // --------------------------------------------------------
 
     if (
@@ -343,7 +370,7 @@ router.put(
       return res.status(422).json({
         success: false,
         message:
-          'At least one valid hero image is required.'
+          'At least one valid hero media URL is required.'
       })
     }
 
@@ -370,8 +397,13 @@ router.put(
           slides.map(slide => ({
             type: 'hero',
 
+            // URL can be image OR video
             image:
               slide.image,
+
+            // image / video
+            mediaType:
+              slide.mediaType,
 
             mobileImage:
               slide.mobileImage,
@@ -424,6 +456,11 @@ router.put(
 
               image:
                 slide.image || '',
+
+              mediaType:
+                slide.mediaType === 'video'
+                  ? 'video'
+                  : 'image',
 
               mobileImage:
                 slide.mobileImage ||

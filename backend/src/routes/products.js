@@ -1,6 +1,8 @@
 import { Router } from 'express'
 import Product from '../models/Product.js'
+import Review from '../models/Reviews.js'
 import Subscriber from '../models/Subscriber.js'
+
 import { sendEmail } from '../services/integrations.js'
 
 import {
@@ -19,10 +21,6 @@ const router = Router()
 
 const sendNewProductAnnouncement = async product => {
   try {
-    // ----------------------------------------------------------
-    // Get all active newsletter subscribers
-    // ----------------------------------------------------------
-
     const subscribers = await Subscriber.find({
       isSubscribed: true
     })
@@ -33,23 +31,14 @@ const sendNewProductAnnouncement = async product => {
       console.log(
         '[Newsletter] No active subscribers found.'
       )
-
       return
     }
-
-    // ----------------------------------------------------------
-    // Product image
-    // ----------------------------------------------------------
 
     const productImage =
       Array.isArray(product.images) &&
       product.images.length > 0
         ? product.images[0]
         : ''
-
-    // ----------------------------------------------------------
-    // Frontend URL
-    // ----------------------------------------------------------
 
     const clientUrl = (
       process.env.CLIENT_URL ||
@@ -63,18 +52,10 @@ const sendNewProductAnnouncement = async product => {
         )}`
       : '#'
 
-    // ----------------------------------------------------------
-    // Product details
-    // ----------------------------------------------------------
-
     const productName =
       String(product.name || 'A new piece').trim()
 
     const productPrice = Number(product.price)
-
-    // ----------------------------------------------------------
-    // Product image HTML
-    // ----------------------------------------------------------
 
     const imageHtml = productImage
       ? `
@@ -90,10 +71,6 @@ const sendNewProductAnnouncement = async product => {
         />
       `
       : ''
-
-    // ----------------------------------------------------------
-    // Price HTML
-    // ----------------------------------------------------------
 
     const priceHtml =
       Number.isFinite(productPrice)
@@ -111,10 +88,6 @@ const sendNewProductAnnouncement = async product => {
         `
         : ''
 
-    // ----------------------------------------------------------
-    // Email HTML
-    // ----------------------------------------------------------
-
     const emailHtml = `
       <div
         style="
@@ -125,7 +98,6 @@ const sendNewProductAnnouncement = async product => {
           color:#292824;
         "
       >
-
         <div
           style="
             max-width:600px;
@@ -146,8 +118,6 @@ const sendNewProductAnnouncement = async product => {
             "
           >
 
-            <!-- Eyebrow -->
-
             <div
               style="
                 font-size:11px;
@@ -159,8 +129,6 @@ const sendNewProductAnnouncement = async product => {
             >
               Just arrived at XAAJ
             </div>
-
-            <!-- Product name -->
 
             <h1
               style="
@@ -174,8 +142,6 @@ const sendNewProductAnnouncement = async product => {
             >
               ${productName}
             </h1>
-
-            <!-- Description -->
 
             <p
               style="
@@ -191,11 +157,7 @@ const sendNewProductAnnouncement = async product => {
               everyday rituals and beautiful moments.
             </p>
 
-            <!-- Price -->
-
             ${priceHtml}
-
-            <!-- Product button -->
 
             <a
               href="${productUrl}"
@@ -213,8 +175,6 @@ const sendNewProductAnnouncement = async product => {
               Discover the piece
             </a>
 
-            <!-- Divider -->
-
             <div
               style="
                 margin:32px auto;
@@ -223,8 +183,6 @@ const sendNewProductAnnouncement = async product => {
                 background:#d8d0c5;
               "
             ></div>
-
-            <!-- Signature -->
 
             <p
               style="
@@ -242,8 +200,6 @@ const sendNewProductAnnouncement = async product => {
             </p>
 
           </div>
-
-          <!-- Footer -->
 
           <div
             style="
@@ -264,10 +220,6 @@ const sendNewProductAnnouncement = async product => {
       </div>
     `
 
-    // ----------------------------------------------------------
-    // Send email to all subscribers
-    // ----------------------------------------------------------
-
     const results = await Promise.allSettled(
       subscribers.map(({ email }) =>
         sendEmail({
@@ -277,10 +229,6 @@ const sendNewProductAnnouncement = async product => {
         })
       )
     )
-
-    // ----------------------------------------------------------
-    // Count successful / failed emails
-    // ----------------------------------------------------------
 
     const failed = results.filter(
       result => result.status === 'rejected'
@@ -298,9 +246,7 @@ const sendNewProductAnnouncement = async product => {
     console.log(
       `[Newsletter] Product announcement sent to ${successful}/${subscribers.length} subscriber(s).`
     )
-
   } catch (error) {
-    // Newsletter failure should NOT break product creation.
     console.error(
       '[Newsletter] Product announcement error:',
       error
@@ -308,9 +254,9 @@ const sendNewProductAnnouncement = async product => {
   }
 }
 
-
 // ============================================================
 // GET ALL PRODUCTS
+// LIVE REVIEW RATING + REVIEW COUNT
 // ============================================================
 
 router.get(
@@ -343,28 +289,19 @@ router.get(
       isActive: true
     }
 
-    // --------------------------------------------------------
     // Category
-    // --------------------------------------------------------
-
     if (category) {
       filter.category = String(category).trim()
     }
 
-    // --------------------------------------------------------
     // Search
-    // --------------------------------------------------------
-
     if (search) {
       filter.$text = {
         $search: String(search).trim()
       }
     }
 
-    // --------------------------------------------------------
-    // Price filter
-    // --------------------------------------------------------
-
+    // Price
     const min = Number(minPrice)
     const max = Number(maxPrice)
 
@@ -388,30 +325,21 @@ router.get(
       }
     }
 
-    // --------------------------------------------------------
-    // Stock filter
-    // --------------------------------------------------------
-
+    // Stock
     if (inStock === 'true') {
       filter.stock = {
         $gt: 0
       }
     }
 
-    // --------------------------------------------------------
-    // Tag filter
-    // --------------------------------------------------------
-
+    // Tag
     if (tag) {
       filter.tags = String(tag)
         .trim()
         .toLowerCase()
     }
 
-    // --------------------------------------------------------
     // Sorting
-    // --------------------------------------------------------
-
     const sortMap = {
       newest: {
         createdAt: -1
@@ -433,6 +361,7 @@ router.get(
 
     const skip = (page - 1) * limit
 
+    // Get products
     const [products, total] = await Promise.all([
       Product
         .find(filter)
@@ -440,14 +369,107 @@ router.get(
           sortMap[sort] || sortMap.newest
         )
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
 
       Product.countDocuments(filter)
     ])
 
-    res.json({
+    // ========================================================
+    // LIVE REVIEW STATS
+    //
+    // Includes:
+    // 1. New reviews with isActive: true
+    // 2. Old reviews where isActive doesn't exist
+    //
+    // Excludes:
+    // isActive: false
+    // ========================================================
+
+    const productIds = products.map(
+      product => product._id
+    )
+
+    let reviewStats = []
+
+    if (productIds.length > 0) {
+      reviewStats = await Review.aggregate([
+        {
+          $match: {
+            product: {
+              $in: productIds
+            },
+
+            $or: [
+              {
+                isActive: true
+              },
+              {
+                isActive: {
+                  $exists: false
+                }
+              }
+            ]
+          }
+        },
+
+        {
+          $group: {
+            _id: '$product',
+
+            rating: {
+              $avg: '$rating'
+            },
+
+            reviewCount: {
+              $sum: 1
+            }
+          }
+        }
+      ])
+    }
+
+    // Create review map
+    const reviewStatsMap = new Map(
+      reviewStats.map(stat => [
+        String(stat._id),
+        {
+          rating: Number(
+            Number(stat.rating || 0).toFixed(2)
+          ),
+
+          reviewCount: Number(
+            stat.reviewCount || 0
+          )
+        }
+      ])
+    )
+
+    // Attach live review data
+    const productsWithReviews = products.map(
+      product => {
+        const stats = reviewStatsMap.get(
+          String(product._id)
+        )
+
+        return {
+          ...product,
+
+          rating: stats
+            ? stats.rating
+            : Number(product.rating || 0),
+
+          reviewCount: stats
+            ? stats.reviewCount
+            : Number(product.reviewCount || 0)
+        }
+      }
+    )
+
+    return res.json({
       success: true,
-      data: products,
+
+      data: productsWithReviews,
 
       pagination: {
         page,
@@ -459,10 +481,10 @@ router.get(
   })
 )
 
-
 // ============================================================
 // GET SINGLE PRODUCT
 // Supports slug and MongoDB ID
+// LIVE REVIEW RATING + REVIEW COUNT
 // ============================================================
 
 router.get(
@@ -471,10 +493,14 @@ router.get(
     const identifier =
       String(req.params.identifier).trim()
 
+    // --------------------------------------------------------
+    // Find by slug
+    // --------------------------------------------------------
+
     let product = await Product.findOne({
       slug: identifier.toLowerCase(),
       isActive: true
-    })
+    }).lean()
 
     // --------------------------------------------------------
     // Try MongoDB ObjectId
@@ -487,11 +513,11 @@ router.get(
       product = await Product.findOne({
         _id: identifier,
         isActive: true
-      })
+      }).lean()
     }
 
     // --------------------------------------------------------
-    // Not found
+    // Product not found
     // --------------------------------------------------------
 
     if (!product) {
@@ -501,13 +527,80 @@ router.get(
       })
     }
 
-    res.json({
+    // ========================================================
+    // LIVE REVIEW STATS
+    // ========================================================
+
+    const reviewStats = await Review.aggregate([
+      {
+        $match: {
+          product: product._id,
+
+          $or: [
+            {
+              isActive: true
+            },
+            {
+              isActive: {
+                $exists: false
+              }
+            }
+          ]
+        }
+      },
+
+      {
+        $group: {
+          _id: '$product',
+
+          rating: {
+            $avg: '$rating'
+          },
+
+          reviewCount: {
+            $sum: 1
+          }
+        }
+      }
+    ])
+
+    const stats = reviewStats[0]
+
+    // --------------------------------------------------------
+    // Calculate live rating
+    // --------------------------------------------------------
+
+    const rating = stats
+      ? Number(
+          Number(stats.rating || 0).toFixed(2)
+        )
+      : Number(product.rating || 0)
+
+    // --------------------------------------------------------
+    // Calculate live review count
+    // --------------------------------------------------------
+
+    const reviewCount = stats
+      ? Number(stats.reviewCount || 0)
+      : Number(product.reviewCount || 0)
+
+    // --------------------------------------------------------
+    // Attach live review data to product
+    // --------------------------------------------------------
+
+    product.rating = rating
+    product.reviewCount = reviewCount
+
+    // --------------------------------------------------------
+    // Response
+    // --------------------------------------------------------
+
+    return res.json({
       success: true,
       data: product
     })
   })
 )
-
 
 // ============================================================
 // CREATE PRODUCT
@@ -525,17 +618,11 @@ router.post(
       ...req.validated.body
     }
 
-    // --------------------------------------------------------
     // MRP = compareAtPrice
-    // --------------------------------------------------------
-
     productData.compareAtPrice =
       productData.mrp
 
-    // --------------------------------------------------------
     // Images
-    // --------------------------------------------------------
-
     if (Array.isArray(productData.images)) {
       productData.images =
         productData.images
@@ -545,29 +632,20 @@ router.post(
       productData.images = []
     }
 
-    // --------------------------------------------------------
-    // Create
-    // --------------------------------------------------------
-
+    // Create product
     const product =
       await Product.create(productData)
 
-    // --------------------------------------------------------
-    // Newsletter announcement
-    // --------------------------------------------------------
-    // Product is already created successfully.
-    // Newsletter failure will NOT undo the product creation.
-
+    // Newsletter
     await sendNewProductAnnouncement(product)
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: 'Product created successfully',
       data: product
     })
   })
 )
-
 
 // ============================================================
 // UPDATE PRODUCT
@@ -580,10 +658,7 @@ router.patch(
   adminOnly,
 
   asyncHandler(async (req, res) => {
-    // --------------------------------------------------------
-    // Basic ObjectId validation
-    // --------------------------------------------------------
-
+    // Validate ObjectId
     if (
       !/^[a-fA-F0-9]{24}$/.test(
         req.params.id
@@ -595,10 +670,7 @@ router.patch(
       })
     }
 
-    // --------------------------------------------------------
-    // Find existing product
-    // --------------------------------------------------------
-
+    // Find product
     const product =
       await Product.findById(
         req.params.id
@@ -615,18 +687,12 @@ router.patch(
       ...req.body
     }
 
-    // --------------------------------------------------------
-    // Prevent client from modifying protected fields
-    // --------------------------------------------------------
-
+    // Protected fields
     delete updateData._id
     delete updateData.createdAt
     delete updateData.updatedAt
 
-    // --------------------------------------------------------
-    // MRP / Selling price
-    // --------------------------------------------------------
-
+    // MRP
     if (
       updateData.mrp !== undefined
     ) {
@@ -647,6 +713,7 @@ router.patch(
         updateData.mrp
     }
 
+    // Selling price
     if (
       updateData.price !== undefined
     ) {
@@ -664,10 +731,7 @@ router.patch(
       }
     }
 
-    // --------------------------------------------------------
-    // Check price relationship
-    // --------------------------------------------------------
-
+    // Price relationship
     const finalMrp =
       updateData.mrp !== undefined
         ? updateData.mrp
@@ -686,10 +750,7 @@ router.patch(
       })
     }
 
-    // --------------------------------------------------------
     // Stock
-    // --------------------------------------------------------
-
     if (
       updateData.stock !== undefined
     ) {
@@ -702,15 +763,13 @@ router.patch(
       ) {
         return res.status(422).json({
           success: false,
-          message: 'Stock must be a valid whole number'
+          message:
+            'Stock must be a valid whole number'
         })
       }
     }
 
-    // --------------------------------------------------------
     // Images
-    // --------------------------------------------------------
-
     if (
       updateData.images !== undefined
     ) {
@@ -731,10 +790,7 @@ router.patch(
           .filter(Boolean)
     }
 
-    // --------------------------------------------------------
     // Update
-    // --------------------------------------------------------
-
     Object.assign(
       product,
       updateData
@@ -742,14 +798,13 @@ router.patch(
 
     await product.save()
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Product updated successfully',
       data: product
     })
   })
 )
-
 
 // ============================================================
 // DELETE / ARCHIVE PRODUCT
@@ -791,13 +846,12 @@ router.delete(
       })
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Product archived'
     })
   })
 )
-
 
 // ============================================================
 // EXPORT

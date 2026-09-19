@@ -5,7 +5,7 @@ export const images = {
   mug: '/images/cupPlate.png',
   bowl: '/images/bowl.png',
   glass: '/images/Glassware.png',
-  vase: '/images/Glassware.png'
+  vase: '/images/vase.png'
 }
 
 export const products = [

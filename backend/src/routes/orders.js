@@ -12,16 +12,18 @@ import {
 
 import { sendEmail } from '../services/integrations.js'
 
+import {
+  createForwardShipment,
+  cancelVelocityShipments
+} from '../services/velocity.js'
+
 const router = Router()
+
+const CUSTOMER_CARE_EMAIL = 'customercare@xaaj.in'
+const CUSTOMER_CARE_PHONE = '+91 9899446117'
 
 // ============================================================
 // GET ALL ORDERS
-//
-// Customer:
-//   Sirf apne orders
-//
-// Admin:
-//   ?all=true ke saath sabhi orders
 // ============================================================
 
 router.get(
@@ -36,15 +38,9 @@ router.get(
             user: req.user.id
           }
 
-    const orders =
-      await Order.find(filter)
-        .populate(
-          'user',
-          'name email'
-        )
-        .sort({
-          createdAt: -1
-        })
+    const orders = await Order.find(filter)
+      .populate('user', 'name email')
+      .sort({ createdAt: -1 })
 
     res.json({
       success: true,
@@ -52,7 +48,6 @@ router.get(
     })
   })
 )
-
 
 // ============================================================
 // GET SINGLE ORDER
@@ -62,19 +57,14 @@ router.get(
   '/:id',
   protect,
   asyncHandler(async (req, res) => {
-    const order =
-      await Order.findOne({
-        _id: req.params.id,
-
-        ...(req.user.role === 'admin'
-          ? {}
-          : {
-              user: req.user.id
-            })
-      }).populate(
-        'user',
-        'name email'
-      )
+    const order = await Order.findOne({
+      _id: req.params.id,
+      ...(req.user.role === 'admin'
+        ? {}
+        : {
+            user: req.user.id
+          })
+    }).populate('user', 'name email')
 
     if (!order) {
       return res.status(404).json({
@@ -90,44 +80,29 @@ router.get(
   })
 )
 
-
 // ============================================================
 // CREATE ORDER
 //
-// Customer checkout ke time order create hoga.
-//
-// IMPORTANT:
-// Product price frontend se trust nahi kiya jayega.
-// Price MongoDB se li jayegi.
+// Payment:
+// razorpay
+// cod
 //
 // Shipping:
-//   ₹1000 ya above  = FREE
-//   ₹1000 se below  = ₹99
-//
-// Payment:
-//   razorpay
-//   cod
-//
-// Shipping address:
-// 1. Checkout se bheja gaya address use hoga.
-// 2. Agar nahi bheja gaya to user's saved address use hoga.
-//
-// Order mein address ka SNAPSHOT save hoga.
-// Baad mein profile address change hone par old order nahi badlega.
+// >= ₹1000 => FREE
+// < ₹1000  => ₹99
 // ============================================================
 
 router.post(
   '/',
   protect,
   asyncHandler(async (req, res) => {
-    // --------------------------------------------------------
-    // Cart items
-    // --------------------------------------------------------
+    // ========================================================
+    // CART
+    // ========================================================
 
-    const incoming =
-      Array.isArray(req.body.items)
-        ? req.body.items
-        : []
+    const incoming = Array.isArray(req.body.items)
+      ? req.body.items
+      : []
 
     if (!incoming.length) {
       return res.status(400).json({
@@ -136,24 +111,27 @@ router.post(
       })
     }
 
+    // ========================================================
+    // PRODUCT IDS
+    // ========================================================
 
-    // --------------------------------------------------------
-    // Product IDs
-    // --------------------------------------------------------
+    const productIds = incoming
+      .map(item => item.product)
+      .filter(Boolean)
 
-    const productIds =
-      incoming
-        .map(item => item.product)
-        .filter(Boolean)
-
-    const products =
-      await Product.find({
-        _id: {
-          $in: productIds
-        },
-        isActive: true
+    if (!productIds.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid products found'
       })
+    }
 
+    const products = await Product.find({
+      _id: {
+        $in: productIds
+      },
+      isActive: true
+    })
 
     if (!products.length) {
       return res.status(400).json({
@@ -162,64 +140,79 @@ router.post(
       })
     }
 
+    // ========================================================
+    // SECURE ORDER ITEMS
+    // ========================================================
 
-    // --------------------------------------------------------
-    // Secure order items
-    // --------------------------------------------------------
+    const items = []
+    const packageItems = []
 
-    const items =
-      incoming
-        .map(item => {
-          const product =
-            products.find(
-              p =>
-                p._id.toString() ===
-                String(item.product)
-            )
+    for (const incomingItem of incoming) {
+      const product = products.find(
+        p =>
+          p._id.toString() ===
+          String(incomingItem.product)
+      )
 
-          if (!product) {
-            return null
-          }
+      if (!product) {
+        continue
+      }
 
-          const quantity = Math.max(
-            1,
-            Number(item.quantity) || 1
-          )
+      const quantity = Math.max(
+        1,
+        Number(incomingItem.quantity) || 1
+      )
 
+      // ------------------------------------------------------
+      // STOCK
+      // ------------------------------------------------------
 
-          // --------------------------------------------------
-          // Stock check
-          // --------------------------------------------------
+      if (quantity > product.stock) {
+        const error = new Error(
+          `${product.name} does not have enough stock`
+        )
 
-          if (quantity > product.stock) {
-            throw Object.assign(
-              new Error(
-                `${product.name} does not have enough stock`
-              ),
-              {
-                statusCode: 400
-              }
-            )
-          }
+        error.statusCode = 400
 
+        throw error
+      }
 
-          return {
-            product: product._id,
+      // ------------------------------------------------------
+      // ORDER ITEM SNAPSHOT
+      // ------------------------------------------------------
 
-            name: product.name,
+      items.push({
+        product: product._id,
+        name: product.name,
+        image: product.images?.[0] || '',
+        price: Number(product.price),
+        quantity
+      })
 
-            image:
-              product.images?.[0] || '',
+      // ------------------------------------------------------
+      // VELOCITY SHIPPING DATA
+      // ------------------------------------------------------
 
-            // IMPORTANT:
-            // Always database price
-            price: product.price,
+      packageItems.push({
+        weight: Number(
+          product.shipping?.weight || 0
+        ),
 
-            quantity
-          }
-        })
-        .filter(Boolean)
+        length: Number(
+          product.shipping?.length || 0
+        ),
 
+        breadth: Number(
+          product.shipping?.breadth || 0
+        ),
+
+        height: Number(
+          product.shipping?.height || 0
+        ),
+
+        quantity
+      })
+    }
 
     if (!items.length) {
       return res.status(400).json({
@@ -228,67 +221,55 @@ router.post(
       })
     }
 
+    // ========================================================
+    // SUBTOTAL
+    // ========================================================
 
-    // --------------------------------------------------------
-    // Calculate subtotal
-    // --------------------------------------------------------
+    const subtotal = items.reduce(
+      (sum, item) =>
+        sum +
+        Number(item.price) *
+          Number(item.quantity),
+      0
+    )
 
-    const subtotal =
-      items.reduce(
-        (sum, item) =>
-          sum +
-          item.price *
-            item.quantity,
-        0
-      )
-
-
-    // --------------------------------------------------------
-    // Shipping fee
+    // ========================================================
+    // SHIPPING FEE
     //
-    // ₹1000+ = Free shipping
+    // ₹1000 or above = FREE
     // Below ₹1000 = ₹99
-    // --------------------------------------------------------
+    // ========================================================
 
     const shippingFee =
       subtotal >= 1000
         ? 0
         : 99
 
-
-    // --------------------------------------------------------
-    // Discount
-    // --------------------------------------------------------
+    // ========================================================
+    // DISCOUNT
+    // ========================================================
 
     const discount = 0
 
-
-    // --------------------------------------------------------
-    // Final total
-    // --------------------------------------------------------
+    // ========================================================
+    // TOTAL
+    // ========================================================
 
     const total =
       subtotal -
       discount +
       shippingFee
 
-
     // ========================================================
     // PAYMENT METHOD
     // ========================================================
 
-    const paymentMethod =
-      String(
-        req.body.paymentMethod ||
+    const paymentMethod = String(
+      req.body.paymentMethod ||
         'razorpay'
-      )
-        .trim()
-        .toLowerCase()
-
-
-    // --------------------------------------------------------
-    // Only Razorpay and COD allowed
-    // --------------------------------------------------------
+    )
+      .trim()
+      .toLowerCase()
 
     if (
       !['razorpay', 'cod'].includes(
@@ -301,7 +282,6 @@ router.post(
       })
     }
 
-
     // ========================================================
     // SHIPPING ADDRESS
     // ========================================================
@@ -309,20 +289,16 @@ router.post(
     let shippingAddress =
       req.body.shippingAddress || null
 
-
-    // --------------------------------------------------------
-    // If checkout did not send address,
-    // fetch user's saved address
-    // --------------------------------------------------------
+    // If checkout didn't send address,
+    // use first saved address.
 
     if (
       !shippingAddress ||
       typeof shippingAddress !== 'object'
     ) {
-      const user =
-        await User.findById(
-          req.user.id
-        )
+      const user = await User.findById(
+        req.user.id
+      )
 
       const savedAddress =
         user?.addresses?.[0]
@@ -338,13 +314,12 @@ router.post(
           phone:
             savedAddress.phone || '',
 
-          address:
-            [
-              savedAddress.line1,
-              savedAddress.line2
-            ]
-              .filter(Boolean)
-              .join(', '),
+          address: [
+            savedAddress.line1,
+            savedAddress.line2
+          ]
+            .filter(Boolean)
+            .join(', '),
 
           city:
             savedAddress.city || '',
@@ -358,10 +333,9 @@ router.post(
       }
     }
 
-
-    // --------------------------------------------------------
-    // Create immutable shipping snapshot
-    // --------------------------------------------------------
+    // ========================================================
+    // NORMALIZE ADDRESS
+    // ========================================================
 
     shippingAddress = {
       name: String(
@@ -369,8 +343,7 @@ router.post(
       ).trim(),
 
       email: String(
-        shippingAddress?.email ||
-        ''
+        shippingAddress?.email || ''
       )
         .trim()
         .toLowerCase(),
@@ -396,9 +369,8 @@ router.post(
       ).trim()
     }
 
-
     // ========================================================
-    // VALIDATE SHIPPING DETAILS
+    // ADDRESS VALIDATION
     // ========================================================
 
     if (
@@ -419,80 +391,441 @@ router.post(
       })
     }
 
-
     // ========================================================
-    // CREATE ORDER
-    //
-    // IMPORTANT:
-    // Yahan stock decrement nahi kar rahe.
-    //
-    // Razorpay:
-    // Payment route successful payment ke baad
-    // stock safely update karega.
-    //
-    // COD:
-    // Order pending rahega aur admin isko manage karega.
+    // VELOCITY PACKAGE
     // ========================================================
 
-    const order =
-      await Order.create({
-        user: req.user.id,
+    const velocityPackage =
+      packageItems.reduce(
+        (acc, item) => {
+          acc.weight +=
+            item.weight *
+            item.quantity
 
-        items,
+          acc.length = Math.max(
+            acc.length,
+            item.length
+          )
 
-        shippingAddress,
+          acc.breadth = Math.max(
+            acc.breadth,
+            item.breadth
+          )
 
-        subtotal,
+          acc.height = Math.max(
+            acc.height,
+            item.height
+          )
 
-        discount,
+          return acc
+        },
+        {
+          weight: 0,
+          length: 0,
+          breadth: 0,
+          height: 0
+        }
+      )
 
-        shippingFee,
+    // ========================================================
+    // VELOCITY CONFIG
+    // ========================================================
 
-        total,
+    const velocityConfigured =
+      Boolean(
+        process.env.VELOCITY_WAREHOUSE_ID
+      ) &&
+      Boolean(
+        process.env.VELOCITY_STORE_NAME
+      )
 
-        status: 'pending',
+    // ========================================================
+    // COD PACKAGE VALIDATION
+    // ========================================================
 
-        paymentStatus: 'pending',
-
-        paymentProvider:
-          paymentMethod
+    if (
+      paymentMethod === 'cod' &&
+      velocityConfigured &&
+      (
+        velocityPackage.weight <= 0 ||
+        velocityPackage.length <= 0 ||
+        velocityPackage.breadth <= 0 ||
+        velocityPackage.height <= 0
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'Shipping package details are missing. Please add weight and dimensions to all products before placing a COD order.'
       })
+    }
 
+    // ========================================================
+    // CREATE XAAJ ORDER
+    // ========================================================
+
+    const order = await Order.create({
+      user: req.user.id,
+
+      items,
+
+      shippingAddress,
+
+      subtotal,
+
+      discount,
+
+      shippingFee,
+
+      total,
+
+      status: 'pending',
+
+      paymentStatus: 'pending',
+
+      paymentProvider:
+        paymentMethod
+    })
+
+    // ========================================================
+    // VELOCITY - COD
+    //
+    // COD order is sent to Velocity immediately.
+    //
+    // Razorpay order will be sent to Velocity only after
+    // successful Razorpay payment verification.
+    // ========================================================
+
+    if (
+      paymentMethod === 'cod' &&
+      !velocityConfigured
+    ) {
+      console.warn(
+        '[VELOCITY] COD shipment skipped: VELOCITY_WAREHOUSE_ID or VELOCITY_STORE_NAME is missing.'
+      )
+    }
+
+    if (
+      paymentMethod === 'cod' &&
+      velocityConfigured
+    ) {
+      try {
+        // ----------------------------------------------------
+        // LOG BEFORE API CALL
+        // ----------------------------------------------------
+
+        console.log(
+          '[VELOCITY] Creating COD shipment...',
+          {
+            orderId: String(order._id),
+
+            warehouseId:
+              process.env.VELOCITY_WAREHOUSE_ID,
+
+            storeName:
+              process.env.VELOCITY_STORE_NAME,
+
+            total: Number(total),
+
+            subtotal: Number(subtotal),
+
+            shippingFee:
+              Number(shippingFee),
+
+            package:
+              velocityPackage
+          }
+        )
+
+        // ----------------------------------------------------
+        // CREATE VELOCITY SHIPMENT
+        // ----------------------------------------------------
+
+        const velocityResult =
+          await createForwardShipment({
+            store_name:
+              process.env.VELOCITY_STORE_NAME,
+
+            order_id:
+              String(order._id),
+
+            order_date:
+              new Date().toISOString(),
+
+            billing_customer_name:
+              shippingAddress.name,
+
+            billing_address:
+              shippingAddress.address,
+
+            billing_city:
+              shippingAddress.city,
+
+            billing_pincode:
+              shippingAddress.pin,
+
+            billing_state:
+              shippingAddress.state,
+
+            billing_country:
+              'India',
+
+            billing_phone:
+              shippingAddress.phone,
+
+            shipping_is_billing:
+              true,
+
+            print_label:
+              true,
+
+            order_items:
+              items.map(item => ({
+                name:
+                  item.name,
+
+                sku:
+                  String(item.product),
+
+                units:
+                  Number(item.quantity),
+
+                selling_price:
+                  Number(item.price)
+              })),
+
+            payment_method:
+              'COD',
+
+            sub_total:
+              Number(subtotal),
+
+            cod_collectible:
+              Number(total),
+
+            length:
+              velocityPackage.length,
+
+            breadth:
+              velocityPackage.breadth,
+
+            height:
+              velocityPackage.height,
+
+            weight:
+              velocityPackage.weight,
+
+            warehouse_id:
+              process.env.VELOCITY_WAREHOUSE_ID
+          })
+
+        // ----------------------------------------------------
+        // LOG COMPLETE VELOCITY RESPONSE
+        // ----------------------------------------------------
+
+        console.log(
+          '[VELOCITY] COD shipment API response:',
+          JSON.stringify(
+            velocityResult,
+            null,
+            2
+          )
+        )
+
+        // ----------------------------------------------------
+        // NORMALIZE RESPONSE
+        // ----------------------------------------------------
+
+        const velocityData =
+          velocityResult?.data ||
+          velocityResult?.result ||
+          velocityResult ||
+          {}
+
+        // ----------------------------------------------------
+        // VELOCITY ORDER ID
+        // ----------------------------------------------------
+
+        order.velocityOrderId =
+          velocityData?.order_id ||
+          velocityData?.external_order_id ||
+          String(order._id)
+
+        // ----------------------------------------------------
+        // SHIPMENT ID
+        // ----------------------------------------------------
+
+        order.velocityShipmentId =
+          velocityData?.shipment_id ||
+          velocityData?.shipment?.id ||
+          velocityData?.id ||
+          ''
+
+        // ----------------------------------------------------
+        // AWB
+        // ----------------------------------------------------
+
+        order.velocityAwb =
+          velocityData?.awb_code ||
+          velocityData?.awb ||
+          velocityData?.tracking_number ||
+          ''
+
+        // ----------------------------------------------------
+        // CARRIER
+        // ----------------------------------------------------
+
+        order.velocityCarrierId =
+          velocityData?.carrier_id ||
+          velocityData?.carrier?.id ||
+          ''
+
+        // ----------------------------------------------------
+        // TRACKING URL
+        // ----------------------------------------------------
+
+        order.velocityTrackingUrl =
+          velocityData?.tracking_url ||
+          velocityData?.track_url ||
+          velocityData?.label_url ||
+          ''
+
+        // ----------------------------------------------------
+        // COURIER
+        // ----------------------------------------------------
+
+        order.courierName =
+          velocityData?.courier_name ||
+          velocityData?.courier?.name ||
+          ''
+
+        // ----------------------------------------------------
+        // TRACKING NUMBER
+        // ----------------------------------------------------
+
+        order.trackingNumber =
+          order.velocityAwb || ''
+
+        // ----------------------------------------------------
+        // VELOCITY STATUS
+        // ----------------------------------------------------
+
+        order.velocityStatus =
+          velocityData?.status ||
+          velocityData?.shipment_status ||
+          'created'
+
+        order.velocityLastSyncedAt =
+          new Date()
+
+        await order.save()
+
+        // ----------------------------------------------------
+        // SUCCESS LOG
+        // ----------------------------------------------------
+
+        console.log(
+          '[VELOCITY] COD shipment created successfully:',
+          {
+            orderId:
+              String(order._id),
+
+            velocityOrderId:
+              order.velocityOrderId,
+
+            velocityShipmentId:
+              order.velocityShipmentId,
+
+            velocityAwb:
+              order.velocityAwb,
+
+            velocityCarrierId:
+              order.velocityCarrierId,
+
+            velocityTrackingUrl:
+              order.velocityTrackingUrl,
+
+            velocityStatus:
+              order.velocityStatus
+          }
+        )
+
+        // ----------------------------------------------------
+        // IMPORTANT DEBUG
+        //
+        // If shipment ID exists but AWB is empty,
+        // Velocity may require another shipment-assignment
+        // API call.
+        // ----------------------------------------------------
+
+        if (
+          order.velocityShipmentId &&
+          !order.velocityAwb
+        ) {
+          console.warn(
+            '[VELOCITY] Shipment created but AWB is empty. Check the Velocity API response/assignment step.'
+          )
+        }
+
+      } catch (velocityError) {
+        // ----------------------------------------------------
+        // VELOCITY FAILURE
+        //
+        // XAAJ order remains created.
+        // ----------------------------------------------------
+
+        console.error(
+          '[VELOCITY] COD shipment creation failed:',
+          velocityError?.response?.data ||
+          velocityError?.message ||
+          velocityError
+        )
+
+        console.error(
+          '[VELOCITY] Full error:',
+          JSON.stringify(
+            velocityError?.response?.data ||
+              {},
+            null,
+            2
+          )
+        )
+      }
+    }
+
+    // ========================================================
+    // RESPONSE
+    // ========================================================
 
     res.status(201).json({
       success: true,
+
       message:
         'Order created successfully',
+
       data: order
     })
   })
 )
 
-
 // ============================================================
 // CUSTOMER CANCEL ORDER
 //
-// Customer sirf PENDING order cancel kar sakta hai.
+// Customer can cancel only when status = pending.
 //
-// Pending:
-//   Cancel allowed
+// Once order moves to another status,
+// online cancellation is disabled.
 //
-// Other statuses:
-//   Online cancellation not allowed
-//   Customer Care contact karna hoga
-//
-// Customer Care:
-//   customercare@xaaj.in
-//   +91 9899446117
+// Velocity cancellation is attempted first.
 // ============================================================
 
 router.patch(
   '/:id/cancel',
   protect,
   asyncHandler(async (req, res) => {
-    // --------------------------------------------------------
-    // Find customer's own order
-    // --------------------------------------------------------
+    // ========================================================
+    // FIND ORDER
+    // ========================================================
 
     const order =
       await Order.findOne({
@@ -503,11 +836,6 @@ router.patch(
         'name email'
       )
 
-
-    // --------------------------------------------------------
-    // Order not found
-    // --------------------------------------------------------
-
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -515,10 +843,9 @@ router.patch(
       })
     }
 
-
-    // --------------------------------------------------------
-    // Only pending order can be cancelled
-    // --------------------------------------------------------
+    // ========================================================
+    // ONLY PENDING CAN CANCEL
+    // ========================================================
 
     if (
       order.status !== 'pending'
@@ -530,25 +857,79 @@ router.patch(
           'CANCELLATION_UNAVAILABLE',
 
         message:
-          'This order can no longer be cancelled online. Please contact Customer Care at customercare@xaaj.in or +91 9899446117.'
+          `This order can no longer be cancelled online. Please contact Customer Care at ${CUSTOMER_CARE_EMAIL} or ${CUSTOMER_CARE_PHONE}.`
       })
     }
 
+    // ========================================================
+    // CANCEL VELOCITY SHIPMENT
+    // ========================================================
 
-    // --------------------------------------------------------
-    // Cancel order
-    // --------------------------------------------------------
+    if (order.velocityAwb) {
+      try {
+        console.log(
+          '[VELOCITY] Cancelling shipment:',
+          order.velocityAwb
+        )
 
-    order.status =
-      'cancelled'
+        const velocityCancelResult =
+          await cancelVelocityShipments([
+            order.velocityAwb
+          ])
 
+        console.log(
+          '[VELOCITY] Cancellation response:',
+          JSON.stringify(
+            velocityCancelResult,
+            null,
+            2
+          )
+        )
+
+        const cancelData =
+          velocityCancelResult?.data ||
+          velocityCancelResult?.result ||
+          velocityCancelResult ||
+          {}
+
+        order.velocityStatus =
+          cancelData?.status ||
+          'cancelled'
+
+        order.velocityLastSyncedAt =
+          new Date()
+
+      } catch (velocityError) {
+        console.error(
+          '[VELOCITY] Shipment cancellation failed:',
+          velocityError?.response?.data ||
+          velocityError?.message ||
+          velocityError
+        )
+
+        return res.status(400).json({
+          success: false,
+
+          code:
+            'VELOCITY_CANCELLATION_FAILED',
+
+          message:
+            `The shipping partner could not cancel this shipment. Please contact Customer Care at ${CUSTOMER_CARE_EMAIL} or ${CUSTOMER_CARE_PHONE}.`
+        })
+      }
+    }
+
+    // ========================================================
+    // CANCEL XAAJ ORDER
+    // ========================================================
+
+    order.status = 'cancelled'
 
     await order.save()
 
-
-    // --------------------------------------------------------
-    // Customer details
-    // --------------------------------------------------------
+    // ========================================================
+    // CUSTOMER EMAIL
+    // ========================================================
 
     const customerEmail =
       order.shippingAddress?.email ||
@@ -559,97 +940,98 @@ router.patch(
       order.user?.name ||
       'Customer'
 
-
-    // --------------------------------------------------------
-    // Send cancellation email
-    // --------------------------------------------------------
-
     if (customerEmail) {
-      await sendEmail({
-        to: customerEmail,
+      try {
+        await sendEmail({
+          to: customerEmail,
 
-        subject:
-          'XAAJ - Order Cancelled',
+          subject:
+            'XAAJ - Order Cancelled',
 
-        html: `
-          <div style="
-            font-family:Arial,sans-serif;
-            line-height:1.6;
-            max-width:600px;
-            margin:auto;
-            padding:20px;
-          ">
-
-            <h2>
-              Your order has been cancelled
-            </h2>
-
-            <p>
-              Hi <strong>${customerName}</strong>,
-            </p>
-
-            <p>
-              Your XAAJ order has been
-              successfully cancelled.
-            </p>
-
+          html: `
             <div style="
-              margin-top:20px;
-              padding:16px;
-              border:1px solid #e5e5e5;
-              border-radius:10px;
+              font-family:Arial,sans-serif;
+              line-height:1.6;
+              max-width:600px;
+              margin:auto;
+              padding:20px;
             ">
 
-              <p style="margin:0 0 8px;">
-                <strong>Order ID:</strong>
-                ${order._id}
+              <h2>
+                Your order has been cancelled
+              </h2>
+
+              <p>
+                Hi <strong>${customerName}</strong>,
               </p>
 
-              <p style="margin:0;">
-                <strong>Order Total:</strong>
-                ₹${order.total}
+              <p>
+                Your XAAJ order has been
+                successfully cancelled.
+              </p>
+
+              <div style="
+                margin-top:20px;
+                padding:16px;
+                border:1px solid #e5e5e5;
+                border-radius:10px;
+              ">
+
+                <p style="margin:0 0 8px;">
+                  <strong>Order ID:</strong>
+                  ${order._id}
+                </p>
+
+                <p style="margin:0;">
+                  <strong>Order Total:</strong>
+                  ₹${order.total}
+                </p>
+
+              </div>
+
+              <p style="margin-top:24px;">
+                For any assistance, contact
+                <strong>${CUSTOMER_CARE_EMAIL}</strong>
+                or
+                <strong>${CUSTOMER_CARE_PHONE}</strong>.
+              </p>
+
+              <p>
+                Thank you for shopping with
+                <strong>XAAJ</strong>.
               </p>
 
             </div>
-
-            <p style="margin-top:24px;">
-              For any assistance, contact
-              <strong>customercare@xaaj.in</strong>
-              or
-              <strong>+91 9899446117</strong>.
-            </p>
-
-            <p>
-              Thank you for shopping with
-              <strong>XAAJ</strong>.
-            </p>
-
-          </div>
-        `
-      })
+          `
+        })
+      } catch (emailError) {
+        console.error(
+          'Cancellation email failed:',
+          emailError?.message ||
+          emailError
+        )
+      }
     }
 
-
-    // --------------------------------------------------------
-    // Response
-    // --------------------------------------------------------
+    // ========================================================
+    // RESPONSE
+    // ========================================================
 
     res.json({
       success: true,
+
       message:
         'Order cancelled successfully',
+
       data: order
     })
   })
 )
 
-
 // ============================================================
 // UPDATE ORDER STATUS
 //
 // ADMIN ONLY
-//
-// Status flow:
 //
 // pending
 // confirmed
@@ -659,10 +1041,6 @@ router.patch(
 // out_for_delivery
 // delivered
 // cancelled
-//
-// Also:
-// courierName
-// trackingNumber
 // ============================================================
 
 router.patch(
@@ -682,28 +1060,24 @@ router.patch(
       'cancelled'
     ]
 
-
     const status =
       String(
         req.body.status || ''
       ).trim()
-
 
     const courierName =
       String(
         req.body.courierName || ''
       ).trim()
 
-
     const trackingNumber =
       String(
         req.body.trackingNumber || ''
       ).trim()
 
-
-    // --------------------------------------------------------
-    // Validate status
-    // --------------------------------------------------------
+    // ========================================================
+    // STATUS VALIDATION
+    // ========================================================
 
     if (
       !allowedStatuses.includes(
@@ -712,14 +1086,14 @@ router.patch(
     ) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid order status'
+        message:
+          'Invalid order status'
       })
     }
 
-
-    // --------------------------------------------------------
-    // Find order
-    // --------------------------------------------------------
+    // ========================================================
+    // FIND ORDER
+    // ========================================================
 
     const order =
       await Order.findById(
@@ -729,84 +1103,144 @@ router.patch(
         'name email'
       )
 
-
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: 'Order not found'
+        message:
+          'Order not found'
       })
     }
-
 
     const oldStatus =
       order.status
 
-
-    // --------------------------------------------------------
-    // Update status
-    // --------------------------------------------------------
-
-    order.status =
-      status
-
-
-    // --------------------------------------------------------
-    // Courier
-    // --------------------------------------------------------
+    // ========================================================
+    // ADMIN CANCELLATION
+    //
+    // Cancel Velocity shipment first.
+    // ========================================================
 
     if (
-      courierName !== ''
+      status === 'cancelled' &&
+      oldStatus !== 'cancelled' &&
+      order.velocityAwb
     ) {
+      try {
+        console.log(
+          '[VELOCITY] Admin cancelling shipment:',
+          order.velocityAwb
+        )
+
+        const cancelResult =
+          await cancelVelocityShipments([
+            order.velocityAwb
+          ])
+
+        console.log(
+          '[VELOCITY] Admin cancellation response:',
+          JSON.stringify(
+            cancelResult,
+            null,
+            2
+          )
+        )
+
+        order.velocityStatus =
+          'cancelled'
+
+        order.velocityLastSyncedAt =
+          new Date()
+
+      } catch (velocityError) {
+        console.error(
+          '[VELOCITY] Admin cancellation failed:',
+          velocityError?.response?.data ||
+          velocityError?.message ||
+          velocityError
+        )
+
+        return res.status(400).json({
+          success: false,
+
+          code:
+            'VELOCITY_CANCELLATION_FAILED',
+
+          message:
+            `Velocity shipment could not be cancelled. Please try again or contact Customer Care at ${CUSTOMER_CARE_EMAIL}.`
+        })
+      }
+    }
+
+    // ========================================================
+    // UPDATE STATUS
+    // ========================================================
+
+    order.status = status
+
+    // ========================================================
+    // UPDATE COURIER
+    // ========================================================
+
+    if (courierName) {
       order.courierName =
         courierName
     }
 
+    // ========================================================
+    // UPDATE TRACKING
+    // ========================================================
 
-    // --------------------------------------------------------
-    // Tracking number
-    // --------------------------------------------------------
-
-    if (
-      trackingNumber !== ''
-    ) {
+    if (trackingNumber) {
       order.trackingNumber =
         trackingNumber
     }
 
-
     await order.save()
 
-
     // ========================================================
-    // CUSTOMER EMAIL
+    // CUSTOMER DETAILS
     // ========================================================
 
     const customerEmail =
       order.shippingAddress?.email ||
       order.user?.email
 
-
     const customerName =
       order.shippingAddress?.name ||
       order.user?.name ||
       'Customer'
 
+    // ========================================================
+    // EMAIL DEFAULT
+    // ========================================================
 
     let emailSubject =
       'XAAJ - Order Status Updated'
 
-
     let emailTitle =
       'Your order status was updated'
 
-
     let emailMessage =
-      `Your order status has been changed to ${status}.`
+      `Your order status has been changed to ${status.replace(/_/g, ' ')}.`
 
+    // ========================================================
+    // STATUS EMAIL
+    // ========================================================
 
     switch (status) {
-      case 'confirmed':
+      case 'pending':
+        emailSubject =
+          'XAAJ - Order Pending'
 
+        emailTitle =
+          'Your order is pending'
+
+        emailMessage =
+          'Your order has been received and is currently pending confirmation.'
+
+        break
+
+      case 'confirmed':
         emailSubject =
           'XAAJ - Order Confirmed'
 
@@ -814,13 +1248,11 @@ router.patch(
           'Your order is confirmed! 🎉'
 
         emailMessage =
-          'Your payment has been received and your order has been confirmed.'
+          'Your order has been confirmed successfully.'
 
         break
 
-
       case 'processing':
-
         emailSubject =
           'XAAJ - Order Processing'
 
@@ -832,9 +1264,7 @@ router.patch(
 
         break
 
-
       case 'packed':
-
         emailSubject =
           'XAAJ - Order Packed'
 
@@ -846,9 +1276,7 @@ router.patch(
 
         break
 
-
       case 'shipped':
-
         emailSubject =
           'XAAJ - Order Shipped'
 
@@ -860,9 +1288,7 @@ router.patch(
 
         break
 
-
       case 'out_for_delivery':
-
         emailSubject =
           'XAAJ - Out for Delivery'
 
@@ -874,9 +1300,7 @@ router.patch(
 
         break
 
-
       case 'delivered':
-
         emailSubject =
           'XAAJ - Order Delivered'
 
@@ -888,9 +1312,7 @@ router.patch(
 
         break
 
-
       case 'cancelled':
-
         emailSubject =
           'XAAJ - Order Cancelled'
 
@@ -898,23 +1320,34 @@ router.patch(
           'Your order has been cancelled'
 
         emailMessage =
-          'Your order has been cancelled. If you believe this was a mistake, please contact our support team.'
+          `Your order has been cancelled. If you need assistance, please contact ${CUSTOMER_CARE_EMAIL} or ${CUSTOMER_CARE_PHONE}.`
 
         break
     }
 
-
     // ========================================================
-    // COURIER HTML
+    // COURIER INFORMATION
     // ========================================================
 
     let courierHtml = ''
 
-
     if (
       status === 'shipped' ||
-      status === 'out_for_delivery'
+      status === 'out_for_delivery' ||
+      status === 'delivered'
     ) {
+      const courier =
+        order.courierName ||
+        'Not provided'
+
+      const tracking =
+        order.trackingNumber ||
+        order.velocityAwb ||
+        'Not provided'
+
+      const trackingUrl =
+        order.velocityTrackingUrl || ''
+
       courierHtml = `
         <div style="
           margin-top:20px;
@@ -925,24 +1358,33 @@ router.patch(
 
           <p style="margin:0 0 8px;">
             <strong>Courier:</strong>
-            ${
-              order.courierName ||
-              'Not provided'
-            }
+            ${courier}
           </p>
 
           <p style="margin:0;">
             <strong>Tracking Number:</strong>
-            ${
-              order.trackingNumber ||
-              'Not provided'
-            }
+            ${tracking}
           </p>
+
+          ${
+            trackingUrl
+              ? `
+                <p style="margin:12px 0 0;">
+                  <a
+                    href="${trackingUrl}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Track Your Order
+                  </a>
+                </p>
+              `
+              : ''
+          }
 
         </div>
       `
     }
-
 
     // ========================================================
     // SEND EMAIL ONLY IF STATUS CHANGED
@@ -952,72 +1394,96 @@ router.patch(
       customerEmail &&
       oldStatus !== status
     ) {
-      await sendEmail({
-        to: customerEmail,
+      try {
+        await sendEmail({
+          to: customerEmail,
 
-        subject:
-          emailSubject,
+          subject:
+            emailSubject,
 
-        html: `
-          <div style="
-            font-family:Arial,sans-serif;
-            line-height:1.6;
-            max-width:600px;
-            margin:auto;
-            padding:20px;
-          ">
-
-            <h2>
-              ${emailTitle}
-            </h2>
-
-            <p>
-              Hi <strong>${customerName}</strong>,
-            </p>
-
-            <p>
-              ${emailMessage}
-            </p>
-
+          html: `
             <div style="
-              margin-top:20px;
-              padding:16px;
-              border:1px solid #e5e5e5;
-              border-radius:10px;
+              font-family:Arial,sans-serif;
+              line-height:1.6;
+              max-width:600px;
+              margin:auto;
+              padding:20px;
             ">
 
-              <p style="margin:0 0 8px;">
-                <strong>Order ID:</strong>
-                ${order._id}
+              <h2>
+                ${emailTitle}
+              </h2>
+
+              <p>
+                Hi <strong>${customerName}</strong>,
               </p>
 
-              <p style="margin:0 0 8px;">
-                <strong>Order Total:</strong>
-                ₹${order.total}
+              <p>
+                ${emailMessage}
               </p>
 
-              <p style="margin:0;">
-                <strong>Status:</strong>
-                ${status.replace(
-                  /_/g,
-                  ' '
-                )}
+              <div style="
+                margin-top:20px;
+                padding:16px;
+                border:1px solid #e5e5e5;
+                border-radius:10px;
+              ">
+
+                <p style="margin:0 0 8px;">
+                  <strong>Order ID:</strong>
+                  ${order._id}
+                </p>
+
+                <p style="margin:0 0 8px;">
+                  <strong>Order Total:</strong>
+                  ₹${order.total}
+                </p>
+
+                <p style="margin:0;">
+                  <strong>Status:</strong>
+                  ${status.replace(
+                    /_/g,
+                    ' '
+                  )}
+                </p>
+
+              </div>
+
+              ${courierHtml}
+
+              <p style="margin-top:24px;">
+                Thank you for shopping with
+                <strong>XAAJ</strong>.
               </p>
+
+              ${
+                status === 'cancelled'
+                  ? `
+                    <p>
+                      Customer Care:
+                      <strong>
+                        ${CUSTOMER_CARE_EMAIL}
+                      </strong>
+                      <br />
+                      <strong>
+                        ${CUSTOMER_CARE_PHONE}
+                      </strong>
+                    </p>
+                  `
+                  : ''
+              }
 
             </div>
-
-            ${courierHtml}
-
-            <p style="margin-top:24px;">
-              Thank you for shopping with
-              <strong>XAAJ</strong>.
-            </p>
-
-          </div>
-        `
-      })
+          `
+        })
+      } catch (emailError) {
+        console.error(
+          'Order status email failed:',
+          emailError?.message ||
+          emailError
+        )
+      }
     }
-
 
     // ========================================================
     // RESPONSE
@@ -1025,16 +1491,17 @@ router.patch(
 
     res.json({
       success: true,
+
       message:
         'Order updated successfully',
+
       data: order
     })
   })
 )
 
-
 // ============================================================
-// EXPORT ROUTER
+// EXPORT
 // ============================================================
 
 export default router

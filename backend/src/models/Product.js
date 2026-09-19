@@ -139,6 +139,43 @@ const productSchema = new mongoose.Schema(
     },
 
     // ==========================================================
+    // SHIPPING PACKAGE DETAILS
+    //
+    // Used for Velocity Shipping
+    //
+    // weight  = KG
+    // length  = CM
+    // breadth = CM
+    // height  = CM
+    // ==========================================================
+
+    shipping: {
+      weight: {
+        type: Number,
+        required: true,
+        min: 0.001
+      },
+
+      length: {
+        type: Number,
+        required: true,
+        min: 0.1
+      },
+
+      breadth: {
+        type: Number,
+        required: true,
+        min: 0.1
+      },
+
+      height: {
+        type: Number,
+        required: true,
+        min: 0.1
+      }
+    },
+
+    // ==========================================================
     // PRODUCT TAGS
     // Example:
     // featured, bestseller, new

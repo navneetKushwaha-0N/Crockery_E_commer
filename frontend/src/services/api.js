@@ -693,6 +693,68 @@ export const orderService = {
 
 
 // ============================================================
+// REVIEW SERVICES
+// ============================================================
+
+export const reviewService = {
+
+  // ----------------------------------------------------------
+  // Submit product review
+  //
+  // POST /api/reviews
+  //
+  // Only delivered orders can be reviewed.
+  // ----------------------------------------------------------
+
+  create: data =>
+    apiRequest(
+      '/reviews',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          orderId: data?.orderId,
+          productId: data?.productId,
+          rating: Number(data?.rating),
+          comment: String(
+            data?.comment || ''
+          ).trim()
+        })
+      }
+    ),
+
+
+  // ----------------------------------------------------------
+  // Get all reviews for a product
+  //
+  // GET /api/reviews/product/:productId
+  // ----------------------------------------------------------
+
+  getProductReviews: productId =>
+    apiRequest(
+      `/reviews/product/${encodeURIComponent(
+        productId
+      )}`
+    ),
+
+
+  // ----------------------------------------------------------
+  // Get reviews for a particular order
+  //
+  // Used by My Orders page to determine:
+  // - which products can be reviewed
+  // - which products are already reviewed
+  // ----------------------------------------------------------
+
+  getOrderReviews: orderId =>
+    apiRequest(
+      `/reviews/order/${encodeURIComponent(
+        orderId
+      )}`
+    )
+}
+
+
+// ============================================================
 // PAYMENT SERVICES
 // ============================================================
 

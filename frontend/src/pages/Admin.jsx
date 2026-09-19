@@ -1,9 +1,23 @@
 import React, { useEffect, useState } from 'react'
+import {
+  FiGrid,
+  FiBell,
+  FiImage,
+  FiEdit3,
+  FiClock,
+  FiPackage,
+  FiLogOut,
+  FiExternalLink,
+  FiPlus,
+  FiRefreshCw
+} from 'react-icons/fi'
 import { adminService } from '../services/adminService'
 import { apiRequest } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 
 export default function Admin() {
+  const [activeSection, setActiveSection] = useState('dashboard')
+
   const { user, logout } = useAuth()
 
   // =========================
@@ -82,6 +96,7 @@ export default function Admin() {
     mrp: '',
     price: '',
     stock: '',
+    shipping: { weight: '', length: '', breadth: '', height: '' },
     images: [''],
     productDetails: '',
     shippingPayment: '',
@@ -186,6 +201,16 @@ export default function Admin() {
   // Hero Slides API
   // =========================
 
+  // Automatically detect whether the URL is an image or video.
+  // Existing image URLs continue to work normally.
+  const getHeroMediaType = url => {
+    const value = String(url || '').trim()
+
+    return /\.(mp4|webm|ogg|mov)(?:[?#].*)?$/i.test(value)
+      ? 'video'
+      : 'image'
+  }
+
   const loadHeroSlides = async () => {
     try {
       setLoadingHeroSlides(true)
@@ -201,7 +226,16 @@ export default function Admin() {
         Array.isArray(data)
           ? data.map((slide, index) => ({
               image: slide?.image || slide?.imageUrl || '',
-              alt: slide?.alt || slide?.title || `Hero slide ${index + 1}`,
+              mediaType:
+                slide?.mediaType === 'video'
+                  ? 'video'
+                  : getHeroMediaType(
+                      slide?.image || slide?.imageUrl || ''
+                    ),
+              alt:
+                slide?.alt ||
+                slide?.title ||
+                `Hero slide ${index + 1}`,
               enabled:
                 slide?.enabled !== undefined
                   ? Boolean(slide.enabled)
@@ -221,6 +255,7 @@ export default function Admin() {
       ...prev,
       {
         image: '',
+        mediaType: 'image',
         alt: `Hero slide ${prev.length + 1}`,
         enabled: true
       }
@@ -229,11 +264,22 @@ export default function Admin() {
 
   const updateHeroSlide = (index, field, value) => {
     setHeroSlides(prev =>
-      prev.map((slide, slideIndex) =>
-        slideIndex === index
-          ? { ...slide, [field]: value }
-          : slide
-      )
+      prev.map((slide, slideIndex) => {
+        if (slideIndex !== index) return slide
+
+        if (field === 'image') {
+          return {
+            ...slide,
+            image: value,
+            mediaType: getHeroMediaType(value)
+          }
+        }
+
+        return {
+          ...slide,
+          [field]: value
+        }
+      })
     )
   }
 
@@ -264,15 +310,23 @@ export default function Admin() {
 
   const handleSaveHeroSlides = async () => {
     const cleanedSlides = heroSlides
-      .map(slide => ({
-        image: String(slide.image || '').trim(),
-        alt: String(slide.alt || '').trim(),
-        enabled: Boolean(slide.enabled)
-      }))
+      .map(slide => {
+        const image = String(slide.image || '').trim()
+
+        return {
+          image,
+          mediaType:
+            slide.mediaType === 'video'
+              ? 'video'
+              : getHeroMediaType(image),
+          alt: String(slide.alt || '').trim(),
+          enabled: Boolean(slide.enabled)
+        }
+      })
       .filter(slide => slide.image)
 
     if (!cleanedSlides.length) {
-      setError('Please add at least one hero image.')
+      setError('Please add at least one hero media URL.')
       return
     }
 
@@ -298,6 +352,12 @@ export default function Admin() {
         Array.isArray(data)
           ? data.map((slide, index) => ({
               image: slide?.image || slide?.imageUrl || '',
+              mediaType:
+                slide?.mediaType === 'video'
+                  ? 'video'
+                  : getHeroMediaType(
+                      slide?.image || slide?.imageUrl || ''
+                    ),
               alt:
                 slide?.alt ||
                 slide?.title ||
@@ -310,7 +370,7 @@ export default function Admin() {
           : cleanedSlides
       )
 
-      setMessage('Hero images updated successfully.')
+      setMessage('Hero media updated successfully.')
     } catch (err) {
       setError(err.message || 'Unable to update hero images')
     } finally {
@@ -638,6 +698,18 @@ export default function Admin() {
     }))
   }
 
+  const handleShippingChange = e => {
+    const { name, value } = e.target
+
+    setForm(prev => ({
+      ...prev,
+      shipping: {
+        ...prev.shipping,
+        [name]: value
+      }
+    }))
+  }
+
   // =========================
   // Multiple Product Images
   // =========================
@@ -692,6 +764,12 @@ export default function Admin() {
       mrp: product.mrp ?? product.compareAtPrice ?? '',
       price: product.price ?? '',
       stock: product.stock ?? '',
+      shipping: {
+        weight: product.shipping?.weight ?? '',
+        length: product.shipping?.length ?? '',
+        breadth: product.shipping?.breadth ?? '',
+        height: product.shipping?.height ?? ''
+      },
       images: Array.isArray(product.images) && product.images.length
         ? product.images
         : [''],
@@ -770,6 +848,26 @@ export default function Admin() {
       return
     }
 
+    if (form.shipping.weight === '' || Number(form.shipping.weight) <= 0) {
+      setError('Please enter a valid shipping weight.')
+      return
+    }
+
+    if (form.shipping.length === '' || Number(form.shipping.length) <= 0) {
+      setError('Please enter a valid package length.')
+      return
+    }
+
+    if (form.shipping.breadth === '' || Number(form.shipping.breadth) <= 0) {
+      setError('Please enter a valid package breadth.')
+      return
+    }
+
+    if (form.shipping.height === '' || Number(form.shipping.height) <= 0) {
+      setError('Please enter a valid package height.')
+      return
+    }
+
     const productImages = form.images
       .map(url => url.trim())
       .filter(Boolean)
@@ -792,6 +890,12 @@ export default function Admin() {
         form.stock === ''
           ? 0
           : Number(form.stock),
+      shipping: {
+        weight: Number(form.shipping.weight),
+        length: Number(form.shipping.length),
+        breadth: Number(form.shipping.breadth),
+        height: Number(form.shipping.height)
+      },
       images: productImages,
       productDetails: form.productDetails.trim(),
       shippingPayment: form.shippingPayment.trim(),
@@ -871,7 +975,28 @@ export default function Admin() {
   // =========================
   if (user?.role !== 'admin') {
     return (
-      <main className="page">
+      <main className="page xaaj-admin-v2">
+<style>{`
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap');
+.xaaj-admin-v2{--ink:#24221f;--muted:#777169;--line:#e9e3da;--paper:#fffdf9;--cream:#f5f1ea;--accent:#8b6a43;--dark:#26231f;max-width:1500px!important;margin:0 auto!important;padding:34px 38px 90px!important;background:radial-gradient(circle at 85% 0%,rgba(139,106,67,.08),transparent 30%),#f8f5ef!important;font-family:'DM Sans',sans-serif;color:var(--ink)}
+.xaaj-admin-v2 *{box-sizing:border-box}.xaaj-admin-v2 h1,.xaaj-admin-v2 h2,.xaaj-admin-v2 h3{font-family:'Playfair Display',serif;letter-spacing:-.025em}.xaaj-admin-v2 h1{font-size:42px!important;margin:4px 0 8px!important}.xaaj-admin-v2 h2{font-size:28px!important}.xaaj-admin-v2 p{color:var(--muted);line-height:1.65}.xaaj-admin-v2 .wrap{max-width:none!important}
+/* header */
+.xaaj-admin-v2 .admin-header,.xaaj-admin-v2 header:first-child{background:linear-gradient(135deg,#292620,#40382f)!important;color:#fff!important;border:0!important;border-radius:24px!important;padding:30px 34px!important;box-shadow:0 22px 55px rgba(38,35,31,.16)!important;position:relative;overflow:hidden}.xaaj-admin-v2 .admin-header:after,.xaaj-admin-v2 header:first-child:after{content:'';position:absolute;right:-90px;top:-100px;width:280px;height:280px;border:1px solid rgba(255,255,255,.12);border-radius:50%;box-shadow:0 0 0 45px rgba(255,255,255,.035),0 0 0 90px rgba(255,255,255,.025)}
+/* buttons */
+.xaaj-admin-v2 button,.xaaj-admin-v2 .button{appearance:none!important;border:1px solid #d8d0c4!important;background:#fff!important;color:#292621!important;border-radius:12px!important;padding:11px 17px!important;font:600 13px 'DM Sans',sans-serif!important;letter-spacing:.01em!important;cursor:pointer!important;transition:all .2s ease!important;box-shadow:0 2px 0 rgba(0,0,0,.02)!important}.xaaj-admin-v2 button:hover:not(:disabled){transform:translateY(-2px)!important;border-color:#b7a58e!important;box-shadow:0 9px 22px rgba(49,41,31,.10)!important}.xaaj-admin-v2 button.button,.xaaj-admin-v2 button[type=submit]{background:#292621!important;color:#fff!important;border-color:#292621!important;box-shadow:0 8px 20px rgba(41,38,33,.18)!important}.xaaj-admin-v2 button.button:hover,.xaaj-admin-v2 button[type=submit]:hover{background:#8b6a43!important;border-color:#8b6a43!important}.xaaj-admin-v2 button:disabled{opacity:.45!important;cursor:not-allowed!important;transform:none!important}
+/* sections */
+.xaaj-admin-v2 section{background:rgba(255,253,249,.92)!important;border:1px solid var(--line)!important;border-radius:22px!important;padding:30px!important;margin-bottom:28px!important;box-shadow:0 12px 35px rgba(63,53,41,.055)!important;backdrop-filter:blur(8px)}
+.xaaj-admin-v2 section:hover{box-shadow:0 18px 45px rgba(63,53,41,.075)!important}.xaaj-admin-v2 .summary{position:relative!important;background:linear-gradient(145deg,#fffefa,#f4eee5)!important;border:1px solid #e5ddd2!important;border-radius:20px!important;padding:24px!important;min-height:125px!important;box-shadow:0 12px 28px rgba(57,47,35,.07)!important;overflow:hidden}.xaaj-admin-v2 .summary:after{content:'';position:absolute;right:-28px;bottom:-38px;width:100px;height:100px;border:1px solid rgba(139,106,67,.16);border-radius:50%}.xaaj-admin-v2 .summary strong{display:block!important;font-size:31px!important;font-family:'Playfair Display',serif!important}.xaaj-admin-v2 .summary span{display:block!important;margin-top:8px!important;color:var(--muted)!important;font-size:12px!important;text-transform:uppercase!important;letter-spacing:.12em!important}
+/* controls */
+.xaaj-admin-v2 input:not([type=checkbox]),.xaaj-admin-v2 textarea,.xaaj-admin-v2 select{background:#fffefa!important;border:1px solid #ded7cd!important;border-radius:11px!important;padding:12px 14px!important;color:#2c2925!important;outline:none!important;transition:.2s!important;box-shadow:inset 0 1px 2px rgba(0,0,0,.025)!important}.xaaj-admin-v2 input:not([type=checkbox]):focus,.xaaj-admin-v2 textarea:focus,.xaaj-admin-v2 select:focus{border-color:#9b7c58!important;box-shadow:0 0 0 4px rgba(139,106,67,.10)!important}.xaaj-admin-v2 label{font-weight:600!important;font-size:13px!important;color:#4c4741!important}
+/* lists/cards */
+.xaaj-admin-v2 img{border-radius:14px}.xaaj-admin-v2 [style*="border: '1px solid #e5e5e5'"]{border-color:#e7dfd5!important;border-radius:15px!important;background:#fffefa!important}.xaaj-admin-v2 small{color:#8b857d!important}.xaaj-admin-v2 .eyebrow{text-transform:uppercase!important;letter-spacing:.16em!important;font-size:10px!important;font-weight:700!important;color:#9a7954!important}
+/* status */
+.xaaj-admin-v2 [style*="borderRadius: '999px'"]{box-shadow:0 2px 8px rgba(0,0,0,.04)!important}
+/* message */
+.xaaj-admin-v2 div[style*="background: '#edf7ed'"]{border:1px solid #cfe2d0!important;border-radius:13px!important;box-shadow:0 8px 20px rgba(56,95,60,.07)!important}.xaaj-admin-v2 div[style*="background: '#fff1f0'"]{border:1px solid #edd0cd!important;border-radius:13px!important}
+@media(max-width:900px){.xaaj-admin-v2{padding:20px 14px 60px!important}.xaaj-admin-v2 h1{font-size:32px!important}.xaaj-admin-v2 section{padding:21px!important;border-radius:18px!important}}
+`}</style>
         <div className="wrap narrow">
           <h1>Admin access required</h1>
 
@@ -888,55 +1013,79 @@ export default function Admin() {
   // Admin UI
   // =========================
   return (
-    <main className="page">
-      <div className="wrap">
-
-        {/* =========================
-            Page Header
-        ========================== */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '20px',
-            flexWrap: 'wrap',
-            marginBottom: '30px'
-          }}
-        >
-          <div>
-            <span className="eyebrow">
-              Operations
-            </span>
-
-            <h1>
-              Store dashboard
-            </h1>
-
-            <p>
-              Manage your XAAJ store,
-              products and inventory.
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+    <main className="page xaaj-admin-v2" data-active-section={activeSection}>
+      <style>{`.xaaj-admin-v2{--ink:#25231f;--muted:#777169;--line:#e7e0d6;min-height:100vh!important;max-width:none!important;margin:0!important;padding:0!important;background:radial-gradient(circle at 82% 0%,rgba(154,116,72,.09),transparent 28%),#f7f4ee!important;font-family:'DM Sans',sans-serif;color:var(--ink)}
+.xaaj-admin-v2 *{box-sizing:border-box}.xaaj-admin-v2 .admin-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}.xaaj-admin-v2 .admin-sidebar{position:sticky;top:0;height:100vh;background:linear-gradient(180deg,#10271c,#0b1f16);color:#fff;padding:28px 18px;display:flex;flex-direction:column;z-index:20;box-shadow:14px 0 45px rgba(34,29,23,.12)}.xaaj-admin-v2 .brand-mark{padding:6px 12px 30px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:22px}.xaaj-admin-v2 .brand-mark strong{font-family:'Playfair Display',serif;font-size:27px;letter-spacing:.08em;font-weight:500}.xaaj-admin-v2 .brand-mark span{display:block;margin-top:5px;color:#bdb5aa;font-size:9px;letter-spacing:.18em;text-transform:uppercase}.xaaj-admin-v2 .side-label{font-size:9px;text-transform:uppercase;letter-spacing:.18em;color:#8f887d;padding:0 12px 10px}.xaaj-admin-v2 .side-nav{display:grid;gap:5px}.xaaj-admin-v2 .side-nav button{width:100%!important;border:0!important;background:transparent!important;color:#bdb7ae!important;box-shadow:none!important;border-radius:12px!important;padding:12px 13px!important;display:flex!important;align-items:center!important;gap:12px!important;text-align:left!important;font:600 12px 'DM Sans',sans-serif!important;transform:none!important}.xaaj-admin-v2 .side-nav button:hover{background:rgba(47,112,72,.28)!important;color:#fff!important;border-color:rgba(82,157,105,.45)!important;transform:translateX(3px)!important}.xaaj-admin-v2 .side-nav button.active{background:linear-gradient(90deg,#2f7048,#245d3b)!important;color:#fff!important;box-shadow:0 8px 22px rgba(47,112,72,.28),inset 3px 0 #8bd19d!important}.xaaj-admin-v2 .side-nav button.active:hover{background:linear-gradient(90deg,#398356,#2f7048)!important}.xaaj-admin-v2 .side-icon{width:25px;height:25px;border:1px solid rgba(255,255,255,.13);border-radius:8px;display:grid;place-items:center;font-size:11px;color:#9dd5aa;flex:none}.xaaj-admin-v2 .side-footer{margin-top:auto;padding:15px 0 4px}.xaaj-admin-v2 .sidebar-logout{width:100%!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;background:rgba(255,255,255,.045)!important;color:#d8ddd9!important;border:1px solid rgba(255,255,255,.13)!important;border-radius:12px!important;padding:11px 14px!important;box-shadow:none!important}.xaaj-admin-v2 .sidebar-logout:hover{background:#2f7048!important;border-color:#4d9666!important;color:#fff!important;transform:translateY(-1px)!important;box-shadow:0 8px 20px rgba(47,112,72,.25)!important}.xaaj-admin-v2 .sidebar-logout span:first-child{font-size:15px;color:#9bcda7}.xaaj-admin-v2 .admin-main{min-width:0;padding:28px 34px 70px}.xaaj-admin-v2 .content-width{max-width:1320px;margin:0 auto}.xaaj-admin-v2 .topbar{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:26px;padding:22px 26px;background:rgba(255,253,249,.88);border:1px solid var(--line);border-radius:20px;box-shadow:0 12px 35px rgba(63,53,41,.055);backdrop-filter:blur(10px)}.xaaj-admin-v2 .topbar h1,.xaaj-admin-v2 h1,.xaaj-admin-v2 h2,.xaaj-admin-v2 h3{font-family:'Playfair Display',serif;letter-spacing:-.025em}.xaaj-admin-v2 .topbar h1{font-size:32px!important;margin:3px 0 4px!important}.xaaj-admin-v2 .topbar p{margin:0;color:var(--muted);font-size:13px}.xaaj-admin-v2 .top-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.xaaj-admin-v2 .live-store-btn{display:inline-flex!important;align-items:center!important;gap:9px!important;background:#fff!important;color:#205c36!important;border:1px solid #a9c9b1!important;border-radius:999px!important;padding:10px 15px!important;box-shadow:0 5px 16px rgba(47,112,72,.10)!important}.xaaj-admin-v2 .live-store-btn:hover{background:#2f7048!important;color:#fff!important;border-color:#2f7048!important;box-shadow:0 9px 22px rgba(47,112,72,.24)!important}.xaaj-admin-v2 .live-dot{width:9px;height:9px;border-radius:50%;background:#35a85a;box-shadow:0 0 0 0 rgba(53,168,90,.55);animation:xaaj-live-pulse 1.25s infinite}.xaaj-admin-v2 .live-store-btn:hover .live-dot{background:#fff;box-shadow:0 0 0 0 rgba(255,255,255,.55)}@keyframes xaaj-live-pulse{0%{box-shadow:0 0 0 0 rgba(53,168,90,.55);opacity:1}70%{box-shadow:0 0 0 7px rgba(53,168,90,0);opacity:.72}100%{box-shadow:0 0 0 0 rgba(53,168,90,0);opacity:1}}.xaaj-admin-v2 button,.xaaj-admin-v2 .button{appearance:none!important;border:1px solid #d8d0c4!important;background:#fff!important;color:#292621!important;border-radius:11px!important;padding:10px 15px!important;font:600 12px 'DM Sans',sans-serif!important;cursor:pointer!important;transition:all .2s ease!important;box-shadow:0 2px 0 rgba(0,0,0,.02)!important}.xaaj-admin-v2 button:hover:not(:disabled){transform:translateY(-1px)!important;border-color:#3b8758!important;background:#eef8f1!important;color:#1f5c35!important;box-shadow:0 8px 18px rgba(47,112,72,.12)!important}.xaaj-admin-v2 button.button,.xaaj-admin-v2 button[type=submit]{background:#292621!important;color:#fff!important;border-color:#292621!important;box-shadow:0 7px 18px rgba(41,38,33,.18)!important}.xaaj-admin-v2 button.button:hover,.xaaj-admin-v2 button[type=submit]:hover{background:#2f7048!important;border-color:#2f7048!important;color:#fff!important;box-shadow:0 9px 22px rgba(47,112,72,.24)!important}.xaaj-admin-v2 button:disabled{opacity:.45!important;cursor:not-allowed!important;transform:none!important}.xaaj-admin-v2 section{background:rgba(255,253,249,.94)!important;border:1px solid var(--line)!important;border-radius:20px!important;padding:28px!important;margin-bottom:26px!important;box-shadow:0 12px 35px rgba(63,53,41,.055)!important}.xaaj-admin-v2 .summary{background:linear-gradient(145deg,#fffefa,#f2ece2)!important;border:1px solid #e4dcd1!important;border-radius:18px!important;padding:23px!important;min-height:120px!important;box-shadow:0 10px 25px rgba(57,47,35,.065)!important}.xaaj-admin-v2 .summary strong{font-family:'Playfair Display',serif!important;font-size:30px!important}.xaaj-admin-v2 .summary span{display:block!important;margin-top:7px!important;color:var(--muted)!important;font-size:11px!important;text-transform:uppercase!important;letter-spacing:.12em!important}.xaaj-admin-v2 input:not([type=checkbox]),.xaaj-admin-v2 textarea,.xaaj-admin-v2 select{background:#fffefa!important;border:1px solid #ded7cd!important;border-radius:10px!important;padding:11px 13px!important;color:#2c2925!important;outline:none!important;transition:.2s!important}.xaaj-admin-v2 input:not([type=checkbox]):focus,.xaaj-admin-v2 textarea:focus,.xaaj-admin-v2 select:focus{border-color:#9b7c58!important;box-shadow:0 0 0 4px rgba(139,106,67,.10)!important}.xaaj-admin-v2 label{font-weight:600!important;font-size:12px!important;color:#4c4741!important}.xaaj-admin-v2 img{border-radius:13px}.xaaj-admin-v2 .eyebrow{text-transform:uppercase!important;letter-spacing:.16em!important;font-size:9px!important;font-weight:700!important;color:#9a7954!important}.xaaj-admin-v2 small{color:#8b857d!important}.xaaj-admin-v2[data-active-section=dashboard] [data-admin-section]:not([data-admin-section=dashboard]),.xaaj-admin-v2[data-active-section=announcement] [data-admin-section]:not([data-admin-section=announcement]),.xaaj-admin-v2[data-active-section=hero] [data-admin-section]:not([data-admin-section=hero]),.xaaj-admin-v2[data-active-section=blog] [data-admin-section]:not([data-admin-section=blog]),.xaaj-admin-v2[data-active-section=orders] [data-admin-section]:not([data-admin-section=orders]),.xaaj-admin-v2[data-active-section=products] [data-admin-section]:not([data-admin-section=products]){display:none!important}.xaaj-admin-v2 .side-icon svg{display:block}.xaaj-admin-v2 .sidebar-logout svg{color:#9bcda7;flex:none}.xaaj-admin-v2 .sidebar-logout:hover svg{color:#fff}.xaaj-admin-v2 .live-store-btn svg{flex:none}.xaaj-admin-v2 .product-header-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.xaaj-admin-v2 .product-header-actions button{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-height:39px!important}.xaaj-admin-v2 .product-add-btn{background:#292621!important;color:#fff!important;border-color:#292621!important;box-shadow:0 7px 18px rgba(41,38,33,.14)!important}.xaaj-admin-v2 .product-add-btn:hover{background:#2f7048!important;border-color:#2f7048!important;color:#fff!important;box-shadow:0 9px 22px rgba(47,112,72,.22)!important}.xaaj-admin-v2 .product-refresh-btn{background:#fff!important;color:#3f3a34!important}.xaaj-admin-v2 .product-refresh-btn:hover{background:#eef8f1!important;color:#1f5c35!important;border-color:#3b8758!important}.xaaj-admin-v2 .is-spinning{animation:xaaj-spin .8s linear infinite}@keyframes xaaj-spin{to{transform:rotate(360deg)}}
+@media(max-width:900px){.xaaj-admin-v2 .admin-shell{grid-template-columns:1fr}.xaaj-admin-v2 .admin-sidebar{position:sticky;top:0;height:auto;padding:13px 12px}.xaaj-admin-v2 .brand-mark,.xaaj-admin-v2 .side-label{display:none}.xaaj-admin-v2 .side-footer{display:block;margin:0 0 0 8px;padding:0;flex:none}.xaaj-admin-v2 .sidebar-logout{width:auto!important;padding:9px 12px!important}.xaaj-admin-v2 .side-nav{display:flex;overflow-x:auto;gap:5px}.xaaj-admin-v2 .side-nav button{width:auto!important;white-space:nowrap;padding:9px 11px!important}.xaaj-admin-v2 .side-icon{display:none}.xaaj-admin-v2 .admin-main{padding:18px 14px 50px}.xaaj-admin-v2 .topbar{padding:18px}.xaaj-admin-v2 .topbar h1{font-size:27px!important}}`}</style>
+      <div className="admin-shell">
+        <aside className="admin-sidebar">
+          <div className="brand-mark"><strong>XAAJ</strong><span>Stories Crafted in Earth</span></div>
+          <div className="side-label">Store Management</div>
+          <nav className="side-nav">
+            {[
+              ['dashboard', 'Overview', FiGrid],
+              ['announcement', 'Announcement', FiBell],
+              ['hero', 'Hero Media', FiImage],
+              ['blog', 'Blog', FiEdit3],
+              ['orders', 'Orders', FiClock],
+              ['products', 'Products', FiPackage]
+            ].map(([key, label, Icon]) => (
+              <button
+                key={key}
+                type="button"
+                className={activeSection === key ? 'active' : ''}
+                onClick={() => {
+                  setActiveSection(key)
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
+              >
+                <span className="side-icon">
+                  <Icon size={15} strokeWidth={1.8} />
+                </span>
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+          <div className="side-footer">
             <button
               type="button"
-              className="button"
-              onClick={handleAddProduct}
-            >
-              + Add Product
-            </button>
-
-            <button
-              type="button"
-              className="button button-light"
+              className="sidebar-logout"
               onClick={async () => {
                 await logout()
                 window.location.href = '/account'
               }}
             >
-              Logout
+              <FiLogOut size={15} strokeWidth={1.8} />
+              <span>Logout</span>
+            </button>
+          </div>
+        </aside>
+        <div className="admin-main">
+          <div className="content-width">
+
+
+        <div className="topbar">
+          <div>
+            <span className="eyebrow">XAAJ / Admin</span>
+            <h1>{activeSection === 'dashboard' ? 'Store overview' : activeSection === 'announcement' ? 'Announcement bar' : activeSection === 'hero' ? 'Hero media' : activeSection === 'blog' ? 'Blog management' : activeSection === 'orders' ? 'Customer orders' : 'Product management'}</h1>
+            <p>Manage your XAAJ storefront from one place.</p>
+          </div>
+          <div className="top-actions">
+            <button
+              type="button"
+              className="live-store-btn"
+              onClick={() =>
+  window.open(
+    '/?xaajPreview=1',
+    '_blank',
+    'noopener,noreferrer'
+  )
+}
+              title="Open live store"
+            >
+              <span className="live-dot" />
+              <FiExternalLink size={14} strokeWidth={1.8} />
+              <span>Live Store</span>
             </button>
           </div>
         </div>
@@ -979,7 +1128,7 @@ export default function Admin() {
             Dashboard Stats
         ========================== */}
         {dashboard && (
-          <section
+          <section data-admin-section="dashboard"
             style={{
               marginBottom: '50px'
             }}
@@ -1033,7 +1182,7 @@ export default function Admin() {
         {/* =========================
             Announcement Bar Management
         ========================== */}
-        <section
+        <section data-admin-section="announcement"
           style={{
             marginBottom: '50px',
             padding: '28px',
@@ -1152,7 +1301,7 @@ export default function Admin() {
         {/* =========================
             Hero Images Management
         ========================== */}
-        <section
+        <section data-admin-section="hero"
           style={{
             marginBottom: '50px',
             padding: '28px',
@@ -1172,10 +1321,10 @@ export default function Admin() {
           >
             <div>
               <span className="eyebrow">Website Content</span>
-              <h2>Hero Images</h2>
+              <h2>Hero Media</h2>
               <p>
-                Change the homepage hero photos without changing
-                the existing hero text or button.
+                Change the homepage hero image or video using a URL.
+                The existing hero text and button remain unchanged.
               </p>
             </div>
 
@@ -1194,7 +1343,7 @@ export default function Admin() {
           </div>
 
           {loadingHeroSlides ? (
-            <p>Loading hero images...</p>
+            <p>Loading hero media...</p>
           ) : (
             <>
               {heroSlides.length > 0 && (
@@ -1227,15 +1376,31 @@ export default function Admin() {
                         }}
                       >
                         {slide.image ? (
-                          <img
-                            src={slide.image}
-                            alt={slide.alt || `Hero slide ${index + 1}`}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover'
-                            }}
-                          />
+                          slide.mediaType === 'video' ? (
+                            <video
+                              src={slide.image}
+                              muted
+                              autoPlay
+                              loop
+                              playsInline
+                              controls
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          ) : (
+                            <img
+                              src={slide.image}
+                              alt={slide.alt || `Hero slide ${index + 1}`}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          )
                         ) : (
                           <div
                             style={{
@@ -1247,7 +1412,7 @@ export default function Admin() {
                               color: '#777'
                             }}
                           >
-                            Image preview
+                            Media preview
                           </div>
                         )}
                       </div>
@@ -1269,7 +1434,7 @@ export default function Admin() {
                               e.target.value
                             )
                           }
-                          placeholder="Hero image URL"
+                          placeholder="Hero image or video URL"
                         />
 
                         <input
@@ -1281,7 +1446,7 @@ export default function Admin() {
                               e.target.value
                             )
                           }
-                          placeholder="Image alt text"
+                          placeholder="Image alt text (for images)"
                         />
 
                         <label
@@ -1365,7 +1530,7 @@ export default function Admin() {
                   }}
                 >
                   <p style={{ marginTop: 0 }}>
-                    No hero images configured yet.
+                    No hero media configured yet.
                   </p>
                 </div>
               )}
@@ -1378,7 +1543,7 @@ export default function Admin() {
                 }}
               >
                 The homepage hero text and “Explore the collection”
-                button remain unchanged. Only the hero photos are
+                button remain unchanged. Only the hero image/video media are
                 managed here.
               </small>
 
@@ -1395,7 +1560,7 @@ export default function Admin() {
                   onClick={addHeroSlide}
                   disabled={savingHeroSlides}
                 >
-                  + Add Hero Image
+                  + Add Hero Media
                 </button>
 
                 <button
@@ -1409,7 +1574,7 @@ export default function Admin() {
                 >
                   {savingHeroSlides
                     ? 'Saving...'
-                    : 'Save Hero Images'}
+                    : 'Save Hero Media'}
                 </button>
 
                 <button
@@ -1430,7 +1595,7 @@ export default function Admin() {
         {/* =========================
             Blog Management
         ========================== */}
-        <section
+        <section data-admin-section="blog"
           style={{
             marginBottom: '50px',
             padding: '28px',
@@ -2090,6 +2255,29 @@ export default function Admin() {
                 placeholder="20"
               />
 
+              {/* Velocity Shipping Package Details */}
+              <div
+                style={{
+                  marginTop: '18px',
+                  marginBottom: '18px',
+                  padding: '18px',
+                  border: '1px solid #e5e5e5',
+                  borderRadius: '10px',
+                  background: '#faf9f6'
+                }}
+              >
+                <h3 style={{ margin: '0 0 6px' }}>Shipping Package Details</h3>
+                <p style={{ margin: '0 0 16px', color: '#666', fontSize: '13px' }}>
+                  Required for Velocity Shipping. Weight in kg and dimensions in cm.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
+                  <div><label htmlFor="product-weight">Weight (kg) *</label><input id="product-weight" type="number" name="weight" value={form.shipping.weight} onChange={handleShippingChange} placeholder="Example: 2.5" min="0.001" step="0.001" required /></div>
+                  <div><label htmlFor="product-length">Length (cm) *</label><input id="product-length" type="number" name="length" value={form.shipping.length} onChange={handleShippingChange} placeholder="Example: 35" min="0.1" step="0.1" required /></div>
+                  <div><label htmlFor="product-breadth">Breadth (cm) *</label><input id="product-breadth" type="number" name="breadth" value={form.shipping.breadth} onChange={handleShippingChange} placeholder="Example: 30" min="0.1" step="0.1" required /></div>
+                  <div><label htmlFor="product-height">Height (cm) *</label><input id="product-height" type="number" name="height" value={form.shipping.height} onChange={handleShippingChange} placeholder="Example: 15" min="0.1" step="0.1" required /></div>
+                </div>
+              </div>
+
               {/* Product Description */}
               <label>
                 Product Description *
@@ -2236,7 +2424,7 @@ export default function Admin() {
         {/* =========================
             Order Management
         ========================== */}
-        <section style={{ marginBottom: '50px' }}>
+        <section data-admin-section="orders" style={{ marginBottom: '50px' }}>
           <div
             style={{
               display: 'flex',
@@ -2592,7 +2780,7 @@ export default function Admin() {
         {/* =========================
             Product Management
         ========================== */}
-        <section>
+        <section data-admin-section="products">
 
           <div
             style={{
@@ -2614,15 +2802,30 @@ export default function Admin() {
               </h2>
             </div>
 
-            <button
-              type="button"
-              onClick={loadProducts}
-              disabled={loadingProducts}
-            >
-              {loadingProducts
-                ? 'Loading...'
-                : 'Refresh'}
-            </button>
+            <div className="product-header-actions">
+              <button
+                type="button"
+                className="product-add-btn"
+                onClick={handleAddProduct}
+              >
+                <FiPlus size={15} strokeWidth={2} />
+                <span>Add Product</span>
+              </button>
+
+              <button
+                type="button"
+                className="product-refresh-btn"
+                onClick={loadProducts}
+                disabled={loadingProducts}
+              >
+                <FiRefreshCw
+                  size={14}
+                  strokeWidth={1.9}
+                  className={loadingProducts ? 'is-spinning' : ''}
+                />
+                <span>{loadingProducts ? 'Loading...' : 'Refresh'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Loading */}
@@ -2801,6 +3004,8 @@ export default function Admin() {
 
         </section>
 
+          </div>
+        </div>
       </div>
     </main>
   )

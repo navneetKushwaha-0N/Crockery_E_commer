@@ -35,6 +35,7 @@ import authRoutes from './routes/auth.js'
 import productRoutes from './routes/products.js'
 import commerceRoutes from './routes/commerce.js'
 import orderRoutes from './routes/orders.js'
+import velocityTestRoutes from './routes/velocityTest.js'
 import cmsRoutes from './routes/cms.js'
 import blogRoutes from './routes/blogs.js'
 import newsletterRoutes from './routes/newsletter.js'
@@ -42,6 +43,7 @@ import contactRoutes from './routes/contact.js'
 import adminRoutes from './routes/admin.js'
 import paymentRoutes from './routes/payments.js'
 import uploadRoutes from './routes/uploads.js'
+import reviewRoutes from './routes/reviews.js'
 
 // -------------------------
 // 5. Middleware
@@ -232,6 +234,34 @@ app.use(
 app.use(
   '/api/orders',
   orderRoutes
+)
+
+
+// -------------------------
+// Velocity Test
+// -------------------------
+// Test Velocity API authentication
+//
+// GET /api/velocity/test
+// -------------------------
+app.use(
+  '/api/velocity',
+  velocityTestRoutes
+)
+
+
+// -------------------------
+// Reviews
+// -------------------------
+// Customer product reviews
+//
+// POST   /api/reviews
+// GET    /api/reviews/product/:productId
+// GET    /api/reviews/order/:orderId
+// -------------------------
+app.use(
+  '/api/reviews',
+  reviewRoutes
 )
 
 
