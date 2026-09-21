@@ -2,7 +2,11 @@
 // IMPORTS
 // ============================================================
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
+
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { ScrollSmoother } from 'gsap/ScrollSmoother'
 
 import {
   BrowserRouter,
@@ -39,6 +43,7 @@ import {
 import { FaInstagram, FaWhatsapp } from 'react-icons/fa'
 
 import './styles.css'
+import './xaaj-fonts.css'
 
 // API
 import { apiRequest, productService, orderService, reviewService, cmsService, newsletterService, contactService } from './services/api'
@@ -73,6 +78,9 @@ import {
 import {
   money
 } from './utils/formatters'
+
+
+gsap.registerPlugin(ScrollTrigger, ScrollSmoother)
 
 
 // ============================================================
@@ -113,8 +121,9 @@ const tableImage =
 
 function Header() {
 
-  // Mobile menu state
+  // Mobile menu + premium mega-menu state
   const [open, setOpen] = useState(false)
+  const [activeMegaMenu, setActiveMegaMenu] = useState(null)
 
   // Search bar state
   const [search, setSearch] = useState(false)
@@ -123,8 +132,22 @@ function Header() {
   const { user } = useAuth()
 
   // Cart item count + premium cart micro-interaction
-  const { count } = useStore()
+  const {
+    count,
+    newArrivals
+  } = useStore()
+
+  // Live blog content for the Blog mega menu.
+  // useBlogPosts() is declared later in this file and is safe to call here.
+  const {
+    posts: blogPosts
+  } = useBlogPosts()
+
   const [cartBump, setCartBump] = useState(false)
+
+  // GSAP refs for mega-menu entrance animations.
+  const megaMenuRefs = useRef({})
+  const megaCloseTimer = useRef(null)
 
   useEffect(() => {
     const handleCartAdded = () => {
@@ -135,16 +158,10 @@ function Header() {
       }, 520)
     }
 
-    window.addEventListener(
-      'xaaj:cart-added',
-      handleCartAdded
-    )
+    window.addEventListener('xaaj:cart-added', handleCartAdded)
 
     return () => {
-      window.removeEventListener(
-        'xaaj:cart-added',
-        handleCartAdded
-      )
+      window.removeEventListener('xaaj:cart-added', handleCartAdded)
     }
   }, [])
 
@@ -174,7 +191,6 @@ function Header() {
         }
       } catch (error) {
         console.error('Announcement load error:', error)
-        // Keep default announcement if API is unavailable.
       }
     }
 
@@ -188,15 +204,104 @@ function Header() {
   // Navigation
   const navigate = useNavigate()
 
-  // Navigation links
-  const nav = [
-    'Shop',
-    'Collections',
-    'New Arrivals',
-    'About Us',
-    'Blog',
-    'Contact'
-  ]
+  const clearMegaCloseTimer = () => {
+    if (megaCloseTimer.current) {
+      window.clearTimeout(megaCloseTimer.current)
+      megaCloseTimer.current = null
+    }
+  }
+
+  const openMegaMenu = menu => {
+    clearMegaCloseTimer()
+    setActiveMegaMenu(menu)
+  }
+
+  const scheduleMegaMenuClose = () => {
+    clearMegaCloseTimer()
+
+    megaCloseTimer.current = window.setTimeout(() => {
+      setActiveMegaMenu(null)
+      megaCloseTimer.current = null
+    }, 150)
+  }
+
+  const closeMenus = () => {
+    clearMegaCloseTimer()
+    setOpen(false)
+    setActiveMegaMenu(null)
+  }
+
+  const goToShop = (target = '/shop') => {
+    closeMenus()
+    navigate(target)
+  }
+
+  useEffect(() => {
+    return () => clearMegaCloseTimer()
+  }, [])
+
+  // GSAP-powered mega-menu entrance. The menu itself remains in React state;
+  // GSAP only animates it, so it cannot interfere with the site's content reveal.
+  useLayoutEffect(() => {
+    if (!activeMegaMenu) return undefined
+
+    const menu = megaMenuRefs.current[activeMegaMenu]
+
+    if (!menu) return undefined
+
+    const items = menu.querySelectorAll('[data-xaaj-mega-item]')
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        menu,
+        {
+          autoAlpha: 0,
+          y: -14,
+          scaleY: 0.985,
+          transformOrigin: 'top center'
+        },
+        {
+          autoAlpha: 1,
+          y: 0,
+          scaleY: 1,
+          duration: 0.42,
+          ease: 'power3.out',
+          overwrite: true
+        }
+      )
+
+      if (items.length) {
+        gsap.fromTo(
+          items,
+          {
+            autoAlpha: 0,
+            y: 10
+          },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.34,
+            delay: 0.07,
+            stagger: 0.035,
+            ease: 'power2.out',
+            overwrite: true
+          }
+        )
+      }
+    }, menu)
+
+    return () => ctx.revert()
+  }, [activeMegaMenu])
+
+  // Keep XAAJ's own categories/content inside the mega menu.
+  const shopCategories = Array.isArray(categories)
+    ? categories.filter(Boolean)
+    : []
+
+  const featuredCategories = shopCategories.slice(0, 2)
+
+  const categoryLink = category =>
+    `/shop?category=${encodeURIComponent(category)}`
 
   return (
     <>
@@ -236,19 +341,21 @@ function Header() {
         </div>
       )}
 
-
       {/* Main Header */}
       <header className="header">
 
         {/* Mobile Menu Button */}
         <button
           className="icon mobile-menu"
-          onClick={() => setOpen(!open)}
+          onClick={() => {
+            setOpen(current => !current)
+            setActiveMegaMenu(null)
+          }}
           aria-label="Open menu"
+          aria-expanded={open}
         >
           {open ? <X /> : <Menu />}
         </button>
-
 
         {/* Desktop Search Button */}
         <button
@@ -259,11 +366,11 @@ function Header() {
           <Search />
         </button>
 
-
         {/* Logo */}
         <Link
           to="/"
           className="brand"
+          onClick={closeMenus}
         >
           <img
             src={logoUrl}
@@ -275,7 +382,6 @@ function Header() {
           </span>
         </Link>
 
-
         {/* Header Actions */}
         <div className="header-actions">
 
@@ -283,65 +389,56 @@ function Header() {
           <button
             className="icon"
             aria-label="Account"
-            onClick={() =>
-              navigate(
-                user?.role === 'admin'
-                  ? '/admin'
-                  : '/account'
-              )
-            }
+            onClick={() => {
+              closeMenus()
+              navigate(user?.role === 'admin' ? '/admin' : '/account')
+            }}
           >
             <UserRound />
           </button>
-
 
           {/* Wishlist */}
           <button
             className="icon"
             aria-label="Wishlist"
-            onClick={() => navigate('/wishlist')}
+            onClick={() => {
+              closeMenus()
+              navigate('/wishlist')
+            }}
           >
             <Heart />
           </button>
 
-
           {/* Cart */}
           <button
-            className={`bag ${
-              cartBump ? 'cart-bump' : ''
-            }`}
+            className={`bag ${cartBump ? 'cart-bump' : ''}`}
             data-xaaj-cart-target="true"
             aria-label="Cart"
-            onClick={() => navigate('/cart')}
+            onClick={() => {
+              closeMenus()
+              navigate('/cart')
+            }}
           >
             <ShoppingBag />
 
-            {count > 0 && (
-              <b>{count}</b>
-            )}
+            {count > 0 && <b>{count}</b>}
           </button>
 
         </div>
 
       </header>
 
-
       {/* Search Bar */}
       {search && (
         <form
           className="searchbar"
           onSubmit={e => {
-
             e.preventDefault()
-
-            navigate(
-              `/shop?search=${e.target.q.value}`
-            )
-
+            navigate(`/shop?search=${e.target.q.value}`)
+            closeMenus()
             setSearch(false)
           }}
         >
-
           <Search />
 
           <input
@@ -353,108 +450,817 @@ function Header() {
           <button>
             Search
           </button>
-
         </form>
       )}
 
+      {/* ==========================================================
+          NAVIGATION + XAAJ SHOP MEGA MENU
+          ========================================================== */}
+      <div className="xaaj-navigation-wrap">
+        <nav
+          className={`nav ${open ? 'nav-open' : ''}`}
+          aria-label="Primary navigation"
+        >
 
-      {/* Navigation */}
-      <nav
-        className={`nav ${
-          open ? 'nav-open' : ''
-        }`}
-      >
-
-        {nav.map(n => (
-
-          <Link
-            key={n}
-            to={
-              n === 'Shop'
-                ? '/shop#shop-products'
-                : n === 'New Arrivals'
-                ? '/#customer-favorites'
-                : n === 'About Us'
-                ? '/about'
-                : n === 'Blog'
-                ? '/blog'
-                : n === 'Contact'
-                ? '/contact'
-                : `/${n.toLowerCase().replace(/\s+/g, '-')}`
-            }
-            onClick={e => {
-              setOpen(false)
-
-              if (n === 'Shop') {
-                e.preventDefault()
-
-                const scrollToShopProducts = () => {
-                  const section = document.getElementById(
-                    'shop-products'
-                  )
-
-                  if (section) {
-                    section.scrollIntoView({
-                      behavior: 'smooth',
-                      block: 'start'
-                    })
-                  }
-                }
-
-                if (window.location.pathname !== '/shop') {
-                  navigate('/shop#shop-products')
-                  window.setTimeout(scrollToShopProducts, 120)
-                } else {
-                  window.history.pushState(
-                    null,
-                    '',
-                    '/shop#shop-products'
-                  )
-                  window.setTimeout(scrollToShopProducts, 20)
-                }
-
-                return
-              }
-
-              if (n === 'New Arrivals') {
-                e.preventDefault()
-
-                const scrollToFavorites = () => {
-                  const section = document.getElementById(
-                    'customer-favorites'
-                  )
-
-                  if (section) {
-                    section.scrollIntoView({
-                      behavior: 'smooth',
-                      block: 'start'
-                    })
-                  }
-                }
-
-                if (window.location.pathname !== '/') {
-                  navigate('/')
-                  window.setTimeout(scrollToFavorites, 120)
-                } else {
-                  window.history.pushState(
-                    null,
-                    '',
-                    '/#customer-favorites'
-                  )
-                  window.dispatchEvent(new PopStateEvent('popstate'))
-                  window.setTimeout(scrollToFavorites, 20)
-                }
-              }
-            }}
+          {/* SHOP */}
+          <div
+            className={`xaaj-nav-mega-item ${
+              activeMegaMenu === 'shop' ? 'is-open' : ''
+            }`}
+            onMouseEnter={() => openMegaMenu('shop')}
+            onMouseLeave={scheduleMegaMenuClose}
           >
-            {n}
+            <button
+              type="button"
+              className="nav-shop-trigger"
+              aria-expanded={activeMegaMenu === 'shop'}
+              aria-controls="xaaj-shop-mega-menu"
+              onClick={() =>
+                setActiveMegaMenu(current =>
+                  current === 'shop' ? null : 'shop'
+                )
+              }
+            >
+              <span>Shop</span>
+              <ChevronDown
+                size={13}
+                strokeWidth={1.5}
+                className="nav-shop-chevron"
+              />
+            </button>
+
+            {activeMegaMenu === 'shop' && (
+              <div
+                id="xaaj-shop-mega-menu"
+                ref={element => {
+                  megaMenuRefs.current.shop = element
+                }}
+                className="xaaj-shop-mega-menu"
+                onMouseEnter={clearMegaCloseTimer}
+                onMouseLeave={scheduleMegaMenuClose}
+              >
+                <div className="xaaj-shop-mega-inner">
+
+                  <div className="xaaj-mega-column xaaj-mega-categories">
+                    <span className="xaaj-mega-label">SHOP BY FORM</span>
+
+                    <button
+                      type="button"
+                      className="xaaj-mega-main-link"
+                      data-xaaj-mega-item
+                      onClick={() => goToShop('/shop')}
+                    >
+                      Shop all
+                      <ArrowRight size={14} />
+                    </button>
+
+                    {shopCategories.map(category => (
+                      <Link
+                        key={category.name}
+                        to={categoryLink(category.name)}
+                        data-xaaj-mega-item
+                        onClick={closeMenus}
+                      >
+                        {category.name}
+                      </Link>
+                    ))}
+                  </div>
+
+                  <div className="xaaj-mega-column xaaj-mega-featured">
+                    <span className="xaaj-mega-label">FEATURED</span>
+
+                    <div className="xaaj-mega-feature-grid">
+                      {featuredCategories.map(category => (
+                        <Link
+                          key={`featured-${category.name}`}
+                          to={categoryLink(category.name)}
+                          className="xaaj-mega-feature-card"
+                          data-xaaj-mega-item
+                          onClick={closeMenus}
+                        >
+                          <div className="xaaj-mega-feature-image">
+                            <img
+                              src={category.image}
+                              alt={category.name}
+                              loading="lazy"
+                            />
+                          </div>
+                          <span>{category.name}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="xaaj-mega-column">
+                    <span className="xaaj-mega-label">DINING</span>
+
+                    {['Dinner Sets', 'Plates', 'Bowls'].map(name => (
+                      <Link
+                        key={name}
+                        to={categoryLink(name)}
+                        data-xaaj-mega-item
+                        onClick={closeMenus}
+                      >
+                        {name}
+                      </Link>
+                    ))}
+
+                    <span className="xaaj-mega-label xaaj-mega-label-spaced">
+                      SERVEWARE
+                    </span>
+
+                    {['Serveware', 'Glassware'].map(name => (
+                      <Link
+                        key={name}
+                        to={categoryLink(name)}
+                        data-xaaj-mega-item
+                        onClick={closeMenus}
+                      >
+                        {name}
+                      </Link>
+                    ))}
+                  </div>
+
+                  <div className="xaaj-mega-column">
+                    <span className="xaaj-mega-label">DRINKWARE</span>
+
+                    <Link
+                      to={categoryLink('Cups & Mugs')}
+                      data-xaaj-mega-item
+                      onClick={closeMenus}
+                    >
+                      Cups &amp; Mugs
+                    </Link>
+
+                    <Link
+                      to={categoryLink('Glassware')}
+                      data-xaaj-mega-item
+                      onClick={closeMenus}
+                    >
+                      Glassware
+                    </Link>
+
+                    <span className="xaaj-mega-label xaaj-mega-label-spaced">
+                      XAAJ COLLECTIONS
+                    </span>
+
+                    <Link
+                      to="/shop?filter=new"
+                      data-xaaj-mega-item
+                      onClick={closeMenus}
+                    >
+                      New Arrivals
+                    </Link>
+                    <Link
+                      to="/shop?filter=best-selling"
+                      data-xaaj-mega-item
+                      onClick={closeMenus}
+                    >
+                      Best Sellers
+                    </Link>
+                    <Link
+                      to="/shop"
+                      data-xaaj-mega-item
+                      onClick={closeMenus}
+                    >
+                      Everyday Collection
+                    </Link>
+                  </div>
+
+                  <div className="xaaj-mega-footer" data-xaaj-mega-item>
+                    <span>
+                      Thoughtful tableware, shaped slowly in India.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => goToShop('/shop')}
+                    >
+                      Explore the collection
+                      <ArrowRight size={14} />
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Collections */}
+          <Link
+            to="/collections"
+            onClick={closeMenus}
+          >
+            Collections
           </Link>
 
-        ))}
+          {/* NEW ARRIVALS + HOVER MENU */}
+          <div
+            className={`xaaj-nav-mega-item ${
+              activeMegaMenu === 'new-arrivals' ? 'is-open' : ''
+            }`}
+            onMouseEnter={() => openMegaMenu('new-arrivals')}
+            onMouseLeave={scheduleMegaMenuClose}
+          >
+            <Link
+              to="/shop?filter=new"
+              className="xaaj-nav-mega-trigger"
+              onClick={closeMenus}
+            >
+              <span>New Arrivals</span>
+              <ChevronDown
+                size={13}
+                strokeWidth={1.5}
+                className="nav-shop-chevron"
+              />
+            </Link>
 
+            {activeMegaMenu === 'new-arrivals' && (
+              <div
+                ref={element => {
+                  megaMenuRefs.current['new-arrivals'] = element
+                }}
+                className="xaaj-content-mega-menu xaaj-new-arrivals-menu"
+                onMouseEnter={clearMegaCloseTimer}
+                onMouseLeave={scheduleMegaMenuClose}
+              >
+                <div className="xaaj-content-mega-inner">
 
-      </nav>
+                  <div
+                    className="xaaj-content-mega-intro"
+                    data-xaaj-mega-item
+                  >
+                    <span className="xaaj-mega-label">
+                      JUST IN
+                    </span>
+                    <h3>
+                      New pieces for
+                      <br />
+                      everyday rituals.
+                    </h3>
+                    <Link
+                      to="/shop?filter=new"
+                      onClick={closeMenus}
+                    >
+                      View all new arrivals
+                      <ArrowRight size={14} />
+                    </Link>
+                  </div>
 
+                  <div className="xaaj-content-mega-products">
+                    {(Array.isArray(newArrivals)
+                      ? newArrivals.slice(0, 3)
+                      : []
+                    ).map((product, index) => (
+                      <Link
+                        key={product.id || product._id || index}
+                        to={`/product/${product.slug}`}
+                        className="xaaj-mini-product"
+                        data-xaaj-mega-item
+                        onClick={closeMenus}
+                      >
+                        <div className="xaaj-mini-product-image">
+                          <img
+                            src={
+                              product.image ||
+                              product.images?.[0] ||
+                              ''
+                            }
+                            alt={product.name}
+                            loading="lazy"
+                          />
+                        </div>
+                        <span className="xaaj-mini-product-category">
+                          {product.category}
+                        </span>
+                        <strong>{product.name}</strong>
+                      </Link>
+                    ))}
+                  </div>
+
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ABOUT */}
+          <Link to="/about" onClick={closeMenus}>
+            About Us
+          </Link>
+
+          {/* BLOG + HOVER MENU */}
+          <div
+            className={`xaaj-nav-mega-item ${
+              activeMegaMenu === 'blog' ? 'is-open' : ''
+            }`}
+            onMouseEnter={() => openMegaMenu('blog')}
+            onMouseLeave={scheduleMegaMenuClose}
+          >
+            <Link
+              to="/blog"
+              className="xaaj-nav-mega-trigger"
+              onClick={closeMenus}
+            >
+              <span>Blog</span>
+              <ChevronDown
+                size={13}
+                strokeWidth={1.5}
+                className="nav-shop-chevron"
+              />
+            </Link>
+
+            {activeMegaMenu === 'blog' && (
+              <div
+                ref={element => {
+                  megaMenuRefs.current.blog = element
+                }}
+                className="xaaj-content-mega-menu xaaj-blog-mega-menu"
+                onMouseEnter={clearMegaCloseTimer}
+                onMouseLeave={scheduleMegaMenuClose}
+              >
+                <div className="xaaj-content-mega-inner">
+
+                  <div
+                    className="xaaj-content-mega-intro"
+                    data-xaaj-mega-item
+                  >
+                    <span className="xaaj-mega-label">
+                      FROM THE JOURNAL
+                    </span>
+                    <h3>
+                      Stories for
+                      <br />
+                      beautiful living.
+                    </h3>
+                    <Link
+                      to="/blog"
+                      onClick={closeMenus}
+                    >
+                      Read all stories
+                      <ArrowRight size={14} />
+                    </Link>
+                  </div>
+
+                  <div className="xaaj-blog-mini-grid">
+                    {(Array.isArray(blogPosts)
+                      ? blogPosts.filter(post => post?.isPublished !== false).slice(0, 3)
+                      : []
+                    ).map((post, index) => (
+                      <Link
+                        key={post.id || post.slug || index}
+                        to={`/blog/${post.slug}`}
+                        className="xaaj-mini-blog"
+                        data-xaaj-mega-item
+                        onClick={closeMenus}
+                      >
+                        <div className="xaaj-mini-blog-image">
+                          {post.coverImage ? (
+                            <img
+                              src={post.coverImage}
+                              alt={post.title}
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div />
+                          )}
+                          <span>
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+                        </div>
+                        <small>{post.category}</small>
+                        <strong>{post.title}</strong>
+                      </Link>
+                    ))}
+                  </div>
+
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* CONTACT */}
+          <Link to="/contact" onClick={closeMenus}>
+            Contact
+          </Link>
+
+        </nav>
+      </div>
+
+      {/* Click outside the active mega menu to close it */}
+      {activeMegaMenu && (
+        <button
+          type="button"
+          className="xaaj-mega-backdrop"
+          aria-label="Close navigation menu"
+          onClick={() => setActiveMegaMenu(null)}
+        />
+      )}
+
+      {/* Self-contained premium mega-menu styling */}
+      <style>{`
+        .xaaj-navigation-wrap {
+          position: relative;
+          z-index: 1000;
+        }
+
+        .xaaj-nav-mega-item {
+          position: static;
+          display: flex;
+          align-items: center;
+          height: 100%;
+        }
+
+        .nav-shop-trigger,
+        .xaaj-nav-mega-trigger {
+          appearance: none;
+          border: 0;
+          background: transparent;
+          padding: 0;
+          margin: 0;
+          height: 100%;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          color: inherit;
+          font: inherit;
+          cursor: pointer;
+          text-decoration: none;
+          text-transform: inherit;
+          letter-spacing: inherit;
+        }
+
+        .nav-shop-chevron {
+          transition: transform .35s cubic-bezier(.22,1,.36,1);
+        }
+
+        .xaaj-nav-mega-item.is-open .nav-shop-chevron {
+          transform: rotate(180deg);
+        }
+
+        .xaaj-shop-mega-menu,
+        .xaaj-content-mega-menu {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          z-index: 1200;
+          background: rgba(255, 253, 249, .985);
+          border-top: 1px solid rgba(41, 40, 36, .09);
+          border-bottom: 1px solid rgba(41, 40, 36, .10);
+          box-shadow: 0 24px 55px rgba(41, 40, 36, .13);
+          will-change: transform, opacity;
+        }
+
+        .xaaj-shop-mega-inner {
+          width: min(1380px, calc(100% - 70px));
+          margin: 0 auto;
+          padding: 34px 0 25px;
+          display: grid;
+          grid-template-columns: 1.05fr 1.45fr 1fr 1fr;
+          gap: 34px;
+          position: relative;
+        }
+
+        .xaaj-mega-column {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          padding-right: 24px;
+          border-right: 1px solid rgba(41, 40, 36, .10);
+        }
+
+        .xaaj-mega-column:last-of-type {
+          border-right: 0;
+        }
+
+        .xaaj-mega-label {
+          display: block;
+          margin-bottom: 14px;
+          color: #292824;
+          font-size: 10px;
+          line-height: 1.2;
+          letter-spacing: 1.8px;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+
+        .xaaj-mega-column > a,
+        .xaaj-mega-main-link {
+          appearance: none;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          width: fit-content;
+          margin: 0 0 10px;
+          padding: 0;
+          border: 0;
+          background: transparent;
+          color: #514d47;
+          font: inherit;
+          font-size: 13px;
+          line-height: 1.45;
+          text-decoration: none;
+          cursor: pointer;
+          transition: color .22s ease, transform .22s ease;
+        }
+
+        .xaaj-mega-column > a:hover,
+        .xaaj-mega-main-link:hover {
+          color: #2f7048;
+          transform: translateX(3px);
+        }
+
+        .xaaj-mega-main-link {
+          color: #2f7048;
+          font-weight: 600;
+          margin-bottom: 15px;
+        }
+
+        .xaaj-mega-label-spaced {
+          margin-top: 22px;
+        }
+
+        .xaaj-mega-feature-grid {
+          width: 100%;
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 14px;
+        }
+
+        .xaaj-mega-feature-card {
+          display: block !important;
+          width: 100% !important;
+          margin: 0 !important;
+          color: #292824 !important;
+          transform: none !important;
+        }
+
+        .xaaj-mega-feature-image {
+          width: 100%;
+          aspect-ratio: 1.18 / 1;
+          overflow: hidden;
+          margin-bottom: 9px;
+          background: #eee9e1;
+        }
+
+        .xaaj-mega-feature-image img {
+          width: 100%;
+          height: 100%;
+          display: block;
+          object-fit: cover;
+          transition: transform .65s cubic-bezier(.22,1,.36,1);
+        }
+
+        .xaaj-mega-feature-card:hover .xaaj-mega-feature-image img {
+          transform: scale(1.045);
+        }
+
+        .xaaj-mega-feature-card > span {
+          font-size: 12px;
+          line-height: 1.4;
+        }
+
+        .xaaj-mega-footer {
+          grid-column: 1 / -1;
+          margin-top: 4px;
+          padding-top: 19px;
+          border-top: 1px solid rgba(41, 40, 36, .10);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+        }
+
+        .xaaj-mega-footer > span {
+          color: #77716a;
+          font-family: Georgia, 'Times New Roman', serif;
+          font-size: 14px;
+          font-style: italic;
+        }
+
+        .xaaj-mega-footer button,
+        .xaaj-content-mega-intro a {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          border: 0;
+          background: transparent;
+          color: #292824;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          text-decoration: none;
+          transition: color .2s ease, transform .2s ease;
+        }
+
+        .xaaj-mega-footer button:hover,
+        .xaaj-content-mega-intro a:hover {
+          color: #2f7048;
+          transform: translateX(3px);
+        }
+
+        /* New Arrivals + Blog dropdown */
+        .xaaj-content-mega-menu {
+          background:
+            linear-gradient(
+              180deg,
+              rgba(255,253,249,.99),
+              rgba(250,247,241,.985)
+            );
+        }
+
+        .xaaj-content-mega-inner {
+          width: min(1240px, calc(100% - 70px));
+          margin: 0 auto;
+          padding: 30px 0 27px;
+          display: grid;
+          grid-template-columns: 250px 1fr;
+          gap: 42px;
+          align-items: stretch;
+        }
+
+        .xaaj-content-mega-intro {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          padding-right: 34px;
+          border-right: 1px solid rgba(41,40,36,.10);
+        }
+
+        .xaaj-content-mega-intro .xaaj-mega-label {
+          margin-bottom: 12px;
+        }
+
+        .xaaj-content-mega-intro h3 {
+          margin: 0 0 20px;
+          color: #292824;
+          font-family: Georgia, 'Times New Roman', serif;
+          font-size: clamp(25px, 2.2vw, 34px);
+          font-weight: 400;
+          line-height: 1.08;
+          letter-spacing: -.025em;
+        }
+
+        .xaaj-content-mega-products,
+        .xaaj-blog-mini-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 20px;
+        }
+
+        .xaaj-mini-product,
+        .xaaj-mini-blog {
+          min-width: 0;
+          color: #292824;
+          text-decoration: none;
+          display: block;
+        }
+
+        .xaaj-mini-product-image,
+        .xaaj-mini-blog-image {
+          position: relative;
+          overflow: hidden;
+          width: 100%;
+          aspect-ratio: 1.25 / 1;
+          margin-bottom: 10px;
+          background: #eee9e1;
+        }
+
+        .xaaj-mini-product-image img,
+        .xaaj-mini-blog-image img {
+          width: 100%;
+          height: 100%;
+          display: block;
+          object-fit: cover;
+          transition: transform .7s cubic-bezier(.22,1,.36,1);
+        }
+
+        .xaaj-mini-product:hover .xaaj-mini-product-image img,
+        .xaaj-mini-blog:hover .xaaj-mini-blog-image img {
+          transform: scale(1.055);
+        }
+
+        .xaaj-mini-product-category,
+        .xaaj-mini-blog small {
+          display: block;
+          margin-bottom: 5px;
+          color: #77716a;
+          font-size: 9px;
+          line-height: 1.2;
+          letter-spacing: 1.4px;
+          text-transform: uppercase;
+        }
+
+        .xaaj-mini-product strong,
+        .xaaj-mini-blog strong {
+          display: block;
+          color: #292824;
+          font-size: 13px;
+          line-height: 1.35;
+          font-weight: 500;
+          transition: color .22s ease;
+        }
+
+        .xaaj-mini-product:hover strong,
+        .xaaj-mini-blog:hover strong {
+          color: #2f7048;
+        }
+
+        .xaaj-mini-blog-image span {
+          position: absolute;
+          left: 10px;
+          bottom: 9px;
+          color: #fff;
+          font-size: 10px;
+          letter-spacing: 1.5px;
+          text-shadow: 0 2px 10px rgba(0,0,0,.35);
+        }
+
+        .xaaj-mega-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 999;
+          border: 0;
+          padding: 0;
+          background: rgba(25, 27, 24, .055);
+          cursor: default;
+        }
+
+        @media (max-width: 850px) {
+          .xaaj-shop-mega-menu,
+          .xaaj-content-mega-menu {
+            position: relative;
+            top: auto;
+            left: auto;
+            right: auto;
+            width: 100%;
+            box-shadow: none;
+            border-top: 1px solid rgba(41, 40, 36, .08);
+          }
+
+          .xaaj-shop-mega-inner,
+          .xaaj-content-mega-inner {
+            width: 100%;
+            padding: 22px 20px;
+            grid-template-columns: 1fr;
+            gap: 22px;
+          }
+
+          .xaaj-mega-column {
+            border-right: 0;
+            border-bottom: 1px solid rgba(41, 40, 36, .09);
+            padding: 0 0 20px;
+          }
+
+          .xaaj-content-mega-intro {
+            border-right: 0;
+            border-bottom: 1px solid rgba(41,40,36,.10);
+            padding: 0 0 20px;
+          }
+
+          .xaaj-content-mega-products,
+          .xaaj-blog-mini-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .xaaj-mini-product,
+          .xaaj-mini-blog {
+            display: grid;
+            grid-template-columns: 92px 1fr;
+            column-gap: 13px;
+            align-items: center;
+          }
+
+          .xaaj-mini-product-image,
+          .xaaj-mini-blog-image {
+            grid-row: 1 / span 3;
+            margin: 0;
+            aspect-ratio: 1 / 1;
+          }
+
+          .xaaj-mini-product-category,
+          .xaaj-mini-blog small {
+            margin: 0 0 4px;
+          }
+
+          .xaaj-mega-backdrop {
+            display: none;
+          }
+
+          .xaaj-nav-mega-item {
+            height: auto;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .xaaj-shop-mega-menu,
+          .xaaj-content-mega-menu,
+          .xaaj-mini-product-image img,
+          .xaaj-mini-blog-image img {
+            transition: none !important;
+          }
+        }
+      `}</style>
     </>
   )
 }
@@ -558,6 +1364,172 @@ const isAdminPreviewMode = () => {
     return adminPreviewSessionActive
   }
 }
+
+const productCardCartStyles = `
+  .product-card .xaaj-cart-button {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(47, 112, 72, .22) !important;
+    border-radius: 999px !important;
+    background: #f4f0e8 !important;
+    color: #2f7048 !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    transition:
+      width .48s cubic-bezier(.22,1,.36,1),
+      min-width .48s cubic-bezier(.22,1,.36,1),
+      background-color .3s ease,
+      color .3s ease,
+      border-color .3s ease,
+      box-shadow .4s ease,
+      transform .35s cubic-bezier(.22,1,.36,1) !important;
+  }
+
+  .product-card .xaaj-cart-button:hover,
+  .product-card .xaaj-cart-button:focus-visible {
+    width: 142px !important;
+    min-width: 142px !important;
+    justify-content: flex-start !important;
+    gap: 9px !important;
+    padding: 0 16px !important;
+    background: #2f7048 !important;
+    color: #fff !important;
+    border-color: #2f7048 !important;
+    box-shadow: 0 12px 28px rgba(47, 112, 72, .20) !important;
+    transform: translateY(-1px) !important;
+    outline: none !important;
+  }
+
+  .product-card .xaaj-cart-button:active {
+    transform: translateY(0) scale(.97) !important;
+  }
+
+  .product-card .xaaj-cart-button:disabled {
+    width: 42px !important;
+    min-width: 42px !important;
+    opacity: .52 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .product-card .xaaj-cart-button-icon {
+    width: 16px !important;
+    min-width: 16px !important;
+    height: 16px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
+    z-index: 2 !important;
+    transition: transform .42s cubic-bezier(.22,1,.36,1) !important;
+  }
+
+  .product-card .xaaj-cart-button:hover .xaaj-cart-button-icon,
+  .product-card .xaaj-cart-button:focus-visible .xaaj-cart-button-icon {
+    transform: rotate(-7deg) scale(1.08) !important;
+  }
+
+  .product-card .xaaj-cart-button-label {
+    display: block !important;
+    max-width: 0 !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    transform: translateX(-8px) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: .04em !important;
+    line-height: 1 !important;
+    transition:
+      max-width .42s cubic-bezier(.22,1,.36,1),
+      opacity .28s ease .06s,
+      transform .42s cubic-bezier(.22,1,.36,1) !important;
+    position: relative !important;
+    z-index: 2 !important;
+  }
+
+  .product-card .xaaj-cart-button:hover .xaaj-cart-button-label,
+  .product-card .xaaj-cart-button:focus-visible .xaaj-cart-button-label {
+    max-width: 100px !important;
+    opacity: 1 !important;
+    transform: translateX(0) !important;
+  }
+
+  .product-card .xaaj-cart-button-shine {
+    position: absolute !important;
+    top: -40% !important;
+    left: -70% !important;
+    width: 35% !important;
+    height: 180% !important;
+    pointer-events: none !important;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255,255,255,.38),
+      transparent
+    ) !important;
+    transform: skewX(-18deg) !important;
+    opacity: 0 !important;
+  }
+
+  .product-card .xaaj-cart-button:hover .xaaj-cart-button-shine,
+  .product-card .xaaj-cart-button:focus-visible .xaaj-cart-button-shine {
+    opacity: 1 !important;
+    animation: xaajCartButtonShine .75s cubic-bezier(.22,1,.36,1) forwards !important;
+  }
+
+  .product-card .xaaj-cart-button.add-success {
+    background: #2f7048 !important;
+    color: #fff !important;
+    border-color: #2f7048 !important;
+  }
+
+  @keyframes xaajCartButtonShine {
+    from { left: -70%; }
+    to { left: 135%; }
+  }
+
+  @media (max-width: 850px) {
+    .product-card .xaaj-cart-button {
+      width: 42px !important;
+      min-width: 42px !important;
+    }
+
+    .product-card .xaaj-cart-button:hover,
+    .product-card .xaaj-cart-button:focus-visible {
+      width: 42px !important;
+      min-width: 42px !important;
+      padding: 0 !important;
+      justify-content: center !important;
+      gap: 0 !important;
+    }
+
+    .product-card .xaaj-cart-button-label {
+      display: none !important;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .product-card .xaaj-cart-button,
+    .product-card .xaaj-cart-button-icon,
+    .product-card .xaaj-cart-button-label {
+      transition: none !important;
+    }
+
+    .product-card .xaaj-cart-button:hover .xaaj-cart-button-shine,
+    .product-card .xaaj-cart-button:focus-visible .xaaj-cart-button-shine {
+      animation: none !important;
+    }
+  }
+`
 
 function ProductCard({
   product
@@ -697,7 +1669,10 @@ function ProductCard({
   }
 
   return (
-    <article className="product-card">
+    <>
+      <style>{productCardCartStyles}</style>
+
+      <article className="product-card">
 
       {/* ======================================================
           PRODUCT IMAGE
@@ -833,7 +1808,9 @@ function ProductCard({
 
           <button
             type="button"
-            className={`add ${cartPulse ? 'add-success' : ''}`}
+            className={`add xaaj-cart-button ${
+              cartPulse ? 'add-success' : ''
+            }`}
             onClick={handleAddToCart}
             disabled={Number(product.stock ?? 0) <= 0}
             aria-label={
@@ -842,7 +1819,17 @@ function ProductCard({
                 : `Add ${product.name} to cart`
             }
           >
-            <span className="add-label">
+            <span className="xaaj-cart-button-icon" aria-hidden="true">
+              {Number(product.stock ?? 0) <= 0 ? (
+                <ShoppingBag size={16} strokeWidth={1.7} />
+              ) : cartPulse ? (
+                <Check size={16} strokeWidth={2} />
+              ) : (
+                <ShoppingBag size={16} strokeWidth={1.7} />
+              )}
+            </span>
+
+            <span className="xaaj-cart-button-label">
               {Number(product.stock ?? 0) <= 0
                 ? 'Out of stock'
                 : cartPulse
@@ -850,15 +1837,7 @@ function ProductCard({
                   : 'Add to Cart'}
             </span>
 
-            <span className="add-icon" aria-hidden="true">
-              {Number(product.stock ?? 0) <= 0
-                ? null
-                : cartPulse
-                  ? <Check size={15} />
-                  : null}
-            </span>
-
-            <span className="add-shine" aria-hidden="true" />
+            <span className="xaaj-cart-button-shine" aria-hidden="true" />
           </button>
         </div>
 
@@ -872,7 +1851,8 @@ function ProductCard({
 
       </div>
 
-    </article>
+      </article>
+    </>
   )
 }
 
@@ -943,6 +1923,132 @@ function Home() {
   const [heroPaused, setHeroPaused] = useState(false)
 
   const heroTouchStart = useRef(null)
+
+  // ==========================================================
+  // CINEMATIC CATEGORY SCROLL
+  // ==========================================================
+  const categorySceneRef = useRef(null)
+  useLayoutEffect(() => {
+    const section = categorySceneRef.current
+    if (!section || !Array.isArray(categories) || categories.length < 2) {
+      return undefined
+    }
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return undefined
+    }
+
+    const cards = Array.from(
+      section.querySelectorAll('[data-xaaj-category-card]')
+    )
+    const progressItems = Array.from(
+      section.querySelectorAll('[data-xaaj-category-progress]')
+    )
+
+    if (!cards.length) return undefined
+
+    const ctx = gsap.context(() => {
+      gsap.set(cards, {
+        autoAlpha: 0,
+        yPercent: 5,
+        scale: 0.965
+      })
+
+      gsap.set(cards[0], {
+        autoAlpha: 1,
+        yPercent: 0,
+        scale: 1
+      })
+
+      gsap.set(progressItems, {
+        scaleX: 0.22,
+        transformOrigin: 'left center',
+        opacity: 0.35
+      })
+
+      if (progressItems[0]) {
+        gsap.set(progressItems[0], {
+          scaleX: 1,
+          opacity: 1
+        })
+      }
+
+      const timeline = gsap.timeline({
+        defaults: {
+          ease: 'power2.inOut'
+        },
+        scrollTrigger: {
+          trigger: section,
+          start: 'top top',
+          end: () => `+=${window.innerHeight * (categories.length - 1)}`,
+          pin: true,
+          scrub: 1.15,
+          anticipatePin: 1,
+          invalidateOnRefresh: true
+        }
+      })
+
+      for (let index = 1; index < cards.length; index += 1) {
+        const previous = cards[index - 1]
+        const current = cards[index]
+
+        timeline
+          .to(
+            previous,
+            {
+              autoAlpha: 0,
+              yPercent: -4,
+              scale: 0.965,
+              duration: 1
+            },
+            index - 1
+          )
+          .fromTo(
+            current,
+            {
+              autoAlpha: 0,
+              yPercent: 5,
+              scale: 0.965
+            },
+            {
+              autoAlpha: 1,
+              yPercent: 0,
+              scale: 1,
+              duration: 1
+            },
+            index - 1
+          )
+
+        if (progressItems[index - 1]) {
+          timeline.to(
+            progressItems[index - 1],
+            {
+              scaleX: 0.22,
+              opacity: 0.35,
+              duration: 0.7
+            },
+            index - 1
+          )
+        }
+
+        if (progressItems[index]) {
+          timeline.to(
+            progressItems[index],
+            {
+              scaleX: 1,
+              opacity: 1,
+              duration: 0.7
+            },
+            index - 1
+          )
+        }
+      }
+
+      ScrollTrigger.refresh()
+    }, section)
+
+    return () => ctx.revert()
+  }, [])
 
   // ==========================================================
   // LOAD HERO SLIDES FROM CMS
@@ -1069,6 +2175,52 @@ function Home() {
   return (
     <>
 
+      {/* Hero sizing fix: the hero itself owns the full viewport height.
+          The media is absolutely pinned to all four edges so no white strip
+          can appear below the image/video. */}
+      <style>{`
+        .hero.hero-slider {
+          position: relative !important;
+          width: 100% !important;
+          height: 100dvh !important;
+          min-height: 100svh !important;
+          max-height: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+          aspect-ratio: auto !important;
+        }
+
+        .hero.hero-slider .hero-slides {
+          position: absolute !important;
+          inset: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          min-height: 100% !important;
+          overflow: hidden !important;
+        }
+
+        .hero.hero-slider .hero-slide {
+          position: absolute !important;
+          inset: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          min-width: 100% !important;
+          min-height: 100% !important;
+          max-width: none !important;
+          max-height: none !important;
+          display: block !important;
+          object-fit: cover !important;
+          object-position: center center !important;
+          margin: 0 !important;
+        }
+
+        .hero.hero-slider .hero-slide img,
+        .hero.hero-slider .hero-slide video {
+          display: block !important;
+        }
+      `}</style>
+
       {/* Header */}
       <Header />
 
@@ -1182,24 +2334,6 @@ function Home() {
 
 
           {/* ====================================================
-              HERO NOTE
-          ==================================================== */}
-
-          <div className="hero-note">
-
-            Stores crafted
-            <br />
-
-            in earth
-
-            <span>
-              ↓
-            </span>
-
-          </div>
-
-
-          {/* ====================================================
               HERO CONTROLS
           ==================================================== */}
 
@@ -1290,55 +2424,293 @@ function Home() {
             CATEGORIES SECTION
         ==================================================== */}
 
-        <section className="categories wrap" data-xaaj-reveal="up">
+        <section
+          ref={categorySceneRef}
+          className="xaaj-category-cinematic"
+          aria-label="Shop by form"
+        >
+          <div className="xaaj-category-cinematic-inner">
 
-          <SectionHeading
-            eyebrow="Shop by form"
-            title="Find your everyday"
-            action={{
-              label: 'View all',
-              to: '/shop'
-            }}
-          />
+            <div className="xaaj-category-copy">
+              <span className="eyebrow">Shop by form</span>
 
+              <h2>
+                Find your
+                <br />
+                <em>everyday.</em>
+              </h2>
 
-          <div className="category-grid">
+              <p>
+                Thoughtfully shaped pieces for the rituals,
+                gatherings and quiet moments around your table.
+              </p>
 
-            {categories.map(c => (
+              <div className="xaaj-category-progress" aria-hidden="true">
+                {categories.map((category, index) => (
+                  <span
+                    key={`progress-${category.name}-${index}`}
+                    data-xaaj-category-progress
+                    title={category.name}
+                  />
+                ))}
+              </div>
 
-              <Link
-                to={`/shop?category=${c.name}`}
-                className="category"
-                data-xaaj-reveal="up"
-                key={c.name}
-              >
+              <span className="xaaj-category-scroll-hint">
+                Scroll to explore
+                <ArrowRight size={14} />
+              </span>
+            </div>
 
-                <img
-                  src={c.image}
-                  alt={c.name}
-                />
+            <div className="xaaj-category-stage">
+              <div className="xaaj-category-stage-glow" aria-hidden="true" />
 
-                <div>
+              {categories.map((category, index) => (
+                <div
+                  className="xaaj-category-card"
+                  data-xaaj-category-card
+                  key={category.name}
+                >
+                  <Link
+                    to={`/shop?category=${encodeURIComponent(category.name)}`}
+                    className="xaaj-category-card-link"
+                  >
+                    <div className="xaaj-category-image-wrap">
+                      <img
+                        src={category.image}
+                        alt={category.name}
+                        loading={index === 0 ? 'eager' : 'lazy'}
+                      />
+                    </div>
 
-                  <h3>
-                    {c.name}
-                  </h3>
-
-                  <span>
-                    Shop now
-                    <ArrowRight
-                      size={13}
-                    />
-                  </span>
-
+                  </Link>
                 </div>
+              ))}
 
-              </Link>
-
-            ))}
+            </div>
 
           </div>
 
+          <style>{`
+            .xaaj-category-cinematic {
+              position: relative;
+              min-height: 100vh;
+              height: 100vh;
+              overflow: hidden;
+              background:
+                radial-gradient(circle at 74% 42%, rgba(255,255,255,.72), transparent 34%),
+                linear-gradient(135deg, #f6f1e9 0%, #eee8dd 100%);
+              color: #292824;
+              isolation: isolate;
+            }
+
+            .xaaj-category-cinematic-inner {
+              width: min(1480px, calc(100% - 96px));
+              height: 100%;
+              margin: 0 auto;
+              display: grid;
+              grid-template-columns: minmax(300px, .72fr) minmax(0, 1.6fr);
+              gap: clamp(42px, 6vw, 96px);
+              align-items: center;
+              padding: 62px 0;
+            }
+
+            .xaaj-category-copy {
+              position: relative;
+              z-index: 3;
+              max-width: 420px;
+              padding-left: clamp(0px, 1.5vw, 22px);
+            }
+
+
+            .xaaj-category-copy h2 {
+              margin: 12px 0 25px;
+              font-family: Georgia, 'Times New Roman', serif;
+              font-size: clamp(54px, 6.2vw, 94px);
+              line-height: .91;
+              letter-spacing: -.055em;
+              font-weight: 400;
+            }
+
+            .xaaj-category-copy h2 em {
+              color: #bd5137;
+              font-style: italic;
+              font-weight: 400;
+            }
+
+            .xaaj-category-copy p {
+              max-width: 350px;
+              margin: 0;
+              color: #706b63;
+              font-size: 14px;
+              line-height: 1.8;
+            }
+
+            .xaaj-category-progress {
+              display: flex;
+              width: min(300px, 100%);
+              gap: 7px;
+              margin-top: 42px;
+            }
+
+            .xaaj-category-progress span {
+              display: block;
+              flex: 1;
+              height: 2px;
+              background: #2f7048;
+              border-radius: 99px;
+            }
+
+            .xaaj-category-scroll-hint {
+              display: inline-flex;
+              align-items: center;
+              gap: 8px;
+              margin-top: 22px;
+              color: #8a837a;
+              font-size: 10px;
+              letter-spacing: 1.8px;
+              text-transform: uppercase;
+            }
+
+            .xaaj-category-stage {
+              position: relative;
+              width: 100%;
+              height: min(80vh, 760px);
+              min-height: 540px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transform: translateX(clamp(0px, 1.5vw, 24px));
+            }
+
+            .xaaj-category-stage-glow {
+              position: absolute;
+              width: min(42vw, 600px);
+              height: min(42vw, 600px);
+              border-radius: 50%;
+              background: rgba(255,255,255,.55);
+              filter: blur(2px);
+            }
+
+            .xaaj-category-card {
+              position: absolute;
+              inset: 0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              visibility: hidden;
+              will-change: transform, opacity;
+            }
+
+            .xaaj-category-card-link {
+              position: relative;
+              display: block;
+              width: min(680px, 88%);
+              color: inherit;
+              text-decoration: none;
+              outline: none;
+            }
+
+            .xaaj-category-image-wrap {
+              position: relative;
+              width: min(570px, 100%);
+              aspect-ratio: 1 / 1;
+              margin: 0 auto;
+              overflow: hidden;
+              border-radius: 50%;
+              background: #e6dfd4;
+              box-shadow:
+                0 30px 80px rgba(55,48,40,.12),
+                0 0 0 1px rgba(41,40,36,.06);
+            }
+
+            .xaaj-category-image-wrap::after {
+              content: '';
+              position: absolute;
+              inset: 0;
+              background: linear-gradient(
+                145deg,
+                rgba(255,255,255,.15),
+                transparent 45%,
+                rgba(40,35,28,.08)
+              );
+              pointer-events: none;
+            }
+
+            .xaaj-category-image-wrap img {
+              width: 100%;
+              height: 100%;
+              display: block;
+              object-fit: cover;
+              transition: transform 1.2s cubic-bezier(.22,1,.36,1);
+            }
+
+            .xaaj-category-card-link:hover .xaaj-category-image-wrap img {
+              transform: scale(1.035);
+            }
+
+            @media (max-width: 850px) {
+              .xaaj-category-cinematic {
+                height: auto;
+                min-height: 100svh;
+              }
+
+              .xaaj-category-cinematic-inner {
+                width: min(100% - 38px, 620px);
+                min-height: 100svh;
+                grid-template-columns: 1fr;
+                gap: 25px;
+                padding: 55px 0 45px;
+              }
+
+              .xaaj-category-copy {
+                max-width: 100%;
+              }
+
+              .xaaj-category-copy h2 {
+                font-size: clamp(48px, 15vw, 72px);
+                margin-bottom: 16px;
+              }
+
+              .xaaj-category-copy p {
+                max-width: 330px;
+              }
+
+              .xaaj-category-progress,
+              .xaaj-category-scroll-hint {
+                margin-top: 20px;
+              }
+
+              .xaaj-category-stage {
+                height: 58vh;
+                min-height: 400px;
+                transform: none;
+              }
+
+              .xaaj-category-card-link {
+                width: min(470px, 88%);
+              }
+
+              .xaaj-category-image-wrap {
+                width: min(390px, 100%);
+              }
+
+              .xaaj-category-card-info {
+                bottom: -38px;
+              }
+
+              .xaaj-category-card-info h3 {
+                font-size: clamp(28px, 8vw, 38px);
+              }
+
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+              .xaaj-category-card,
+              .xaaj-category-image-wrap img {
+                transition: none !important;
+              }
+            }
+          `}</style>
         </section>
 
 
@@ -1442,19 +2814,67 @@ function Home() {
             </span>
 
             <h2>
-              Beauty is in
-              <br />
-              <em>
-                the details.
-              </em>
+              India, Made for the Table.
             </h2>
 
-            <p>
-              From the slight variation in a rim
-              to the warmth of clay under your palm,
-              our pieces are made to bring more
-              intention to the everyday.
-            </p>
+            <div className="feature-story-copy xaaj-brand-story-premium">
+
+              <div className="xaaj-story-intro">
+                <p className="xaaj-story-lead">
+                  A little clay.
+                  <br />
+                  A lot of character.
+                  <br />
+                  And a story in every piece.
+                </p>
+
+                <p className="xaaj-story-body">
+                  XAAJ is contemporary crockery rooted in the colours, crafts and everyday beauty of India.
+                  <br />
+                  Made by hand. Designed for now.
+                  <br />
+                  Meant to be used, loved and lived with.
+                </p>
+              </div>
+
+              <div className="xaaj-story-rule" aria-hidden="true" />
+
+              <div className="xaaj-story-block">
+                <span className="xaaj-story-kicker">01 — ROOTED IN INDIA</span>
+                <p>
+                  The beauty of India, served differently.
+                  <br />
+                  We find inspiration in the things that surround us—old crafts, familiar colours, everyday rituals, places and people.
+                  <br />
+                  Then we give them a new form.
+                  <br />
+                  Pieces with a sense of where they come from,
+                  <br />
+                  and a place in how you live today.
+                </p>
+              </div>
+
+              <div className="xaaj-story-rule" aria-hidden="true" />
+
+              <div className="xaaj-story-block xaaj-story-living">
+                <span className="xaaj-story-kicker">02 — MADE FOR LIVING</span>
+                <p className="xaaj-story-pull">Made to gather stories.</p>
+                <p>
+                  Morning chai.
+                  <br />
+                  Long lunches.
+                  <br />
+                  Festive dinners.
+                  <br />
+                  Midnight conversations.
+                  <br />
+                  Because a table is never just a table.
+                  <br />
+                  It is where life happens.
+                </p>
+              </div>
+
+            </div>
 
             <Button
               to="/story"
@@ -1481,6 +2901,19 @@ function Home() {
     display: 'block'
   }}
 />
+
+        <style>{`
+          .xaaj-brand-story-premium { display:flex; flex-direction:column; max-width:560px; }
+          .xaaj-story-intro { display:grid; gap:24px; }
+          .xaaj-story-lead { margin:0; max-width:470px; font-family:Georgia,'Times New Roman',serif; font-size:clamp(19px,1.55vw,25px); line-height:1.42; letter-spacing:-.018em; color:rgba(247,244,236,.94); }
+          .xaaj-story-body { margin:0; max-width:500px; color:rgba(235,232,222,.68); font-size:13px; line-height:1.9; }
+          .xaaj-story-rule { width:42px; height:1px; margin:28px 0 25px; background:rgba(242,238,227,.42); }
+          .xaaj-story-block { max-width:500px; }
+          .xaaj-story-kicker { display:block; margin-bottom:12px; color:rgba(221,216,203,.48); font-size:9px; line-height:1.2; font-weight:600; letter-spacing:2.1px; text-transform:uppercase; }
+          .xaaj-story-block p:not(.xaaj-story-pull) { margin:0; color:rgba(235,232,222,.68); font-size:13px; line-height:1.85; }
+          .xaaj-story-pull { margin:0 0 12px; color:rgba(247,244,236,.9); font-family:Georgia,'Times New Roman',serif; font-size:clamp(18px,1.45vw,23px); line-height:1.25; letter-spacing:-.015em; }
+          @media(max-width:850px){ .xaaj-story-body,.xaaj-story-block p:not(.xaaj-story-pull){font-size:12.5px;line-height:1.75}.xaaj-story-rule{margin:23px 0 21px} }
+        `}</style>
 
         </section>
 
@@ -2392,166 +3825,599 @@ function Footer() {
   return (
     <>
       <style>{`
-        .footer .social a {
-          display: inline-flex;
+        .xaaj-footer-premium {
+          position: relative;
+          overflow: hidden;
+          background: #f5f3ea;
+          color: #171b18;
+          border-top: 1px solid rgba(34, 45, 38, .08);
+        }
+
+        .xaaj-footer-premium::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          opacity: .32;
+          background:
+            linear-gradient(45deg, rgba(72, 107, 86, .07) 25%, transparent 25%, transparent 75%, rgba(72, 107, 86, .07) 75%),
+            linear-gradient(45deg, rgba(72, 107, 86, .07) 25%, transparent 25%, transparent 75%, rgba(72, 107, 86, .07) 75%);
+          background-position: 0 0, 10px 10px;
+          background-size: 20px 20px;
+          mask-image: linear-gradient(to top, #000 0%, rgba(0,0,0,.7) 32%, transparent 68%);
+          -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0,0,0,.7) 32%, transparent 68%);
+        }
+
+        .xaaj-footer-inner {
+          position: relative;
+          z-index: 2;
+          width: min(1420px, calc(100% - 96px));
+          margin: 0 auto;
+          padding: 68px 0 0;
+        }
+
+        .xaaj-footer-columns {
+          display: grid;
+          grid-template-columns: 1.15fr .85fr .95fr .95fr 1.35fr;
+          gap: 54px;
+        }
+
+        .xaaj-footer-column h4 {
+          margin: 0 0 22px;
+          color: #171b18;
+          font-size: 13px;
+          line-height: 1.2;
+          font-weight: 650;
+          letter-spacing: 1.25px;
+          text-transform: uppercase;
+        }
+
+        .xaaj-footer-column a,
+        .xaaj-footer-column span {
+          display: block;
+          margin: 0 0 15px;
+          color: #252a27;
+          font-size: 14px;
+          line-height: 1.45;
+          text-decoration: none;
+          transition: transform .35s cubic-bezier(.22,1,.36,1), color .25s ease;
+        }
+
+        .xaaj-footer-column a:hover {
+          color: #477456;
+          transform: translateX(4px);
+        }
+
+        .xaaj-footer-social {
+          display: flex;
+          align-items: center;
+          gap: 17px;
+          margin: 0 0 30px;
+        }
+
+        .xaaj-footer-social a {
+          width: 28px;
+          height: 28px;
+          margin: 0 !important;
+          display: inline-flex !important;
           align-items: center;
           justify-content: center;
+          color: #171b18 !important;
+          transform: none !important;
+        }
+
+        .xaaj-footer-social a:hover {
+          color: #477456 !important;
+          transform: translateY(-3px) !important;
+        }
+
+        .xaaj-footer-country {
+          display: inline-flex !important;
+          align-items: center;
+          gap: 9px;
+          margin-top: 8px !important;
+          font-size: 14px !important;
+        }
+
+        .xaaj-footer-globe {
+          width: 24px;
+          height: 24px;
+          border: 1px solid #1f2521;
+          border-radius: 50%;
+          position: relative;
+          display: inline-block;
+        }
+
+        .xaaj-footer-globe::before {
+          content: '';
+          position: absolute;
+          left: 5px;
+          right: 5px;
+          top: 3px;
+          bottom: 3px;
+          border-left: 1px solid #1f2521;
+          border-right: 1px solid #1f2521;
+          border-radius: 50%;
+        }
+
+        .xaaj-footer-globe::after {
+          content: '';
+          position: absolute;
+          left: 3px;
+          right: 3px;
+          top: 11px;
+          height: 1px;
+          background: #1f2521;
+        }
+
+        .xaaj-footer-locator {
+          margin-top: 18px;
+        }
+
+        .xaaj-footer-locator-title {
+          margin-bottom: 14px !important;
+          font-size: 13px !important;
+          font-weight: 650 !important;
+          letter-spacing: .9px;
+          text-transform: uppercase;
+        }
+
+        .xaaj-footer-locator-box {
+          width: min(100%, 360px);
+          min-height: 62px;
+          padding: 0 18px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          background: rgba(255,255,255,.72);
+          border: 1px solid rgba(29, 37, 32, .08);
+          box-shadow: 0 10px 30px rgba(33, 43, 36, .05);
+        }
+
+        .xaaj-footer-locator-box span {
+          margin: 0;
+          color: #8a8d89;
+          font-size: 14px;
+        }
+
+        .xaaj-footer-locator-arrow {
+          font-size: 24px;
+          line-height: 1;
+          color: #3e443f;
+          transition: transform .3s ease;
+        }
+
+        .xaaj-footer-locator-box:hover .xaaj-footer-locator-arrow {
+          transform: translateX(4px);
+        }
+
+        .xaaj-footer-connect p {
+          margin: 0 0 15px;
+          color: #252a27;
+          font-size: 14px;
+          line-height: 1.5;
+        }
+
+        .xaaj-footer-connect a {
+          display: block;
+          margin: 0 0 14px;
+          font-size: 14px;
+        }
+
+        .xaaj-footer-contact-line {
+          display: flex !important;
+          align-items: center;
+          gap: 9px;
+        }
+
+        .xaaj-footer-contact-line svg {
+          flex: 0 0 auto;
+        }
+
+        .xaaj-footer-art {
+          position: relative;
+          z-index: 1;
+          height: 300px;
+          margin-top: 38px;
+          overflow: hidden;
+        }
+
+        .xaaj-footer-art-checker {
+          position: absolute;
+          inset: 58px 0 0;
+          opacity: .48;
+          background:
+            linear-gradient(45deg, rgba(78, 116, 92, .09) 25%, transparent 25%, transparent 75%, rgba(78, 116, 92, .09) 75%),
+            linear-gradient(45deg, rgba(78, 116, 92, .09) 25%, transparent 25%, transparent 75%, rgba(78, 116, 92, .09) 75%);
+          background-position: 0 0, 18px 18px;
+          background-size: 36px 36px;
+          mask-image: linear-gradient(to top, #000 0%, rgba(0,0,0,.8) 55%, transparent 100%);
+          -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0,0,0,.8) 55%, transparent 100%);
+        }
+
+        .xaaj-footer-botanical {
+          position: absolute;
+          left: -2%;
+          right: -2%;
+          bottom: -22px;
+          width: 104%;
+          height: 270px;
+          pointer-events: none;
+        }
+
+        .xaaj-footer-botanical .stem {
+          fill: none;
+          stroke: #6f856d;
+          stroke-width: 2.1;
+          stroke-linecap: round;
+          opacity: .8;
+        }
+
+        .xaaj-footer-botanical .leaf {
+          fill: #81947a;
+          opacity: .78;
+        }
+
+        .xaaj-footer-botanical .leaf-light {
+          fill: #a5b39b;
+          opacity: .68;
+        }
+
+        .xaaj-footer-botanical .flower {
+          fill: #c87b7b;
+          opacity: .72;
+        }
+
+        .xaaj-footer-botanical .flower-center {
+          fill: #d6b45b;
+          opacity: .9;
+        }
+
+        .xaaj-footer-botanical .fruit {
+          fill: #b64c4c;
+          opacity: .82;
+        }
+
+        .xaaj-footer-botanical .sun {
+          fill: #c49a3b;
+          opacity: .78;
+        }
+
+        .xaaj-footer-bottom {
+          position: relative;
+          z-index: 3;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+          padding: 18px 0 24px;
+          border-top: 1px solid rgba(30, 39, 33, .10);
+          color: #626862;
+          font-size: 11px;
+          letter-spacing: .3px;
+        }
+
+        .xaaj-footer-bottom a {
           color: inherit;
           text-decoration: none;
         }
-        .footer .footer-bottom a {
-          color: inherit;
-          text-decoration: none;
+
+        .xaaj-footer-bottom a:hover {
+          color: #477456;
         }
-        .footer .footer-bottom a:hover {
-          text-decoration: underline;
+
+        @media (max-width: 1000px) {
+          .xaaj-footer-columns {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 40px 28px;
+          }
+
+          .xaaj-footer-connect {
+            grid-column: span 2;
+          }
+        }
+
+        @media (max-width: 680px) {
+          .xaaj-footer-inner {
+            width: min(100% - 38px, 560px);
+            padding-top: 48px;
+          }
+
+          .xaaj-footer-columns {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 34px 24px;
+          }
+
+          .xaaj-footer-columns > :first-child {
+            grid-column: 1 / -1;
+          }
+
+          .xaaj-footer-connect {
+            grid-column: 1 / -1;
+          }
+
+          .xaaj-footer-art {
+            height: 220px;
+            margin-top: 24px;
+          }
+
+          .xaaj-footer-botanical {
+            height: 205px;
+          }
+
+          .xaaj-footer-bottom {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .xaaj-footer-column a,
+          .xaaj-footer-social a,
+          .xaaj-footer-locator-arrow {
+            transition: none !important;
+          }
         }
       `}</style>
 
-      <footer className="footer">
+      <footer className="xaaj-footer-premium">
 
+        <div className="xaaj-footer-inner">
 
-        {/* Footer Main */}
-      <div className="footer-main">
+          <div className="xaaj-footer-columns">
 
+            {/* FIND US ON */}
+            <div className="xaaj-footer-column">
 
-        {/* Footer Logo */}
-        <Link
-          to="/"
-          className="brand footer-brand"
-        >
+              <h4>Find us on</h4>
 
-          <img
-            src={logoUrl}
-            alt="XAAJ"
-          />
+              <div className="xaaj-footer-social">
 
-          <span>
-            STORES CRAFTED IN EARTH
-          </span>
+                <a
+                  href="https://www.instagram.com/xaajstories?stkn=MWxkMzRscjAzaXVjZQ%3D%3D&utm_source=qr"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="XAAJ on Instagram"
+                  title="Instagram"
+                >
+                  <FaInstagram size={23} />
+                </a>
 
-        </Link>
+                <a
+                  href="https://wa.me/919899446117"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Chat with XAAJ on WhatsApp"
+                  title="WhatsApp"
+                >
+                  <FaWhatsapp size={23} />
+                </a>
 
+                <a
+                  href="mailto:customercare@xaaj.in"
+                  aria-label="Email XAAJ"
+                  title="Email"
+                >
+                  <Mail size={22} />
+                </a>
 
-        {/* Explore Links */}
-        <div>
+              </div>
 
-          <h4>
-            Explore
-          </h4>
+              <span className="xaaj-footer-country">
+                <span className="xaaj-footer-globe" aria-hidden="true" />
+                India
+              </span>
 
-          <Link to="/shop">
-            Shop all
-          </Link>
+              <div className="xaaj-footer-locator">
 
-          <Link to="/shop?filter=new">
-            New arrivals
-          </Link>
+                <h4 className="xaaj-footer-locator-title">
+                  Shop &amp; experience
+                </h4>
 
-          <Link to="/about">
-            About us
-          </Link>
+                <div className="xaaj-footer-locator-box">
+                  <span>City, Country</span>
+                  <span className="xaaj-footer-locator-arrow">›</span>
+                </div>
 
-        </div>
+              </div>
 
+            </div>
 
-        {/* Help Links */}
-        <div>
+            {/* ABOUT */}
+            <div className="xaaj-footer-column">
 
-          <h4>
-            Help
-          </h4>
+              <h4>About us</h4>
 
-          <Link to="/contact">
-            Contact us
-          </Link>
+              <Link to="/about">Our story</Link>
+              <Link to="/story">The XAAJ way</Link>
+              <Link to="/blog">Journal</Link>
+              <Link to="/contact">Contact</Link>
 
-          <Link to="/shipping" title="Shipping Policy">
-            Shipping Policy
-          </Link>
+            </div>
 
-          <Link to="/returns" title="Return & Refund Policy">
-            Return & Refund Policy
-          </Link>
+            {/* SERVICES */}
+            <div className="xaaj-footer-column">
 
-          <Link to="/cancellation" title="Cancellation Policy">
-            Cancellation Policy
-          </Link>
+              <h4>Services</h4>
 
-          <Link to="/faq">
-            FAQs
-          </Link>
+              <Link to="/shop">Shop all</Link>
+              <Link to="/shop?filter=new">New arrivals</Link>
+              <Link to="/faq">Gift cards &amp; gifting</Link>
+              <Link to="/contact">Corporate enquiries</Link>
 
-        </div>
+            </div>
 
+            {/* HELP */}
+            <div className="xaaj-footer-column">
 
-        {/* Social Links */}
-        <div>
+              <h4>Help</h4>
 
-          <h4>
-            Follow along
-          </h4>
+              <Link to="/shipping" title="Shipping Policy">
+                Shipping &amp; Payment
+              </Link>
 
-          <div className="social">
+              <Link to="/account">
+                Track Order
+              </Link>
 
-            {/* WhatsApp */}
-            <a
-              href="https://wa.me/919899446117"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Chat with XAAJ on WhatsApp"
-              title="WhatsApp"
+              <Link to="/returns" title="Return & Refund Policy">
+                Return &amp; Exchanges
+              </Link>
+
+              <Link to="/terms" title="Terms & Conditions">
+                Terms of Use
+              </Link>
+
+              <Link to="/privacy" title="Privacy Policy">
+                Privacy Policy
+              </Link>
+
+              <Link to="/faq">
+                FAQs
+              </Link>
+
+            </div>
+
+            {/* CONNECT */}
+            <div className="xaaj-footer-column xaaj-footer-connect">
+
+              <h4>Connect</h4>
+
+              <p>For collaborations &amp; brand enquiries</p>
+
+              <a href="mailto:customercare@xaaj.in">
+                customercare@xaaj.in
+              </a>
+
+              <a
+                href="https://wa.me/919899446117"
+                target="_blank"
+                rel="noreferrer"
+                className="xaaj-footer-contact-line"
+              >
+                <FaWhatsapp size={18} />
+                +91 98994 46117
+              </a>
+
+              <p>
+                Monday – Saturday<br />
+                9:30 am – 5:30 pm IST
+              </p>
+
+            </div>
+
+          </div>
+
+          {/* Botanical / textile-inspired artwork */}
+          <div className="xaaj-footer-art" aria-hidden="true">
+
+            <div className="xaaj-footer-art-checker" />
+
+            <svg
+              className="xaaj-footer-botanical"
+              viewBox="0 0 1600 300"
+              preserveAspectRatio="none"
             >
-              <FaWhatsapp size={22} />
-            </a>
 
-            {/* Email */}
-            <a
-              href="mailto:customercare@xaaj.in"
-              aria-label="Email XAAJ"
-              title="Email"
-            >
-              <Mail />
-            </a>
+              <path
+                className="stem"
+                d="M-40 290 C 160 220, 220 250, 360 190 S 620 180, 790 235 S 1040 270, 1190 190 S 1430 165, 1640 235"
+              />
 
-            {/* Instagram */}
-            <a
-              href="https://www.instagram.com/xaajstories?stkn=MWxkMzRscjAzaXVjZQ%3D%3D&utm_source=qr"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="XAAJ on Instagram"
-              title="Instagram"
-            >
-              <FaInstagram size={22} />
-            </a>
+              <path
+                className="stem"
+                d="M40 292 C 150 250, 180 145, 260 105"
+              />
+
+              <path
+                className="stem"
+                d="M350 294 C 430 240, 470 130, 545 82"
+              />
+
+              <path
+                className="stem"
+                d="M1170 294 C 1110 235, 1100 135, 1040 95"
+              />
+
+              <path
+                className="stem"
+                d="M1460 294 C 1390 235, 1420 145, 1370 90"
+              />
+
+              <g>
+                <ellipse className="leaf" cx="170" cy="220" rx="15" ry="31" transform="rotate(-42 170 220)" />
+                <ellipse className="leaf-light" cx="205" cy="194" rx="14" ry="30" transform="rotate(35 205 194)" />
+                <ellipse className="leaf" cx="250" cy="168" rx="14" ry="29" transform="rotate(-42 250 168)" />
+                <ellipse className="leaf-light" cx="285" cy="150" rx="13" ry="27" transform="rotate(36 285 150)" />
+
+                <ellipse className="leaf" cx="470" cy="205" rx="15" ry="31" transform="rotate(-46 470 205)" />
+                <ellipse className="leaf-light" cx="510" cy="175" rx="14" ry="28" transform="rotate(36 510 175)" />
+                <ellipse className="leaf" cx="555" cy="130" rx="13" ry="27" transform="rotate(-36 555 130)" />
+
+                <ellipse className="leaf-light" cx="1135" cy="210" rx="15" ry="31" transform="rotate(40 1135 210)" />
+                <ellipse className="leaf" cx="1095" cy="172" rx="14" ry="29" transform="rotate(-38 1095 172)" />
+                <ellipse className="leaf-light" cx="1050" cy="132" rx="13" ry="26" transform="rotate(38 1050 132)" />
+
+                <ellipse className="leaf" cx="1395" cy="205" rx="15" ry="31" transform="rotate(42 1395 205)" />
+                <ellipse className="leaf-light" cx="1360" cy="168" rx="14" ry="29" transform="rotate(-38 1360 168)" />
+                <ellipse className="leaf" cx="1325" cy="128" rx="13" ry="27" transform="rotate(36 1325 128)" />
+              </g>
+
+              <g>
+                <circle className="fruit" cx="330" cy="220" r="25" />
+                <path className="leaf-light" d="M330 195 C 310 177, 294 179, 286 190 C 304 198, 318 201, 330 195 Z" />
+                <circle className="fruit" cx="1235" cy="218" r="24" />
+                <path className="leaf-light" d="M1235 194 C 1253 176, 1270 180, 1278 191 C 1259 199, 1246 200, 1235 194 Z" />
+              </g>
+
+              <g>
+                <circle className="flower-center" cx="675" cy="215" r="10" />
+                <circle className="flower" cx="675" cy="190" r="14" />
+                <circle className="flower" cx="700" cy="215" r="14" />
+                <circle className="flower" cx="675" cy="240" r="14" />
+                <circle className="flower" cx="650" cy="215" r="14" />
+
+                <circle className="flower-center" cx="925" cy="212" r="10" />
+                <circle className="flower" cx="925" cy="187" r="14" />
+                <circle className="flower" cx="950" cy="212" r="14" />
+                <circle className="flower" cx="925" cy="237" r="14" />
+                <circle className="flower" cx="900" cy="212" r="14" />
+              </g>
+
+              <path
+                className="sun"
+                d="M790 80
+                   C 805 104, 826 110, 850 111
+                   C 826 122, 815 140, 815 166
+                   C 800 143, 780 134, 756 137
+                   C 779 123, 788 105, 790 80 Z"
+              />
+
+            </svg>
+
+          </div>
+
+          <div className="xaaj-footer-bottom">
+
+            <span>
+              © 2026 XAAJ. Made for everyday.
+            </span>
+
+            <span>
+              <Link to="/privacy" title="Privacy Policy">Privacy</Link>
+              {' · '}
+              <Link to="/terms" title="Terms & Conditions">Terms</Link>
+            </span>
 
           </div>
 
         </div>
 
-      </div>
-
-
-      {/* Footer Bottom */}
-      <div className="footer-bottom">
-
-        <span>
-          © 2026 XAAJ. Made for everyday.
-        </span>
-
-        <span>
-          <Link to="/privacy" title="Privacy Policy">Privacy</Link>
-          {' · '}
-          <Link to="/terms" title="Terms & Conditions">Terms</Link>
-        </span>
-
-      </div>
-
       </footer>
     </>
   )
 }
-
 
 // ============================================================
 // SHOP PAGE
@@ -3151,15 +5017,115 @@ function Product() {
                 <span className="detail-add-shine" aria-hidden="true" />
               </button>
 
-              {/* Product Information Accordions */}
-              <div
-                className="faq-list"
-                style={{ marginTop: '28px' }}
-              >
+              {/* Product Information Accordions — premium editorial style */}
+              <div className="xaaj-product-accordions">
+                <style>{`
+                  @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+                  .xaaj-product-accordions {
+                    margin-top: 30px;
+                    border-top: 1px solid rgba(42, 39, 35, .14);
+                  }
+
+                  .xaaj-product-accordions details {
+                    margin: 0;
+                    border-bottom: 1px solid rgba(42, 39, 35, .14);
+                  }
+
+                  .xaaj-product-accordions summary {
+                    position: relative;
+                    list-style: none;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 24px;
+                    padding: 21px 2px 20px;
+                    cursor: pointer;
+                    color: #2c2925;
+                    font-family: 'Cormorant Garamond', Georgia, serif;
+                    font-size: clamp(20px, 1.8vw, 25px);
+                    font-weight: 500;
+                    line-height: 1.1;
+                    letter-spacing: -.015em;
+                    transition: color .3s ease;
+                  }
+
+                  .xaaj-product-accordions summary::-webkit-details-marker {
+                    display: none;
+                  }
+
+                  .xaaj-product-accordions summary::after {
+                    content: '+';
+                    width: 25px;
+                    height: 25px;
+                    flex: 0 0 25px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #6f6a63;
+                    font-family: 'Assistant', Arial, sans-serif;
+                    font-size: 20px;
+                    font-weight: 400;
+                    line-height: 1;
+                    transition: transform .35s cubic-bezier(.22,1,.36,1), color .25s ease;
+                  }
+
+                  .xaaj-product-accordions details[open] summary {
+                    color: #2f7048;
+                  }
+
+                  .xaaj-product-accordions details[open] summary::after {
+                    content: '−';
+                    transform: rotate(180deg);
+                    color: #2f7048;
+                  }
+
+                  .xaaj-product-accordions summary:hover {
+                    color: #2f7048;
+                  }
+
+                  .xaaj-product-accordions p {
+                    max-width: 720px;
+                    margin: 0;
+                    padding: 0 42px 23px 2px;
+                    color: #716c65;
+                    font-family: 'Assistant', Arial, sans-serif;
+                    font-size: 13px;
+                    font-weight: 400;
+                    line-height: 1.9;
+                    white-space: pre-line;
+                  }
+
+                  .xaaj-product-accordions details[open] p {
+                    animation: xaajAccordionReveal .45s cubic-bezier(.22,1,.36,1) both;
+                  }
+
+                  @keyframes xaajAccordionReveal {
+                    from {
+                      opacity: 0;
+                      transform: translateY(-7px);
+                    }
+                    to {
+                      opacity: 1;
+                      transform: translateY(0);
+                    }
+                  }
+
+                  @media (max-width: 700px) {
+                    .xaaj-product-accordions summary {
+                      padding: 18px 0;
+                      font-size: 21px;
+                    }
+
+                    .xaaj-product-accordions p {
+                      padding: 0 4px 20px;
+                      font-size: 13px;
+                    }
+                  }
+                `}</style>
+
                 <details open>
-                  <summary>
-                    Description
-                  </summary>
+                  <summary>Description</summary>
                   <p>
                     {product.description ||
                       product.desc ||
@@ -3168,32 +5134,26 @@ function Product() {
                 </details>
 
                 <details>
-                  <summary>
-                    Product Details &amp; Care
-                  </summary>
-                  <p style={{ whiteSpace: 'pre-line' }}>
+                  <summary>Product Details &amp; Care</summary>
+                  <p>
                     {product.productDetails ||
-                      'Product details and care instructions will be updated soon.'}
+                      'Material, dimensions and care instructions will be shown here.'}
                   </p>
                 </details>
 
                 <details>
-                  <summary>
-                    Shipping &amp; Payment
-                  </summary>
-                  <p style={{ whiteSpace: 'pre-line' }}>
+                  <summary>Shipping &amp; Payment</summary>
+                  <p>
                     {product.shippingPayment ||
-                      'Secure online payments. Shipping details will be provided at checkout.'}
+                      'Shipping and payment information will be shown here. Secure online payment options are available at checkout.'}
                   </p>
                 </details>
 
                 <details>
-                  <summary>
-                    Return &amp; Exchange
-                  </summary>
-                  <p style={{ whiteSpace: 'pre-line' }}>
+                  <summary>Return &amp; Exchange</summary>
+                  <p>
                     {product.returnExchange ||
-                      'Return and exchange information will be updated soon.'}
+                      'Return & exchange information will be shown here. For help with an order, please contact XAAJ support.'}
                   </p>
                 </details>
               </div>
@@ -3606,6 +5566,7 @@ function SimplePage({
   eyebrow,
   children,
   policy = false,
+  auth = false,
   intro = '',
   effectiveDate = ''
 }) {
@@ -3630,6 +5591,588 @@ function SimplePage({
         </main>
         <Newsletter />
         <Footer />
+      </>
+    )
+  }
+
+  if (auth) {
+    return (
+      <>
+        <Header />
+
+        <main className="page simple xaaj-auth-page">
+          <div className="xaaj-auth-shell">
+            {children}
+          </div>
+        </main>
+
+        <style>{`
+          .xaaj-auth-page {
+            min-height: calc(100vh - 118px);
+            padding: 28px 24px 52px;
+            background:
+              radial-gradient(circle at 10% 5%, rgba(47,112,72,.055), transparent 28%),
+              linear-gradient(180deg, #f7f5f0 0%, #f2efe8 100%);
+          }
+
+          .xaaj-auth-shell {
+            width: min(1120px, 100%);
+            min-height: 690px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .xaaj-auth-layout {
+            width: min(100%, 980px);
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(430px, .82fr);
+            align-items: stretch;
+            overflow: hidden;
+            border: 1px solid rgba(39,46,40,.10);
+            border-radius: 24px;
+            background: rgba(255,254,250,.88);
+            box-shadow:
+              0 34px 90px rgba(37,42,37,.09),
+              0 2px 10px rgba(37,42,37,.035);
+          }
+
+          /* The left side is intentionally typographic, not a stock image.
+             It gives the authentication screen its own brand identity. */
+          .xaaj-auth-editorial {
+            position: relative;
+            min-height: 690px;
+            padding: 56px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background: #183126;
+            color: #f8f5ed;
+          }
+
+          .xaaj-auth-editorial::before {
+            content: 'X';
+            position: absolute;
+            right: -45px;
+            bottom: -125px;
+            color: rgba(255,255,255,.035);
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 410px;
+            line-height: 1;
+            font-weight: 400;
+            pointer-events: none;
+          }
+
+          .xaaj-auth-editorial::after {
+            content: '';
+            position: absolute;
+            width: 240px;
+            height: 240px;
+            right: 34px;
+            top: 105px;
+            border: 1px solid rgba(226,235,225,.13);
+            border-radius: 50%;
+            box-shadow:
+              0 0 0 30px rgba(226,235,225,.018),
+              0 0 0 60px rgba(226,235,225,.012);
+            pointer-events: none;
+          }
+
+          .xaaj-auth-mark {
+            position: relative;
+            z-index: 2;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(248,245,237,.72);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 2.4px;
+            text-transform: uppercase;
+          }
+
+          .xaaj-auth-mark i {
+            width: 30px;
+            height: 1px;
+            display: block;
+            background: #a8c29d;
+          }
+
+          .xaaj-auth-editorial-copy {
+            position: relative;
+            z-index: 2;
+            max-width: 500px;
+          }
+
+          .xaaj-auth-editorial-eyebrow {
+            display: block;
+            margin-bottom: 19px;
+            color: #a8c29d;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 2.3px;
+            text-transform: uppercase;
+          }
+
+          .xaaj-auth-editorial h2 {
+            max-width: 500px;
+            margin: 0;
+            color: #f8f5ed;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: clamp(52px, 5.6vw, 78px);
+            line-height: .91;
+            letter-spacing: -.055em;
+            font-weight: 400;
+          }
+
+          .xaaj-auth-editorial h2 em {
+            color: #c9d7c1;
+            font-style: italic;
+            font-weight: 400;
+          }
+
+          .xaaj-auth-editorial-copy p {
+            max-width: 370px;
+            margin: 27px 0 0;
+            color: rgba(248,245,237,.65);
+            font-size: 12px;
+            line-height: 1.85;
+          }
+
+          .xaaj-auth-editorial-footer {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(248,245,237,.48);
+            font-size: 9px;
+            letter-spacing: .7px;
+          }
+
+          .xaaj-auth-editorial-footer b {
+            color: rgba(248,245,237,.76);
+            font-weight: 600;
+          }
+
+          .xaaj-auth-editorial-dot {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #a8c29d;
+          }
+
+          .xaaj-auth-form-panel {
+            display: flex;
+            align-items: center;
+            padding: 42px clamp(34px, 4vw, 56px);
+            background: rgba(255,254,250,.95);
+          }
+
+          .xaaj-auth-form-inner {
+            width: min(400px, 100%);
+            margin: 0 auto;
+          }
+
+          .xaaj-auth-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px;
+            margin-bottom: 27px;
+            border: 1px solid #e4e0d8;
+            border-radius: 999px;
+            background: #f5f3ee;
+          }
+
+          .xaaj-auth-nav a {
+            min-width: 94px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            color: #77736b;
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .4px;
+            transition: background .25s ease, color .25s ease, transform .25s ease;
+          }
+
+          .xaaj-auth-nav a:hover {
+            color: #292824;
+            transform: translateY(-1px);
+          }
+
+          .xaaj-auth-nav a.active {
+            background: #292824;
+            color: #fffdf8;
+            box-shadow: 0 4px 12px rgba(41,40,36,.12);
+          }
+
+          .xaaj-auth-kicker {
+            display: block;
+            margin-bottom: 13px;
+            color: #2f7048;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+          }
+
+          .xaaj-auth-title {
+            margin: 0;
+            color: #292824;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: clamp(44px, 4vw, 58px);
+            line-height: .98;
+            font-weight: 400;
+            letter-spacing: -.05em;
+          }
+
+          .xaaj-auth-lead {
+            max-width: 390px;
+            margin: 13px 0 23px;
+            color: #77736b;
+            font-size: 12px;
+            line-height: 1.8;
+          }
+
+          .xaaj-auth-form {
+            display: grid;
+            gap: 14px;
+          }
+
+          .xaaj-auth-section-label {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            margin: 2px 0 -4px;
+            color: #918b83;
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+          }
+
+          .xaaj-auth-section-label::after {
+            content: '';
+            height: 1px;
+            flex: 1;
+            background: #e7e2d9;
+          }
+
+          .xaaj-auth-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+          }
+
+          .xaaj-auth-fields .full {
+            grid-column: 1 / -1;
+          }
+
+          .xaaj-auth-field {
+            position: relative;
+          }
+
+          .xaaj-auth-field label {
+            display: block;
+            margin: 0 0 6px 1px;
+            color: #5f5a53;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1.1px;
+            text-transform: uppercase;
+          }
+
+          .xaaj-auth-input-wrap {
+            position: relative;
+          }
+
+          .xaaj-auth-field input {
+            width: 100%;
+            height: 46px;
+            box-sizing: border-box;
+            padding: 0 14px;
+            border: 1px solid #dedad2;
+            border-radius: 10px;
+            outline: none;
+            background: #fbfaf7;
+            color: #292824;
+            font: inherit;
+            font-size: 12px;
+            transition:
+              border-color .25s ease,
+              background .25s ease,
+              box-shadow .25s ease;
+          }
+
+          .xaaj-auth-field input::placeholder {
+            color: #aaa49b;
+          }
+
+          .xaaj-auth-field input:hover {
+            border-color: #c9c3b9;
+            background: #fff;
+          }
+
+          .xaaj-auth-field input:focus {
+            border-color: #2f7048;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(47,112,72,.08);
+          }
+
+          .xaaj-auth-password-toggle {
+            position: absolute;
+            top: 50%;
+            right: 13px;
+            transform: translateY(-50%);
+            padding: 4px;
+            border: 0;
+            background: transparent;
+            color: #858078;
+            font: inherit;
+            font-size: 9px;
+            font-weight: 700;
+            cursor: pointer;
+          }
+
+          .xaaj-auth-password-toggle:hover {
+            color: #2f7048;
+          }
+
+          .xaaj-auth-error {
+            margin: -5px 1px 0;
+            color: #b42318;
+            font-size: 11px;
+            line-height: 1.5;
+          }
+
+          .xaaj-auth-submit {
+            position: relative;
+            width: 100%;
+            min-height: 48px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            border: 1px solid #292824;
+            border-radius: 10px;
+            background: #292824;
+            color: #fffdf8;
+            font: inherit;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .65px;
+            cursor: pointer;
+            transition:
+              transform .28s cubic-bezier(.22,1,.36,1),
+              background .25s ease,
+              box-shadow .28s ease;
+          }
+
+          .xaaj-auth-submit:hover {
+            transform: translateY(-2px);
+            background: #2f7048;
+            box-shadow: 0 13px 28px rgba(47,112,72,.17);
+          }
+
+          .xaaj-auth-submit:active {
+            transform: translateY(0);
+          }
+
+          .xaaj-auth-submit:disabled {
+            opacity: .58;
+            cursor: wait;
+            transform: none;
+            box-shadow: none;
+          }
+
+          .xaaj-auth-secondary {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 14px;
+            margin-top: 11px;
+            padding-top: 1px;
+          }
+
+          .xaaj-auth-secondary span {
+            display: none;
+          }
+
+          .xaaj-auth-secondary a,
+          .xaaj-auth-switch a {
+            color: #2f7048;
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 700;
+          }
+
+          .xaaj-auth-secondary a:hover,
+          .xaaj-auth-switch a:hover {
+            text-decoration: underline;
+            text-underline-offset: 4px;
+          }
+
+          .xaaj-auth-switch {
+            margin: 25px 0 0;
+            padding-top: 21px;
+            border-top: 1px solid #e7e2d9;
+            color: #817b73;
+            text-align: center;
+            font-size: 10px;
+          }
+
+          .xaaj-auth-switch a {
+            margin-left: 5px;
+          }
+
+          .xaaj-auth-trust {
+            display: flex;
+            justify-content: center;
+            gap: 9px;
+            margin-top: 18px;
+            color: #aaa49b;
+            font-size: 8px;
+            letter-spacing: .25px;
+          }
+
+          .xaaj-auth-step {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin: 0 0 15px;
+            color: #817b73;
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+          }
+
+          .xaaj-auth-step strong {
+            display: inline-flex;
+            width: 22px;
+            height: 22px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #e7eee7;
+            color: #2f7048;
+            font-size: 8px;
+          }
+
+          @media (max-width: 900px) {
+            .xaaj-auth-page {
+              padding: 25px 16px 55px;
+            }
+
+            .xaaj-auth-layout {
+              grid-template-columns: 1fr;
+              max-width: 620px;
+            }
+
+            .xaaj-auth-editorial {
+              min-height: 300px;
+              padding: 32px;
+            }
+
+            .xaaj-auth-editorial::before {
+              font-size: 250px;
+              right: -30px;
+              bottom: -80px;
+            }
+
+            .xaaj-auth-editorial::after {
+              width: 150px;
+              height: 150px;
+              right: 25px;
+              top: 70px;
+            }
+
+            .xaaj-auth-editorial h2 {
+              font-size: 52px;
+            }
+
+            .xaaj-auth-editorial-footer {
+              margin-top: 35px;
+            }
+
+            .xaaj-auth-form-panel {
+              padding: 42px 30px 48px;
+            }
+          }
+
+          @media (max-width: 560px) {
+            .xaaj-auth-page {
+              min-height: calc(100vh - 90px);
+              padding: 12px 10px 40px;
+            }
+
+            .xaaj-auth-layout {
+              border-radius: 18px;
+            }
+
+            .xaaj-auth-editorial {
+              min-height: 250px;
+              padding: 25px 22px;
+            }
+
+            .xaaj-auth-editorial h2 {
+              font-size: 42px;
+            }
+
+            .xaaj-auth-editorial-copy p {
+              max-width: 270px;
+              margin-top: 14px;
+              font-size: 10px;
+            }
+
+            .xaaj-auth-editorial-footer {
+              display: none;
+            }
+
+            .xaaj-auth-form-panel {
+              padding: 31px 21px 36px;
+            }
+
+            .xaaj-auth-nav {
+              margin-bottom: 30px;
+            }
+
+            .xaaj-auth-nav a {
+              min-width: 86px;
+            }
+
+            .xaaj-auth-fields {
+              grid-template-columns: 1fr;
+              gap: 16px;
+            }
+
+            .xaaj-auth-fields .full {
+              grid-column: auto;
+            }
+
+            .xaaj-auth-title {
+              font-size: 43px;
+            }
+
+            .xaaj-auth-lead {
+              margin-bottom: 26px;
+            }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .xaaj-auth-nav a,
+            .xaaj-auth-field input,
+            .xaaj-auth-submit {
+              transition: none !important;
+            }
+          }        `}</style>
       </>
     )
   }
@@ -4397,12 +6940,9 @@ function BlogPage() {
 
       <main className="xaaj-blog-shell">
         <section className="xaaj-blog-hero">
-          <img
-            className="xaaj-blog-hero-bg"
-            src={heroImage}
-            alt="Handcrafted XAAJ tableware arranged for an everyday table"
-            aria-hidden="true"
-          />
+          {heroPost?.coverImage && (
+            <img className="xaaj-blog-hero-bg" src={heroPost.coverImage} alt="" aria-hidden="true" />
+          )}
           <div className="xaaj-blog-hero-content xaaj-blog-fade">
             <span className="xaaj-blog-kicker">The XAAJ Blog</span>
             <h1>Beautiful things.<br />Thoughtfully lived.</h1>
@@ -4618,6 +7158,8 @@ function App() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false)
 
   // ==========================================================
   // REGISTRATION STATE
@@ -6388,6 +8930,474 @@ function App() {
               padding: 82px 18px 90px;
             }
           }
+
+          /* XAAJ V3 — editorial atelier redesign */
+          .xaaj-about {
+            --paper: #f4f0e8 !important;
+            --paper-2: #e9e2d7 !important;
+            --ink: #292825 !important;
+            --muted: #746f67 !important;
+            --line: rgba(41,40,37,.14) !important;
+            --accent: #a84d35 !important;
+            background: var(--paper) !important;
+          }
+
+          .xaaj-about-hero {
+            width: min(1320px, calc(100% - 52px)) !important;
+            min-height: min(760px, calc(100vh - 110px)) !important;
+            margin: 26px auto 0 !important;
+            grid-template-columns: 1.08fr .92fr !important;
+            background: #e7dfd2 !important;
+            border: 1px solid rgba(41,40,37,.10);
+          }
+
+          .xaaj-about-hero-visual {
+            grid-column: 1 !important;
+            grid-row: 1 !important;
+            min-height: min(760px, calc(100vh - 110px)) !important;
+            order: 0 !important;
+          }
+
+          .xaaj-about-hero-copy {
+            grid-column: 2 !important;
+            grid-row: 1 !important;
+            min-height: min(760px, calc(100vh - 110px)) !important;
+            padding: clamp(46px, 6vw, 92px) clamp(34px, 5vw, 76px) !important;
+            justify-content: space-between !important;
+            background: #e7dfd2 !important;
+          }
+
+          .xaaj-about-hero-visual::before {
+            display: none !important;
+          }
+
+          .xaaj-about-hero-visual img {
+            filter: saturate(.78) contrast(.97) !important;
+            transform: scale(1.01);
+          }
+
+          .xaaj-about-hero:hover .xaaj-about-hero-visual img {
+            transform: scale(1.045) !important;
+          }
+
+          .xaaj-about-hero-badge {
+            left: 22px !important;
+            bottom: 22px !important;
+            width: 104px !important;
+            height: 104px !important;
+            border-radius: 50% !important;
+            background: rgba(24,49,38,.88) !important;
+            border-color: rgba(255,255,255,.45) !important;
+          }
+
+          .xaaj-about-hero h1 {
+            max-width: 650px !important;
+            font-size: clamp(58px, 6.1vw, 88px) !important;
+            line-height: .86 !important;
+            letter-spacing: -.06em !important;
+          }
+
+          .xaaj-about-hero h1 em {
+            color: #a84d35 !important;
+          }
+
+          .xaaj-about-hero-description {
+            max-width: 430px !important;
+            margin-top: 25px !important;
+            font-size: 13px !important;
+            line-height: 1.85 !important;
+          }
+
+          .xaaj-about-hero-link {
+            margin-top: 24px !important;
+          }
+
+          .xaaj-about-hero-number {
+            right: 28px !important;
+            bottom: 25px !important;
+            font-size: 62px !important;
+            color: rgba(41,40,37,.13) !important;
+          }
+
+          .xaaj-about-intro {
+            width: min(1180px, calc(100% - 52px)) !important;
+            padding: 125px 0 118px !important;
+            grid-template-columns: 170px 1fr !important;
+            gap: 70px !important;
+          }
+
+          .xaaj-about-intro h2 {
+            max-width: 880px !important;
+            font-size: clamp(46px, 5.4vw, 74px) !important;
+            line-height: .96 !important;
+          }
+
+          .xaaj-about-intro-text {
+            max-width: 620px !important;
+            margin-top: 28px !important;
+            font-size: 14px !important;
+            line-height: 1.9 !important;
+          }
+
+          .xaaj-about-stat-row {
+            margin-top: 52px !important;
+          }
+
+          .xaaj-about-stat {
+            min-height: 132px !important;
+            padding: 24px 22px 25px 0 !important;
+          }
+
+          .xaaj-about-stat strong {
+            color: #a84d35 !important;
+            font-size: 10px !important;
+            letter-spacing: .18em !important;
+          }
+
+          .xaaj-about-stat span {
+            margin-top: 32px !important;
+            font-family: Georgia, 'Times New Roman', serif !important;
+            font-size: 17px !important;
+            color: #35332e !important;
+          }
+
+          .xaaj-about-story {
+            background: #183126 !important;
+          }
+
+          .xaaj-about-story-grid {
+            width: min(1320px, 100%) !important;
+            min-height: 690px !important;
+            grid-template-columns: .9fr 1.1fr !important;
+          }
+
+          .xaaj-about-story-image {
+            grid-column: 2 !important;
+            min-height: 690px !important;
+          }
+
+          .xaaj-about-story-copy {
+            grid-column: 1 !important;
+            grid-row: 1 !important;
+            padding: 82px clamp(40px, 6vw, 92px) !important;
+          }
+
+          .xaaj-about-story-copy h2 {
+            font-size: clamp(44px, 5vw, 70px) !important;
+          }
+
+          .xaaj-about-story-copy p {
+            font-size: 13px !important;
+            line-height: 1.9 !important;
+          }
+
+          .xaaj-about-values {
+            width: min(1180px, calc(100% - 52px)) !important;
+            padding: 120px 0 110px !important;
+          }
+
+          .xaaj-about-values-head {
+            padding-bottom: 46px !important;
+          }
+
+          .xaaj-about-values h2 {
+            font-size: clamp(45px, 5.3vw, 72px) !important;
+          }
+
+          .xaaj-about-value-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+          .xaaj-about-value {
+            min-height: 0 !important;
+            display: grid !important;
+            grid-template-columns: 70px 1fr 1fr !important;
+            gap: 28px !important;
+            align-items: center !important;
+            padding: 29px 0 !important;
+            border-right: 0 !important;
+            border-bottom: 1px solid var(--line) !important;
+          }
+
+          .xaaj-about-value:not(:first-child) {
+            padding-left: 0 !important;
+          }
+
+          .xaaj-about-value:last-child {
+            border-bottom: 0 !important;
+          }
+
+          .xaaj-about-value h3 {
+            margin: 0 !important;
+            font-size: 28px !important;
+          }
+
+          .xaaj-about-value p {
+            max-width: 340px !important;
+            margin: 0 !important;
+          }
+
+          .xaaj-about-cta {
+            min-height: 430px !important;
+            padding: 105px 20px 110px !important;
+            background: #e7dfd2 !important;
+          }
+
+          .xaaj-about-cta h2 {
+            font-size: clamp(48px, 6vw, 80px) !important;
+          }
+
+          .xaaj-about-cta-links a {
+            border-radius: 0 !important;
+            background: transparent !important;
+            border: 0 !important;
+            border-bottom: 1px solid rgba(41,40,37,.35) !important;
+            padding: 9px 2px !important;
+          }
+
+          @media (max-width: 800px) {
+            .xaaj-about-hero {
+              width: calc(100% - 22px) !important;
+              margin-top: 11px !important;
+              grid-template-columns: 1fr !important;
+            }
+
+            .xaaj-about-hero-visual {
+              grid-column: 1 !important;
+              grid-row: 2 !important;
+              min-height: 440px !important;
+            }
+
+            .xaaj-about-hero-copy {
+              grid-column: 1 !important;
+              grid-row: 1 !important;
+              min-height: 530px !important;
+              padding: 55px 28px 50px !important;
+            }
+
+            .xaaj-about-intro {
+              width: calc(100% - 30px) !important;
+              padding: 78px 0 76px !important;
+              grid-template-columns: 1fr !important;
+              gap: 25px !important;
+            }
+
+            .xaaj-about-story-grid {
+              grid-template-columns: 1fr !important;
+            }
+
+            .xaaj-about-story-image {
+              grid-column: 1 !important;
+              grid-row: 1 !important;
+              min-height: 470px !important;
+            }
+
+            .xaaj-about-story-copy {
+              grid-column: 1 !important;
+              grid-row: 2 !important;
+              padding: 65px 28px 75px !important;
+            }
+
+            .xaaj-about-values {
+              width: calc(100% - 30px) !important;
+              padding: 78px 0 80px !important;
+            }
+
+            .xaaj-about-value {
+              grid-template-columns: 50px 1fr !important;
+              gap: 20px !important;
+            }
+
+            .xaaj-about-value p {
+              grid-column: 2 !important;
+            }
+
+            .xaaj-about-cta {
+              padding: 82px 18px 90px !important;
+            }
+          }
+
+          /* XAAJ V2 — editorial refinement */
+          .xaaj-about-hero {
+            width: 100%;
+            margin: 0;
+            min-height: min(760px, calc(100vh - 112px));
+            grid-template-columns: .78fr 1.22fr;
+            background: #183126;
+            border-radius: 0;
+          }
+
+          .xaaj-about-hero-copy {
+            min-height: min(760px, calc(100vh - 112px));
+            padding: clamp(34px,5vw,72px);
+          }
+
+          .xaaj-about-hero h1 {
+            font-size: clamp(58px,6.7vw,94px);
+            line-height: .86;
+          }
+
+          .xaaj-about-hero-visual {
+            min-height: min(760px, calc(100vh - 112px));
+          }
+
+          .xaaj-about-hero-visual::before {
+            content: '';
+            position: absolute;
+            z-index: 2;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 22%;
+            background: linear-gradient(90deg, rgba(24,49,38,.35), transparent);
+            pointer-events: none;
+          }
+
+          .xaaj-about-intro {
+            width: min(1240px, calc(100% - 52px));
+            padding: 135px 0 125px;
+            grid-template-columns: .42fr 1.58fr;
+            gap: 75px;
+          }
+
+          .xaaj-about-intro h2 {
+            max-width: 900px;
+            font-size: clamp(44px,5.7vw,78px);
+          }
+
+          .xaaj-about-intro-text {
+            max-width: 680px;
+            font-size: 15px;
+          }
+
+          .xaaj-about-stat-row {
+            margin-top: 62px;
+          }
+
+          .xaaj-about-stat {
+            min-height: 145px;
+            padding-top: 28px;
+          }
+
+          .xaaj-about-stat strong {
+            color: #a84d35;
+            font-size: 11px;
+            letter-spacing: .15em;
+          }
+
+          .xaaj-about-stat span {
+            margin-top: 31px;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 17px;
+            letter-spacing: 0;
+            text-transform: none;
+            color: #35332e;
+          }
+
+          .xaaj-about-story-grid {
+            width: 100%;
+            min-height: 720px;
+            grid-template-columns: 1.2fr .8fr;
+          }
+
+          .xaaj-about-story-image {
+            min-height: 720px;
+          }
+
+          .xaaj-about-story-copy {
+            padding: 82px clamp(40px,6vw,96px);
+          }
+
+          .xaaj-about-story-copy h2 {
+            font-size: clamp(44px,5.2vw,72px);
+          }
+
+          .xaaj-about-values {
+            width: min(1240px, calc(100% - 52px));
+            padding: 130px 0 125px;
+          }
+
+          .xaaj-about-values-head {
+            padding-bottom: 52px;
+          }
+
+          .xaaj-about-value-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .xaaj-about-value {
+            min-height: 0;
+            display: grid;
+            grid-template-columns: 80px 1fr 1fr;
+            gap: 28px;
+            align-items: center;
+            padding: 30px 0;
+            border-right: 0;
+            border-bottom: 1px solid var(--line);
+          }
+
+          .xaaj-about-value:not(:first-child) {
+            padding-left: 0;
+          }
+
+          .xaaj-about-value:last-child {
+            border-bottom: 0;
+          }
+
+          .xaaj-about-value h3 {
+            margin: 0;
+            font-size: 28px;
+          }
+
+          .xaaj-about-value p {
+            max-width: 340px;
+          }
+
+          .xaaj-about-cta {
+            min-height: 540px;
+            padding: 110px 20px;
+          }
+
+          .xaaj-about-cta-links a {
+            border-radius: 0;
+            padding: 10px 0;
+            min-height: 0;
+          }
+
+          @media (max-width: 800px) {
+            .xaaj-about-hero,
+            .xaaj-about-hero-copy,
+            .xaaj-about-hero-visual {
+              min-height: auto;
+            }
+
+            .xaaj-about-hero {
+              grid-template-columns: 1fr;
+            }
+
+            .xaaj-about-hero-copy {
+              min-height: 560px;
+            }
+
+            .xaaj-about-hero-visual {
+              min-height: 470px;
+            }
+
+            .xaaj-about-intro {
+              width: calc(100% - 30px);
+              padding: 82px 0;
+              grid-template-columns: 1fr;
+              gap: 28px;
+            }
+
+            .xaaj-about-value {
+              grid-template-columns: 55px 1fr;
+            }
+
+            .xaaj-about-value p {
+              grid-column: 2;
+            }
+          }
         `}</style>
 
         <main className="xaaj-about">
@@ -8052,68 +11062,149 @@ function App() {
 
     return (
       <SimplePage
+        auth
         eyebrow="Welcome back"
-        title="Your account"
+        title="Sign in"
       >
-        <p className="lead">
-          Sign in to see your orders,
-          saved pieces and details.
-        </p>
+        <div className="xaaj-auth-layout">
+          <section className="xaaj-auth-editorial">
+            <div className="xaaj-auth-mark">
+              <i />
+              XAAJ · STORIES CRAFTED IN EARTH
+            </div>
 
-        <form
-          className="checkout-form"
-          onSubmit={handleLogin}
-        >
+            <div className="xaaj-auth-editorial-copy">
+              <span className="xaaj-auth-editorial-eyebrow">
+                The everyday, considered
+              </span>
 
-          {/* Email */}
-          <input
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="Email address"
-            type="email"
-            autoComplete="email"
-            required
-          />
+              <h2>
+                Make room
+                <br />
+                <em>for beautiful.</em>
+              </h2>
 
-          {/* Password */}
-          <input
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder="Password"
-            type="password"
-            autoComplete="current-password"
-            required
-          />
+              <p>
+                Your saved pieces, orders and details —
+                quietly kept in one place.
+              </p>
+            </div>
 
-          {error && (
-            <p style={{ color: '#b42318', margin: '0' }}>
-              {error}
-            </p>
-          )}
+            <div className="xaaj-auth-editorial-footer">
+              <b>01</b>
+              <span className="xaaj-auth-editorial-dot" />
+              Thoughtfully made tableware
+              <span className="xaaj-auth-editorial-dot" />
+              India
+            </div>
+          </section>
 
-          <button
-            type="submit"
-            className="button"
-            disabled={loading}
-          >
-            {loading ? 'Signing in...' : 'Sign in'}
-            <ArrowRight size={15} />
-          </button>
+          <section className="xaaj-auth-form-panel">
+            <div className="xaaj-auth-form-inner">
+              <nav className="xaaj-auth-nav" aria-label="Account navigation">
+                <Link className="active" to="/account">Sign in</Link>
+                <Link to="/register">Create account</Link>
+              </nav>
 
-        </form>
+              <span className="xaaj-auth-kicker">
+                Welcome back
+              </span>
 
-        <p style={{ marginTop: '18px', marginBottom: '0' }}>
-          <Link to="/forgot-password">
-            Forgot Password?
-          </Link>
-        </p>
+              <h1 className="xaaj-auth-title">
+                Sign in.
+              </h1>
 
-        <p style={{ marginTop: '24px' }}>
-          New to XAAJ?{' '}
-          <Link to="/register">
-            Create an account
-          </Link>
-        </p>
+              <p className="xaaj-auth-lead">
+                Enter your email and password to continue
+                to your XAAJ account.
+              </p>
+
+              <form
+                className="xaaj-auth-form"
+                onSubmit={handleLogin}
+              >
+                <div className="xaaj-auth-field">
+                  <label htmlFor="xaaj-login-email">
+                    Email address
+                  </label>
+                  <input
+                    id="xaaj-login-email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    type="email"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+
+                <div className="xaaj-auth-field">
+                  <label htmlFor="xaaj-login-password">
+                    Password
+                  </label>
+
+                  <div className="xaaj-auth-input-wrap">
+                    <input
+                      id="xaaj-login-password"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="Your password"
+                      type={showLoginPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      style={{ paddingRight: '62px' }}
+                      required
+                    />
+
+                    <button
+                      type="button"
+                      className="xaaj-auth-password-toggle"
+                      onClick={() => setShowLoginPassword(value => !value)}
+                    >
+                      {showLoginPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <p className="xaaj-auth-error">
+                    {error}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  className="xaaj-auth-submit"
+                  disabled={loading}
+                >
+                  {loading ? 'Signing in...' : 'Continue to XAAJ'}
+                  {!loading && <ArrowRight size={14} />}
+                </button>
+              </form>
+
+              <div className="xaaj-auth-secondary">
+                <span />
+                <Link to="/forgot-password">
+                  Forgot password?
+                </Link>
+              </div>
+
+              <p className="xaaj-auth-switch">
+                New to XAAJ?
+                <Link to="/register">
+                  Create your account
+                </Link>
+              </p>
+
+              <div className="xaaj-auth-trust">
+                <span>Secure</span>
+                <span>·</span>
+                <span>Private</span>
+                <span>·</span>
+                <span>Made for XAAJ</span>
+              </div>
+            </div>
+          </section>
+        </div>
       </SimplePage>
     )
   }
@@ -8125,125 +11216,252 @@ function App() {
   if (path === '/register') {
     return (
       <SimplePage
+        auth
         eyebrow="Join XAAJ"
-        title="Create your account."
+        title="Create account"
       >
-        <p className="lead">
-          Create your account to save your details
-          and checkout faster. We will verify your
-          email with a one-time OTP.
-        </p>
+        <div className="xaaj-auth-layout">
+          <section className="xaaj-auth-editorial">
+            <div className="xaaj-auth-mark">
+              <i />
+              XAAJ · STORIES CRAFTED IN EARTH
+            </div>
 
-        <form
-          className="checkout-form"
-          onSubmit={handleRegister}
-        >
+            <div className="xaaj-auth-editorial-copy">
+              <span className="xaaj-auth-editorial-eyebrow">
+                Made for everyday rituals
+              </span>
 
-          <input
-            value={registerName}
-            onChange={e => setRegisterName(e.target.value)}
-            placeholder="Full name"
-            autoComplete="name"
-            required
-          />
+              <h2>
+                Begin with
+                <br />
+                <em>something beautiful.</em>
+              </h2>
 
-          <input
-            value={registerEmail}
-            onChange={e => setRegisterEmail(e.target.value)}
-            placeholder="Email address"
-            type="email"
-            autoComplete="email"
-            required
-          />
+              <p>
+                Create your account once. We will keep
+                your details ready for every future order.
+              </p>
+            </div>
 
-          <input
-            value={registerPassword}
-            onChange={e => setRegisterPassword(e.target.value)}
-            placeholder="Password (minimum 8 characters)"
-            type="password"
-            autoComplete="new-password"
-            required
-          />
+            <div className="xaaj-auth-editorial-footer">
+              <b>01</b>
+              <span className="xaaj-auth-editorial-dot" />
+              Thoughtfully made tableware
+              <span className="xaaj-auth-editorial-dot" />
+              India
+            </div>
+          </section>
 
-          <input
-            value={registerPhone}
-            onChange={e =>
-              setRegisterPhone(
-                e.target.value.replace(/\D/g, '').slice(0, 10)
-              )
-            }
-            placeholder="Phone number"
-            type="tel"
-            inputMode="numeric"
-            autoComplete="tel"
-            required
-          />
+          <section className="xaaj-auth-form-panel">
+            <div className="xaaj-auth-form-inner">
+              <nav className="xaaj-auth-nav" aria-label="Account navigation">
+                <Link to="/account">Sign in</Link>
+                <Link className="active" to="/register">Create account</Link>
+              </nav>
 
-          <input
-            value={registerAddress}
-            onChange={e => setRegisterAddress(e.target.value)}
-            placeholder="Full address"
-            autoComplete="street-address"
-            required
-          />
+              <span className="xaaj-auth-kicker">
+                Join XAAJ
+              </span>
 
-          <div>
-            <input
-              value={registerCity}
-              onChange={e => setRegisterCity(e.target.value)}
-              placeholder="City"
-              autoComplete="address-level2"
-              required
-            />
+              <h1 className="xaaj-auth-title">
+                Create account.
+              </h1>
 
-            <input
-              value={registerState}
-              onChange={e => setRegisterState(e.target.value)}
-              placeholder="State"
-              autoComplete="address-level1"
-              required
-            />
-          </div>
+              <p className="xaaj-auth-lead">
+                A few details now means a smoother checkout
+                and a more personal XAAJ experience later.
+              </p>
 
-          <input
-            value={registerPin}
-            onChange={e =>
-              setRegisterPin(
-                e.target.value.replace(/\D/g, '').slice(0, 6)
-              )
-            }
-            placeholder="PIN code"
-            inputMode="numeric"
-            autoComplete="postal-code"
-            maxLength={6}
-            required
-          />
+              <form
+                className="xaaj-auth-form"
+                onSubmit={handleRegister}
+              >
+                <div className="xaaj-auth-section-label">
+                  Your details
+                </div>
 
-          {registerError && (
-            <p style={{ color: '#b42318', margin: '0' }}>
-              {registerError}
-            </p>
-          )}
+                <div className="xaaj-auth-fields">
+                  <div className="xaaj-auth-field">
+                    <label htmlFor="xaaj-register-name">
+                      Full name
+                    </label>
+                    <input
+                      id="xaaj-register-name"
+                      value={registerName}
+                      onChange={e => setRegisterName(e.target.value)}
+                      placeholder="Your name"
+                      autoComplete="name"
+                      required
+                    />
+                  </div>
 
-          <button
-            type="submit"
-            className="button"
-            disabled={registerLoading}
-          >
-            {registerLoading
-              ? 'Creating account...'
-              : 'Create account'}
-            <ArrowRight size={15} />
-          </button>
+                  <div className="xaaj-auth-field">
+                    <label htmlFor="xaaj-register-phone">
+                      Phone
+                    </label>
+                    <input
+                      id="xaaj-register-phone"
+                      value={registerPhone}
+                      onChange={e =>
+                        setRegisterPhone(
+                          e.target.value.replace(/\D/g, '').slice(0, 10)
+                        )
+                      }
+                      placeholder="10-digit number"
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      required
+                    />
+                  </div>
 
-        </form>
+                  <div className="xaaj-auth-field full">
+                    <label htmlFor="xaaj-register-email">
+                      Email address
+                    </label>
+                    <input
+                      id="xaaj-register-email"
+                      value={registerEmail}
+                      onChange={e => setRegisterEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      type="email"
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
 
-        <p style={{ marginTop: '24px' }}>
-          Already have an account?{' '}
-          <Link to="/account">
-            Sign in
-          </Link>
-        </p>
+                  <div className="xaaj-auth-field full">
+                    <label htmlFor="xaaj-register-password">
+                      Password
+                    </label>
+
+                    <div className="xaaj-auth-input-wrap">
+                      <input
+                        id="xaaj-register-password"
+                        value={registerPassword}
+                        onChange={e => setRegisterPassword(e.target.value)}
+                        placeholder="Minimum 8 characters"
+                        type={showRegisterPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        style={{ paddingRight: '62px' }}
+                        required
+                      />
+
+                      <button
+                        type="button"
+                        className="xaaj-auth-password-toggle"
+                        onClick={() => setShowRegisterPassword(value => !value)}
+                      >
+                        {showRegisterPassword ? 'Hide' : 'Show'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="xaaj-auth-section-label">
+                  Delivery details
+                </div>
+
+                <div className="xaaj-auth-fields">
+                  <div className="xaaj-auth-field full">
+                    <label htmlFor="xaaj-register-address">
+                      Address
+                    </label>
+                    <input
+                      id="xaaj-register-address"
+                      value={registerAddress}
+                      onChange={e => setRegisterAddress(e.target.value)}
+                      placeholder="House / street / locality"
+                      autoComplete="street-address"
+                      required
+                    />
+                  </div>
+
+                  <div className="xaaj-auth-field">
+                    <label htmlFor="xaaj-register-city">
+                      City
+                    </label>
+                    <input
+                      id="xaaj-register-city"
+                      value={registerCity}
+                      onChange={e => setRegisterCity(e.target.value)}
+                      placeholder="City"
+                      autoComplete="address-level2"
+                      required
+                    />
+                  </div>
+
+                  <div className="xaaj-auth-field">
+                    <label htmlFor="xaaj-register-state">
+                      State
+                    </label>
+                    <input
+                      id="xaaj-register-state"
+                      value={registerState}
+                      onChange={e => setRegisterState(e.target.value)}
+                      placeholder="State"
+                      autoComplete="address-level1"
+                      required
+                    />
+                  </div>
+
+                  <div className="xaaj-auth-field full">
+                    <label htmlFor="xaaj-register-pin">
+                      PIN code
+                    </label>
+                    <input
+                      id="xaaj-register-pin"
+                      value={registerPin}
+                      onChange={e =>
+                        setRegisterPin(
+                          e.target.value.replace(/\D/g, '').slice(0, 6)
+                        )
+                      }
+                      placeholder="6-digit PIN code"
+                      inputMode="numeric"
+                      autoComplete="postal-code"
+                      maxLength={6}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {registerError && (
+                  <p className="xaaj-auth-error">
+                    {registerError}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  className="xaaj-auth-submit"
+                  disabled={registerLoading}
+                >
+                  {registerLoading
+                    ? 'Creating account...'
+                    : 'Create my XAAJ account'}
+                  {!registerLoading && <ArrowRight size={14} />}
+                </button>
+              </form>
+
+              <p className="xaaj-auth-switch">
+                Already have an account?
+                <Link to="/account">
+                  Sign in
+                </Link>
+              </p>
+
+              <div className="xaaj-auth-trust">
+                <span>Secure</span>
+                <span>·</span>
+                <span>Email verification</span>
+                <span>·</span>
+                <span>Private</span>
+              </div>
+            </div>
+          </section>
+        </div>
       </SimplePage>
     )
   }
@@ -9047,35 +12265,365 @@ function App() {
               min-height: 115px !important;
             }
           }
+
+          /* XAAJ V3 — form-first contact page */
+          .xaaj-contact-page {
+            background: #f4f0e8 !important;
+            color: #292825;
+          }
+
+          .xaaj-contact-content {
+            width: min(1260px, calc(100% - 52px)) !important;
+            margin: 0 auto !important;
+            padding: 42px 0 58px !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout {
+            margin-top: 0 !important;
+            grid-template-columns: minmax(0, 1.28fr) minmax(300px, .72fr) !important;
+            gap: 0 !important;
+            align-items: stretch !important;
+            border-top: 1px solid rgba(41,40,37,.15);
+            border-bottom: 1px solid rgba(41,40,37,.15);
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > form {
+            padding: 66px 64px 64px 0 !important;
+            border: 0 !important;
+            border-right: 1px solid rgba(41,40,37,.15) !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > form > div:first-child {
+            margin-bottom: 38px !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > form h2 {
+            margin-top: 12px !important;
+            font-size: clamp(44px, 4.4vw, 64px) !important;
+            line-height: .92 !important;
+            letter-spacing: -.045em !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > div {
+            margin: 0 !important;
+            padding: 66px 0 62px 62px !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            color: #292825 !important;
+            min-height: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > div h2 {
+            margin-top: 12px !important;
+            font-size: clamp(42px, 4vw, 58px) !important;
+            line-height: .94 !important;
+            letter-spacing: -.045em !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > div p,
+          .xaaj-contact-content .xaaj-contact-layout > div a {
+            color: #706d67 !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > div .eyebrow {
+            color: #a84d35 !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > div > div:last-child {
+            margin-top: 180px !important;
+            gap: 26px !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > div > div:last-child > div {
+            gap: 7px !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-fields {
+            gap: 25px 26px !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-fields label {
+            gap: 10px !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-fields input,
+          .xaaj-contact-content .xaaj-contact-fields textarea {
+            border: 0 !important;
+            border-bottom: 1px solid #cbc5bb !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            padding: 13px 0 14px !important;
+            box-shadow: none !important;
+            color: #292825 !important;
+            transition: border-color .22s ease !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-fields input:focus,
+          .xaaj-contact-content .xaaj-contact-fields textarea:focus {
+            border-bottom-color: #183126 !important;
+            box-shadow: none !important;
+            outline: none !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-fields textarea {
+            min-height: 150px !important;
+            padding-top: 13px !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > form > button {
+            margin-top: 17px !important;
+            min-height: 54px !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            background: #183126 !important;
+            color: #fff !important;
+            letter-spacing: .04em !important;
+            transition: transform .25s ease, background .25s ease !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > form > button:hover:not(:disabled) {
+            background: #234535 !important;
+            transform: translateY(-1px);
+          }
+
+          .xaaj-contact-response-note {
+            margin-top: 24px !important;
+            padding: 18px 0 0 !important;
+            border-top: 1px solid rgba(41,40,37,.12) !important;
+            color: #918b82 !important;
+            font-size: 11px !important;
+          }
+
+          @media (max-width: 900px) {
+            .xaaj-contact-content {
+              width: calc(100% - 36px) !important;
+              padding: 30px 0 42px !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-layout {
+              grid-template-columns: 1fr !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-layout > form {
+              padding: 44px 0 48px !important;
+              border-right: 0 !important;
+              border-bottom: 1px solid rgba(41,40,37,.15) !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-layout > div {
+              padding: 44px 0 46px !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-layout > div > div:last-child {
+              margin-top: 70px !important;
+            }
+          }
+
+          @media (max-width: 560px) {
+            .xaaj-contact-content {
+              width: calc(100% - 28px) !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-layout > form {
+              padding-top: 36px !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-layout > form h2 {
+              font-size: 39px !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-layout > div h2 {
+              font-size: 38px !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-fields {
+              grid-template-columns: 1fr !important;
+              gap: 20px !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-fields label {
+              grid-column: 1 / -1 !important;
+            }
+          }
+
+          /* XAAJ V2 — quiet luxury contact system */
+          .xaaj-contact-page {
+            background: #f4f0e8;
+          }
+
+          .xaaj-contact-hero {
+            width: 100%;
+            margin: 0;
+            min-height: 600px;
+            grid-template-columns: 1.15fr .85fr;
+            background: #183126;
+            border-radius: 0;
+          }
+
+          .xaaj-contact-hero h1 {
+            font-size: clamp(62px,8.2vw,116px);
+            line-height: .82;
+          }
+
+          .xaaj-contact-hero-copy {
+            padding: clamp(58px,7vw,105px) clamp(28px,7vw,110px);
+          }
+
+          .xaaj-contact-hero-copy p {
+            max-width: 510px;
+            color: rgba(245,241,232,.64);
+          }
+
+          .xaaj-contact-mini {
+            margin-top: 38px;
+          }
+
+          .xaaj-contact-mini a {
+            min-height: 0;
+            padding: 0 0 14px;
+            border: 0;
+            border-bottom: 1px solid rgba(245,241,232,.16);
+            border-radius: 0;
+            background: transparent;
+          }
+
+          .xaaj-contact-mini a:hover {
+            transform: none;
+            background: transparent;
+            border-color: rgba(245,241,232,.35);
+          }
+
+          .xaaj-contact-content {
+            width: min(1240px, calc(100% - 52px));
+            padding: 90px 0 55px;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout {
+            margin-top: 0 !important;
+            grid-template-columns: minmax(0,1.22fr) minmax(300px,.78fr) !important;
+            gap: 0 !important;
+            border-top: 1px solid rgba(41,40,37,.14);
+            border-bottom: 1px solid rgba(41,40,37,.14);
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > form {
+            padding: 52px 58px 58px 0 !important;
+            border: 0 !important;
+            border-right: 1px solid rgba(41,40,37,.14) !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > form h2 {
+            font-size: clamp(38px,4.5vw,58px) !important;
+            line-height: .95;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > div {
+            margin: 0 !important;
+            padding: 52px 0 48px 56px !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            color: #292825 !important;
+            min-height: 100% !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > div p,
+          .xaaj-contact-content .xaaj-contact-layout > div a {
+            color: #706d67 !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > div .eyebrow {
+            color: #a84d35 !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > div h2 {
+            font-size: clamp(36px,4vw,54px) !important;
+            line-height: .95;
+          }
+
+          .xaaj-contact-content .xaaj-contact-fields {
+            gap: 18px 24px !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-fields input,
+          .xaaj-contact-content .xaaj-contact-fields textarea {
+            border-radius: 0 !important;
+            border: 0 !important;
+            border-bottom: 1px solid #cbc5bb !important;
+            background: transparent !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-fields input:focus,
+          .xaaj-contact-content .xaaj-contact-fields textarea:focus {
+            border-color: #183126 !important;
+            box-shadow: none !important;
+          }
+
+          .xaaj-contact-content .xaaj-contact-layout > form > button {
+            border-radius: 0 !important;
+            background: #183126 !important;
+            margin-top: 15px !important;
+          }
+
+          .xaaj-contact-response-note {
+            padding: 18px 0 30px;
+          }
+
+          @media (max-width: 900px) {
+            .xaaj-contact-hero {
+              grid-template-columns: 1fr;
+            }
+
+            .xaaj-contact-content .xaaj-contact-layout {
+              grid-template-columns: 1fr !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-layout > form {
+              padding-right: 0 !important;
+              border-right: 0 !important;
+              border-bottom: 1px solid rgba(41,40,37,.14) !important;
+            }
+
+            .xaaj-contact-content .xaaj-contact-layout > div {
+              padding: 42px 0 !important;
+            }
+          }
+
+          @media (max-width: 560px) {
+            .xaaj-contact-hero h1 {
+              font-size: clamp(53px,15vw,75px);
+            }
+
+            .xaaj-contact-hero {
+              min-height: auto;
+            }
+
+            .xaaj-contact-content {
+              width: calc(100% - 30px);
+              padding-top: 60px;
+            }
+
+            .xaaj-contact-content .xaaj-contact-layout > form,
+            .xaaj-contact-content .xaaj-contact-layout > div {
+              padding-top: 34px !important;
+              padding-bottom: 34px !important;
+            }
+          }
         `}</style>
 
         <main className="xaaj-contact-page">
-          <section className="xaaj-contact-hero">
-            <div>
-              <span className="xaaj-contact-kicker">Contact XAAJ</span>
-              <h1>Let’s make <em>something clear.</em></h1>
-            </div>
-
-            <div className="xaaj-contact-hero-copy">
-              <p>
-                Have a question about an order, a product, delivery, or simply
-                want to say hello? Our team is here and happy to help.
-              </p>
-
-              <div className="xaaj-contact-mini">
-                <a href="mailto:customercare@xaaj.in">
-                  <small>Email</small>
-                  <strong>Write to us ↗</strong>
-                </a>
-
-                <a href="tel:+919899446117">
-                  <small>Phone / WhatsApp</small>
-                  <strong>Talk to us ↗</strong>
-                </a>
-              </div>
-            </div>
-          </section>
-
           <section className="xaaj-contact-content">
             <ContactForm />
           </section>
@@ -9139,6 +12687,80 @@ function App() {
 
 
 // ============================================================
+// PREMIUM GLOBAL SMOOTH SCROLL
+// ============================================================
+
+function SmoothScrollShell({ children }) {
+  const main = useRef(null)
+  const smoother = useRef(null)
+
+  useLayoutEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return undefined
+    }
+
+    const wrapper = main.current
+    const content = wrapper?.querySelector('#smooth-content')
+
+    if (!wrapper || !content) {
+      return undefined
+    }
+
+    smoother.current = ScrollSmoother.create({
+      wrapper,
+      content,
+      smooth: 1.25,
+      effects: true,
+      normalizeScroll: false,
+      ignoreMobileResize: true
+    })
+
+    ScrollTrigger.refresh()
+
+    return () => {
+      smoother.current?.kill()
+      smoother.current = null
+    }
+  }, [])
+
+  return (
+    <div
+      id="smooth-wrapper"
+      ref={main}
+      className="xaaj-smooth-wrapper"
+    >
+      <div id="smooth-content" className="xaaj-smooth-content">
+        {children}
+      </div>
+
+      <style>{`
+        html {
+          scroll-behavior: auto;
+        }
+
+        .xaaj-smooth-wrapper {
+          width: 100%;
+          min-height: 100vh;
+        }
+
+        .xaaj-smooth-content {
+          width: 100%;
+          min-height: 100vh;
+          overflow: visible;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .xaaj-smooth-content {
+            transform: none !important;
+          }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+
+// ============================================================
 // APP ROOT
 // ============================================================
 
@@ -9152,7 +12774,11 @@ export default function AppRoot() {
 
         <BrowserRouter>
 
-          <App />
+          <SmoothScrollShell>
+
+            <App />
+
+          </SmoothScrollShell>
 
         </BrowserRouter>
 

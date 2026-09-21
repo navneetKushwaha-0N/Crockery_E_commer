@@ -1,0 +1,124 @@
+/* ==========================================================
+   XAAJ â€” EDITORIAL FONT SYSTEM
+   Matches the reference look:
+   - Cormorant Garamond: headings / editorial typography
+   - Assistant: body / navigation / UI
+   ========================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&display=swap');
+
+:root {
+  --xaaj-heading-font: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --xaaj-body-font: 'Assistant', Arial, Helvetica, sans-serif;
+}
+
+/* Base / UI */
+html,
+body,
+#root {
+  font-family: var(--xaaj-body-font) !important;
+}
+
+body,
+button,
+input,
+textarea,
+select,
+option,
+a {
+  font-family: var(--xaaj-body-font);
+}
+
+/* Editorial / serif typography */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.hero h1,
+.intro h2,
+.section-heading h2,
+.feature h2,
+.newsletter h2,
+.product-title-link h3,
+.product-card h3,
+.blog h1,
+.blog h2,
+.blog h3,
+.xaaj-blog-shell h1,
+.xaaj-blog-shell h2,
+.xaaj-blog-shell h3,
+.xaaj-blog-shell h4,
+.xaaj-about-page h1,
+.xaaj-about-page h2,
+.xaaj-about-page h3,
+.policy-page h1,
+.policy-page h2,
+.policy-page h3,
+.xaaj-contact-page h1,
+.xaaj-contact-page h2,
+.xaaj-contact-page h3 {
+  font-family: var(--xaaj-heading-font) !important;
+}
+
+/* Keep the small functional UI in the sans font */
+.announcement,
+.nav,
+.header,
+.header-actions,
+.searchbar,
+.button,
+.tag,
+.rating,
+.price,
+.add,
+.eyebrow,
+.hero-controls,
+.hero-counter,
+.hero-dot,
+.hero-note,
+.product-category,
+.low-stock,
+.trust-bar,
+.trust-item,
+.newsletter form,
+.newsletter input,
+.newsletter button,
+.footer,
+.footer a {
+  font-family: var(--xaaj-body-font) !important;
+}
+
+/* Brand wordmark gets the editorial face */
+.brand span {
+  font-family: var(--xaaj-heading-font) !important;
+  font-weight: 500;
+  letter-spacing: .055em;
+}
+
+/* Editorial italic treatment */
+h1 em,
+h2 em,
+h3 em,
+.hero h1 em,
+.intro h2 em,
+.feature h2 em,
+.newsletter h2 em {
+  font-family: var(--xaaj-heading-font) !important;
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* Inline Georgia declarations in JSX should visually match too. */
+[style*="Georgia"],
+[style*="Times New Roman"] {
+  font-family: var(--xaaj-heading-font) !important;
+}
+
+/* Better typography rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
