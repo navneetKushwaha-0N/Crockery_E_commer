@@ -283,24 +283,6 @@ function Header() {
     return () => clearMegaCloseTimer()
   }, [])
 
-  // On phones, keep the page itself locked while the navigation drawer is open.
-  // The drawer gets its own touch scrolling, so the background never fights
-  // with the menu and the opening/closing gesture feels stable.
-  useEffect(() => {
-    if (!isMobileViewport() || !open) return undefined
-
-    const previousOverflow = document.body.style.overflow
-    const previousOverscroll = document.body.style.overscrollBehaviorY
-
-    document.body.style.overflow = 'hidden'
-    document.body.style.overscrollBehaviorY = 'none'
-
-    return () => {
-      document.body.style.overflow = previousOverflow
-      document.body.style.overscrollBehaviorY = previousOverscroll
-    }
-  }, [open])
-
   // GSAP-powered mega-menu entrance. The menu itself remains in React state;
   // GSAP only animates it, so it cannot interfere with the site's content reveal.
   useLayoutEffect(() => {
@@ -1277,61 +1259,6 @@ function Header() {
         }
 
         @media (max-width: 850px) {
-          /* ============================================================
-             MOBILE DRAWER — touch-first, smooth and lightweight
-             ============================================================ */
-          .xaaj-navigation-wrap {
-            position: relative;
-            z-index: 6000;
-          }
-
-          .nav {
-            display: flex !important;
-            visibility: hidden;
-            opacity: 0;
-            pointer-events: none;
-            transform: translate3d(100%, 0, 0);
-            will-change: transform, opacity;
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
-            transition:
-              transform .38s cubic-bezier(.22,1,.36,1),
-              opacity .22s ease,
-              visibility 0s linear .38s;
-            overflow-x: hidden;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior: contain;
-            touch-action: pan-y;
-            scrollbar-width: none;
-          }
-
-          .nav::-webkit-scrollbar {
-            display: none;
-          }
-
-          .nav.nav-open {
-            visibility: visible;
-            opacity: 1;
-            pointer-events: auto;
-            transform: translate3d(0, 0, 0);
-            transition:
-              transform .42s cubic-bezier(.22,1,.36,1),
-              opacity .24s ease,
-              visibility 0s linear 0s;
-          }
-
-          .nav > *,
-          .nav .xaaj-nav-mega-item,
-          .nav > a {
-            -webkit-tap-highlight-color: transparent;
-          }
-
-          .nav > a,
-          .nav .xaaj-nav-mega-item {
-            flex-shrink: 0;
-          }
-
           /* Phones: only Shop keeps a dropdown. New Arrivals and Blog stay
              simple links, which makes the touch navigation predictable. */
           .xaaj-nav-mega-item:has(> .xaaj-nav-mega-trigger) > .xaaj-content-mega-menu {
@@ -2245,10 +2172,7 @@ function Home() {
       return undefined
     }
 
-    if (
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
-      window.matchMedia('(max-width: 850px)').matches
-    ) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       return undefined
     }
 
@@ -3078,30 +3002,13 @@ function Home() {
               }
 
               .xaaj-category-stage {
-                height: auto;
-                min-height: 0;
-                display: grid;
-                grid-template-columns: 1fr;
-                align-items: stretch;
-                justify-items: center;
-                gap: 30px;
+                height: 58vh;
+                min-height: 400px;
                 transform: none;
               }
 
-              .xaaj-category-card {
-                position: relative;
-                inset: auto;
-                width: 100%;
-                min-height: 0;
-                display: flex;
-                visibility: visible !important;
-                opacity: 1 !important;
-                transform: none !important;
-                will-change: auto;
-              }
-
               .xaaj-category-card-link {
-                width: min(470px, 100%);
+                width: min(470px, 88%);
               }
 
               .xaaj-category-image-wrap {
@@ -4465,146 +4372,6 @@ function Footer() {
           .xaaj-footer-bottom {
             align-items: flex-start;
             flex-direction: column;
-          }
-        }
-
-        /* ============================================================
-           MOBILE FOOTER — compact editorial layout
-           ============================================================ */
-        @media (max-width: 680px) {
-          .xaaj-footer-premium {
-            overflow: hidden;
-          }
-
-          .xaaj-footer-inner {
-            width: min(100% - 32px, 560px);
-            padding-top: 38px;
-          }
-
-          .xaaj-footer-columns {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 28px 18px;
-          }
-
-          .xaaj-footer-brand {
-            grid-column: 1 / -1;
-          }
-
-          .xaaj-footer-brand-logo {
-            width: 138px;
-            max-width: 46vw;
-            margin-bottom: 20px;
-          }
-
-          .xaaj-footer-brand-caption {
-            max-width: 255px;
-            margin-bottom: 18px !important;
-            font-size: 11px !important;
-            line-height: 1.55 !important;
-          }
-
-          .xaaj-footer-country {
-            gap: 8px;
-            margin-bottom: 20px !important;
-            font-size: 12px !important;
-          }
-
-          .xaaj-footer-emblem {
-            width: 23px;
-            height: 23px;
-            flex-basis: 23px;
-            font-size: 11px;
-          }
-
-          .xaaj-footer-locator {
-            width: 100%;
-            max-width: 300px;
-          }
-
-          .xaaj-footer-locator-title {
-            margin-bottom: 9px !important;
-            font-size: 10px !important;
-            letter-spacing: 1.1px !important;
-          }
-
-          .xaaj-footer-locator-trigger {
-            min-height: 48px;
-            padding: 0 13px;
-            font-size: 12px;
-          }
-
-          .xaaj-footer-column h4 {
-            margin-bottom: 14px;
-            font-size: 10px;
-            letter-spacing: 1px;
-          }
-
-          .xaaj-footer-column a,
-          .xaaj-footer-column span {
-            margin-bottom: 10px;
-            font-size: 12px;
-            line-height: 1.4;
-          }
-
-          .xaaj-footer-connect {
-            grid-column: 1 / -1;
-          }
-
-          .xaaj-footer-connect p {
-            margin-bottom: 10px;
-            font-size: 12px;
-          }
-
-          .xaaj-footer-connect a {
-            margin-bottom: 10px;
-            font-size: 12px;
-          }
-
-          .xaaj-footer-social {
-            gap: 13px;
-            margin-top: 15px;
-            padding-top: 14px;
-          }
-
-          .xaaj-footer-social a {
-            width: 28px;
-            height: 28px;
-          }
-
-          .xaaj-footer-art {
-            height: 150px;
-            margin-top: 12px;
-          }
-
-          .xaaj-footer-art-checker {
-            inset: 38px 0 0;
-            background-size: 26px 26px;
-          }
-
-          .xaaj-footer-botanical {
-            height: 150px;
-            bottom: -14px;
-          }
-
-          .xaaj-footer-bottom {
-            gap: 7px;
-            padding: 14px 0 18px;
-            font-size: 9px;
-            line-height: 1.45;
-          }
-        }
-
-        @media (max-width: 380px) {
-          .xaaj-footer-brand-logo {
-            width: 126px;
-          }
-
-          .xaaj-footer-inner {
-            width: min(100% - 26px, 560px);
-          }
-
-          .xaaj-footer-columns {
-            gap: 25px 14px;
           }
         }
 
@@ -13345,22 +13112,6 @@ function SmoothScrollShell({ children }) {
         }
 
         @media (max-width: 850px) {
-          html,
-          body {
-            scroll-behavior: auto !important;
-            overscroll-behavior-x: none;
-            -webkit-overflow-scrolling: touch;
-          }
-
-          #smooth-wrapper,
-          #smooth-content {
-            width: 100%;
-            min-width: 0;
-            overflow: visible !important;
-            transform: none !important;
-            will-change: auto !important;
-          }
-
           .product-grid {
             width: 100% !important;
             min-width: 0 !important;
