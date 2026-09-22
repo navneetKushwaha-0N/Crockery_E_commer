@@ -1442,15 +1442,18 @@ const isAdminPreviewMode = () => {
 }
 
 const productCardCartStyles = `
-  /* XAAJ product cards: keep the silhouette refined, not overly rounded. */
+  /* Reduced product-card corner radius */
   .product-card {
-    border-radius: 6px !important;
+    border-radius: 8px !important;
   }
 
   .product-card .product-image,
   .product-card .product-image-link {
-    border-radius: 6px !important;
-    overflow: hidden !important;
+    border-radius: 8px !important;
+  }
+
+  .product-card .product-image img {
+    border-radius: 8px !important;
   }
 
   .product-card .xaaj-cart-button {
@@ -5092,34 +5095,11 @@ function Product() {
                     add(product)
                   }
 
-                  // Premium image-to-cart animation.
-                  const image = document.querySelector('.detail-image img')
-                  const cartTarget = document.querySelector(
-                    '[data-xaaj-cart-target="true"]'
-                  )
-                  const imageRect = image?.getBoundingClientRect()
-                  const cartRect = cartTarget?.getBoundingClientRect()
-
-                  if (imageRect && cartRect) {
-                    const flyingImage = image.cloneNode(true)
-                    const startX = imageRect.left + imageRect.width / 2 - 30
-                    const startY = imageRect.top + imageRect.height / 2 - 30
-                    const endX = cartRect.left + cartRect.width / 2 - 30
-                    const endY = cartRect.top + cartRect.height / 2 - 30
-
-                    flyingImage.className = 'xaaj-flying-cart-image'
-                    flyingImage.style.left = `${startX}px`
-                    flyingImage.style.top = `${startY}px`
-                    flyingImage.style.setProperty('--xaaj-x', `${endX - startX}px`)
-                    flyingImage.style.setProperty('--xaaj-y', `${endY - startY}px`)
-
-                    document.body.appendChild(flyingImage)
-                    flyingImage.addEventListener(
-                      'animationend',
-                      () => flyingImage.remove(),
-                      { once: true }
-                    )
-                  }
+                  // Keep the add-to-cart interaction lightweight.
+                  // Do not clone the large product image into <body>: without a
+                  // guaranteed animation stylesheet it can render at full size
+                  // and cover the product page. The header cart bump provides
+                  // the visual confirmation instead.
 
                   window.dispatchEvent(new CustomEvent('xaaj:cart-added'))
                   setDetailCartPulse(true)
