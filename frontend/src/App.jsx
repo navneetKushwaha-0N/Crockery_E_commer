@@ -274,6 +274,28 @@ function Header() {
     setActiveMegaMenu(null)
   }
 
+  // Lock the page behind the mobile drawer so one touch gesture never
+  // competes between the drawer and the document.
+  useEffect(() => {
+    if (!isMobileViewport() || !open) return undefined
+
+    const html = document.documentElement
+    const body = document.body
+    const previousHtmlOverflow = html.style.overflow
+    const previousBodyOverflow = body.style.overflow
+    const previousBodyTouchAction = body.style.touchAction
+
+    html.style.overflow = 'hidden'
+    body.style.overflow = 'hidden'
+    body.style.touchAction = 'none'
+
+    return () => {
+      html.style.overflow = previousHtmlOverflow
+      body.style.overflow = previousBodyOverflow
+      body.style.touchAction = previousBodyTouchAction
+    }
+  }, [open])
+
   const goToShop = (target = '/shop') => {
     closeMenus()
     navigate(target)
@@ -1259,6 +1281,45 @@ function Header() {
         }
 
         @media (max-width: 850px) {
+          /* ======================================================
+             MOBILE DRAWER — smooth, lightweight, touch-first
+             ====================================================== */
+          .nav {
+            display: flex !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            transform: translate3d(0, -12px, 0) !important;
+            pointer-events: none !important;
+            will-change: transform, opacity;
+            transition: transform .34s cubic-bezier(.22,1,.36,1), opacity .22s ease, visibility 0s linear .34s;
+          }
+
+          .nav.nav-open {
+            visibility: visible !important;
+            opacity: 1 !important;
+            transform: translate3d(0, 0, 0) !important;
+            pointer-events: auto !important;
+            transition: transform .34s cubic-bezier(.22,1,.36,1), opacity .22s ease, visibility 0s linear 0s;
+            overscroll-behavior-y: contain;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+          }
+
+          .nav.nav-open > * {
+            animation: xaajMobileDrawerItemIn .28s cubic-bezier(.22,1,.36,1) both;
+          }
+
+          .nav.nav-open > *:nth-child(2) { animation-delay: .025s; }
+          .nav.nav-open > *:nth-child(3) { animation-delay: .05s; }
+          .nav.nav-open > *:nth-child(4) { animation-delay: .075s; }
+          .nav.nav-open > *:nth-child(5) { animation-delay: .10s; }
+          .nav.nav-open > *:nth-child(6) { animation-delay: .125s; }
+
+          @keyframes xaajMobileDrawerItemIn {
+            from { opacity: 0; transform: translate3d(0, 7px, 0); }
+            to { opacity: 1; transform: translate3d(0, 0, 0); }
+          }
+
           /* Phones: only Shop keeps a dropdown. New Arrivals and Blog stay
              simple links, which makes the touch navigation predictable. */
           .xaaj-nav-mega-item:has(> .xaaj-nav-mega-trigger) > .xaaj-content-mega-menu {
@@ -2172,7 +2233,12 @@ function Home() {
       return undefined
     }
 
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    // Mobile uses normal document flow. The pinned GSAP category scene is
+    // desktop-only because pin/scrub work can make touch scrolling hitch.
+    if (
+      window.matchMedia('(max-width: 850px)').matches ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
       return undefined
     }
 
@@ -13068,38 +13134,23 @@ function SmoothScrollShell({ children }) {
       return undefined
     }
 
-    // Use a lighter smoothing value on touch/mobile devices.
-    // This keeps the touch experience natural instead of feeling delayed.
-    const isMobile = window.matchMedia(
-      '(max-width: 850px)'
-    ).matches
+    // Phones stay on native browser scrolling. ScrollSmoother moves the
+    // page with transforms and interpolation; on touch screens that can
+    // feel delayed instead of smooth. Desktop keeps ScrollSmoother.
+    if (window.matchMedia('(max-width: 850px)').matches) {
+      return undefined
+    }
 
     const ctx = gsap.context(() => {
       smoother.current = ScrollSmoother.create({
         wrapper,
         content,
-
-        // Desktop: premium smooth interpolation.
-        // Mobile: lighter smoothing for natural finger scrolling.
-        smooth: isMobile ? 0.65 : 1.2,
-
-        // ScrollSmoother touch smoothing.
-        // A small value avoids excessive touch lag.
-        smoothTouch: isMobile ? 0.15 : false,
-
-        // Keep ScrollTrigger data-speed/data-lag effects working.
+        smooth: 1.2,
         effects: true,
-
-        // Do not override the browser's scroll normalization.
         normalizeScroll: false,
-
-        // Helps prevent mobile viewport-resize jumps.
         ignoreMobileResize: true,
-
-        // Do not aggressively prevent native browser input.
         preventDefault: false
       })
-
       // Recalculate all existing ScrollTrigger positions after
       // ScrollSmoother has been initialized.
       ScrollTrigger.refresh()
@@ -13165,6 +13216,48 @@ function SmoothScrollShell({ children }) {
            ================================================== */
 
         @media (max-width: 850px) {
+
+          /* Native scrolling on touch devices: no transformed scrolling layer. */
+          html,
+          body {
+            scroll-behavior: auto !important;
+            overscroll-behavior-x: none;
+          }
+
+          #smooth-wrapper,
+          #smooth-content,
+          .xaaj-smooth-wrapper,
+          .xaaj-smooth-content {
+            transform: none !important;
+            will-change: auto !important;
+            overflow: visible !important;
+          }
+
+          /* The cinematic category pin is desktop-only on phones. */
+          .xaaj-category-cinematic {
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+          }
+
+          .xaaj-category-stage {
+            height: auto !important;
+            min-height: 0 !important;
+            display: grid !important;
+            gap: 34px !important;
+            transform: none !important;
+          }
+
+          .xaaj-category-card {
+            position: relative !important;
+            inset: auto !important;
+            width: 100% !important;
+            height: auto !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            transform: none !important;
+            will-change: auto !important;
+          }
 
           .xaaj-smooth-wrapper {
             width: 100%;
