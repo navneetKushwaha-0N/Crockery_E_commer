@@ -244,12 +244,22 @@ function Header() {
     }
   }
 
+  const isMobileViewport = () =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 850px)').matches
+
   const openMegaMenu = menu => {
+    // On phones, dropdown state is controlled only by the Shop button.
+    // This prevents touch/hover emulation from opening/closing menus twice.
+    if (isMobileViewport()) return
+
     clearMegaCloseTimer()
     setActiveMegaMenu(menu)
   }
 
   const scheduleMegaMenuClose = () => {
+    // Mobile uses explicit tap-to-open / tap-to-close behavior.
+    if (isMobileViewport()) return
+
     clearMegaCloseTimer()
 
     megaCloseTimer.current = window.setTimeout(() => {
@@ -284,21 +294,22 @@ function Header() {
 
     const items = menu.querySelectorAll('[data-xaaj-mega-item]')
 
+    const mobile = isMobileViewport()
     const ctx = gsap.context(() => {
       gsap.fromTo(
         menu,
         {
           autoAlpha: 0,
-          y: -14,
-          scaleY: 0.985,
+          y: mobile ? -6 : -14,
+          scaleY: mobile ? 0.995 : 0.985,
           transformOrigin: 'top center'
         },
         {
           autoAlpha: 1,
           y: 0,
           scaleY: 1,
-          duration: 0.42,
-          ease: 'power3.out',
+          duration: mobile ? 0.24 : 0.42,
+          ease: mobile ? 'power2.out' : 'power3.out',
           overwrite: true
         }
       )
@@ -308,14 +319,14 @@ function Header() {
           items,
           {
             autoAlpha: 0,
-            y: 10
+            y: mobile ? 4 : 10
           },
           {
             autoAlpha: 1,
             y: 0,
-            duration: 0.34,
-            delay: 0.07,
-            stagger: 0.035,
+            duration: mobile ? 0.2 : 0.34,
+            delay: mobile ? 0.02 : 0.07,
+            stagger: mobile ? 0.018 : 0.035,
             ease: 'power2.out',
             overwrite: true
           }
@@ -1248,6 +1259,67 @@ function Header() {
         }
 
         @media (max-width: 850px) {
+          /* Phones: only Shop keeps a dropdown. New Arrivals and Blog stay
+             simple links, which makes the touch navigation predictable. */
+          .xaaj-nav-mega-item:has(> .xaaj-nav-mega-trigger) > .xaaj-content-mega-menu {
+            display: none !important;
+          }
+
+          .xaaj-nav-mega-item:has(> .xaaj-nav-mega-trigger) > .xaaj-nav-mega-trigger .nav-shop-chevron {
+            display: none !important;
+          }
+
+          .xaaj-nav-mega-item:has(> .xaaj-nav-mega-trigger) {
+            width: 100%;
+          }
+
+          .xaaj-nav-mega-item:has(> .xaaj-nav-mega-trigger) > .xaaj-nav-mega-trigger {
+            width: 100%;
+            justify-content: space-between;
+          }
+
+          /* Shop is the only touch dropdown. Keep it compact and scrollable
+             inside the fixed mobile header instead of creating a giant page. */
+          .xaaj-shop-mega-menu {
+            max-height: calc(100svh - 112px);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .xaaj-shop-mega-inner {
+            padding: 18px 18px 20px;
+            gap: 18px;
+          }
+
+          .xaaj-shop-mega-inner .xaaj-mega-column {
+            padding-bottom: 15px;
+          }
+
+          .xaaj-shop-mega-inner .xaaj-mega-footer {
+            margin-top: 0;
+            padding-top: 15px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+          }
+
+          .xaaj-shop-mega-inner .xaaj-mega-feature-grid {
+            gap: 10px;
+          }
+
+          .xaaj-shop-mega-inner .xaaj-mega-feature-image {
+            aspect-ratio: 1.25 / 1;
+          }
+
+          .xaaj-shop-mega-inner .xaaj-mega-column > a,
+          .xaaj-shop-mega-inner .xaaj-mega-main-link {
+            min-height: 34px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+          }
+
           .xaaj-shop-mega-menu,
           .xaaj-content-mega-menu {
             position: relative;
@@ -1588,6 +1660,77 @@ const productCardCartStyles = `
   }
 
   @media (max-width: 850px) {
+    /* Two clean columns on phones; never let a card force horizontal scroll. */
+    .product-card {
+      min-width: 0 !important;
+      width: 100% !important;
+      overflow: hidden !important;
+    }
+
+    .product-card .product-image {
+      width: 100% !important;
+      aspect-ratio: 1 / 1.08 !important;
+      min-height: 0 !important;
+    }
+
+    .product-card .product-image img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+    }
+
+    .product-card .product-copy {
+      min-width: 0 !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+
+    .product-card .product-title-link h3 {
+      font-size: 13px !important;
+      line-height: 1.3 !important;
+      display: -webkit-box !important;
+      -webkit-line-clamp: 2 !important;
+      -webkit-box-orient: vertical !important;
+      overflow: hidden !important;
+    }
+
+    .product-card .product-description {
+      font-size: 11px !important;
+      line-height: 1.45 !important;
+      display: -webkit-box !important;
+      -webkit-line-clamp: 2 !important;
+      -webkit-box-orient: vertical !important;
+      overflow: hidden !important;
+    }
+
+    .product-card .product-bottom-row {
+      gap: 7px !important;
+      align-items: center !important;
+    }
+
+    .product-card .price strong {
+      font-size: 13px !important;
+    }
+
+    .product-card .price del {
+      font-size: 10px !important;
+    }
+
+    .product-card .save-badge {
+      display: none !important;
+    }
+
+    .product-card .rating {
+      max-width: 100% !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+    }
+
+    .product-card .heart {
+      width: 34px !important;
+      height: 34px !important;
+    }
+
     .product-card .xaaj-cart-button {
       width: 42px !important;
       min-width: 42px !important;
@@ -2153,6 +2296,13 @@ function Home() {
   // ==========================================================
 
   useLayoutEffect(() => {
+    // Mobile uses normal document scrolling here. The pinned hero + overlap
+    // is intentionally desktop-only because it causes scroll hitching on
+    // smaller devices.
+    if (window.matchMedia('(max-width: 850px)').matches) {
+      return undefined
+    }
+
     const stage = heroOverlapStageRef.current
     if (!stage) return undefined
 
@@ -12902,7 +13052,12 @@ function SmoothScrollShell({ children }) {
   const smoother = useRef(null)
 
   useLayoutEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      window.matchMedia('(max-width: 850px)').matches
+    ) {
+      // Phones use native browser scrolling. This avoids the extra transform
+      // work from ScrollSmoother and removes the mobile scroll hitching.
       return undefined
     }
 
@@ -12954,6 +13109,23 @@ function SmoothScrollShell({ children }) {
           width: 100%;
           min-height: 100vh;
           overflow: visible;
+        }
+
+        @media (max-width: 850px) {
+          .product-grid {
+            width: 100% !important;
+            min-width: 0 !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 18px 10px !important;
+          }
+
+          .shop-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+
+          .product-grid > * {
+            min-width: 0 !important;
+          }
         }
 
         @media (prefers-reduced-motion: reduce) {
