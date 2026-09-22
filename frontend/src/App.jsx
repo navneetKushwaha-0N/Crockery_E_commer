@@ -13052,15 +13052,6 @@ function SmoothScrollShell({ children }) {
   const smoother = useRef(null)
 
   useLayoutEffect(() => {
-    if (
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
-      window.matchMedia('(max-width: 850px)').matches
-    ) {
-      // Phones use native browser scrolling. This avoids the extra transform
-      // work from ScrollSmoother and removes the mobile scroll hitching.
-      return undefined
-    }
-
     const wrapper = main.current
     const content = wrapper?.querySelector('#smooth-content')
 
@@ -13068,20 +13059,56 @@ function SmoothScrollShell({ children }) {
       return undefined
     }
 
-    smoother.current = ScrollSmoother.create({
-      wrapper,
-      content,
-      smooth: 1.25,
-      effects: true,
-      normalizeScroll: false,
-      ignoreMobileResize: true
-    })
+    const reducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches
 
-    ScrollTrigger.refresh()
+    // Respect the user's accessibility preference.
+    if (reducedMotion) {
+      return undefined
+    }
+
+    // Use a lighter smoothing value on touch/mobile devices.
+    // This keeps the touch experience natural instead of feeling delayed.
+    const isMobile = window.matchMedia(
+      '(max-width: 850px)'
+    ).matches
+
+    const ctx = gsap.context(() => {
+      smoother.current = ScrollSmoother.create({
+        wrapper,
+        content,
+
+        // Desktop: premium smooth interpolation.
+        // Mobile: lighter smoothing for natural finger scrolling.
+        smooth: isMobile ? 0.65 : 1.2,
+
+        // ScrollSmoother touch smoothing.
+        // A small value avoids excessive touch lag.
+        smoothTouch: isMobile ? 0.15 : false,
+
+        // Keep ScrollTrigger data-speed/data-lag effects working.
+        effects: true,
+
+        // Do not override the browser's scroll normalization.
+        normalizeScroll: false,
+
+        // Helps prevent mobile viewport-resize jumps.
+        ignoreMobileResize: true,
+
+        // Do not aggressively prevent native browser input.
+        preventDefault: false
+      })
+
+      // Recalculate all existing ScrollTrigger positions after
+      // ScrollSmoother has been initialized.
+      ScrollTrigger.refresh()
+    }, wrapper)
 
     return () => {
       smoother.current?.kill()
       smoother.current = null
+      ctx.revert()
     }
   }, [])
 
@@ -13091,36 +13118,79 @@ function SmoothScrollShell({ children }) {
       ref={main}
       className="xaaj-smooth-wrapper"
     >
-      <div id="smooth-content" className="xaaj-smooth-content">
+      <div
+        id="smooth-content"
+        className="xaaj-smooth-content"
+      >
         {children}
       </div>
 
       <style>{`
+        /* ==================================================
+           GLOBAL SMOOTH SCROLL
+           ================================================== */
+
         html {
           scroll-behavior: auto;
         }
 
+        body {
+          margin: 0;
+          width: 100%;
+          min-height: 100%;
+        }
+
+        #root {
+          width: 100%;
+          min-height: 100vh;
+        }
+
         .xaaj-smooth-wrapper {
+          position: relative;
           width: 100%;
           min-height: 100vh;
         }
 
         .xaaj-smooth-content {
+          position: relative;
           width: 100%;
           min-height: 100vh;
           overflow: visible;
+          will-change: transform;
         }
 
+
+        /* ==================================================
+           MOBILE
+           ================================================== */
+
         @media (max-width: 850px) {
+
+          .xaaj-smooth-wrapper {
+            width: 100%;
+            min-height: 100svh;
+          }
+
+          .xaaj-smooth-content {
+            width: 100%;
+            min-height: 100svh;
+            overflow: visible;
+          }
+
+          /* Keep product grids stable on mobile. */
           .product-grid {
             width: 100% !important;
             min-width: 0 !important;
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            grid-template-columns:
+              repeat(2, minmax(0, 1fr)) !important;
             gap: 18px 10px !important;
           }
 
           .shop-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            grid-template-columns:
+              repeat(2, minmax(0, 1fr)) !important;
           }
 
           .product-grid > * {
@@ -13128,9 +13198,36 @@ function SmoothScrollShell({ children }) {
           }
         }
 
+
+        /* ==================================================
+           SMALL PHONES
+           ================================================== */
+
+        @media (max-width: 480px) {
+
+          .product-grid {
+            gap: 16px 8px !important;
+          }
+
+          .shop-grid {
+            gap: 16px 8px !important;
+          }
+        }
+
+
+        /* ==================================================
+           REDUCED MOTION
+           ================================================== */
+
         @media (prefers-reduced-motion: reduce) {
+
+          html {
+            scroll-behavior: auto !important;
+          }
+
           .xaaj-smooth-content {
             transform: none !important;
+            will-change: auto !important;
           }
         }
       `}</style>
