@@ -2756,6 +2756,36 @@ function Home() {
           className="xaaj-category-cinematic"
           aria-label="Shop by form"
         >
+          {/* Mobile-only category layout: restored to the original
+              compact circular collection row for natural phone scrolling. */}
+          <div className="xaaj-mobile-category-collections">
+            <div className="xaaj-mobile-category-heading">
+              <span>SHOP BY CATEGORY</span>
+              <h2>Explore Our Collections</h2>
+              <p>Find the perfect pieces for every occasion.</p>
+            </div>
+
+            <div className="xaaj-mobile-category-scroll" aria-label="Shop by category">
+              {categories.map(category => (
+                <Link
+                  key={`mobile-category-${category.name}`}
+                  to={`/shop?category=${encodeURIComponent(category.name)}`}
+                  className="xaaj-mobile-category-item"
+                >
+                  <div className="xaaj-mobile-category-image">
+                    <img
+                      src={category.image}
+                      alt={category.name}
+                      loading="lazy"
+                    />
+                  </div>
+                  <strong>{category.name}</strong>
+                  <span>Shop Now <ArrowRight size={9} /></span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
           <div className="xaaj-category-cinematic-inner">
 
             <div className="xaaj-category-copy">
@@ -2818,6 +2848,10 @@ function Home() {
           </div>
 
           <style>{`
+            .xaaj-mobile-category-collections {
+              display: none;
+            }
+
             .xaaj-category-cinematic {
               position: relative;
               min-height: 100vh;
@@ -2977,7 +3011,132 @@ function Home() {
 
             @media (max-width: 850px) {
               /* =================================================
+                 MOBILE = ORIGINAL COLLECTIONS STRIP
+                 Keep this section compact and fully native-scrollable.
+                 No pinning, scrub, or cinematic category animation.
+                 ================================================= */
+
+              .xaaj-category-cinematic {
+                background: #f8f5ef !important;
+                overflow: hidden !important;
+              }
+
+              .xaaj-mobile-category-collections {
+                display: block;
+                width: 100%;
+                padding: 20px 0 18px;
+                background: #f8f5ef;
+              }
+
+              .xaaj-mobile-category-heading {
+                text-align: center;
+                padding: 0 18px 15px;
+              }
+
+              .xaaj-mobile-category-heading > span {
+                display: block;
+                margin-bottom: 3px;
+                color: #817a71;
+                font-size: 7px;
+                line-height: 1.2;
+                font-weight: 700;
+                letter-spacing: 2px;
+              }
+
+              .xaaj-mobile-category-heading h2 {
+                margin: 0;
+                color: #292824;
+                font-family: Georgia, 'Times New Roman', serif;
+                font-size: clamp(24px, 7vw, 31px);
+                line-height: 1.05;
+                font-weight: 400;
+                letter-spacing: -.035em;
+              }
+
+              .xaaj-mobile-category-heading p {
+                margin: 5px 0 0;
+                color: #817a71;
+                font-size: 9px;
+                line-height: 1.4;
+              }
+
+              .xaaj-mobile-category-scroll {
+                display: flex;
+                gap: 16px;
+                width: 100%;
+                padding: 0 18px 4px;
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior-x: contain;
+                scroll-snap-type: x proximity;
+                scrollbar-width: none;
+              }
+
+              .xaaj-mobile-category-scroll::-webkit-scrollbar {
+                display: none;
+              }
+
+              .xaaj-mobile-category-item {
+                flex: 0 0 72px;
+                width: 72px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                color: #292824;
+                text-decoration: none;
+                text-align: center;
+                scroll-snap-align: start;
+                -webkit-tap-highlight-color: transparent;
+              }
+
+              .xaaj-mobile-category-image {
+                width: 68px;
+                height: 68px;
+                border-radius: 50%;
+                overflow: hidden;
+                background: #e8e1d7;
+                box-shadow: 0 2px 9px rgba(41,40,36,.09);
+                border: 1px solid rgba(41,40,36,.06);
+              }
+
+              .xaaj-mobile-category-image img {
+                width: 100%;
+                height: 100%;
+                display: block;
+                object-fit: cover;
+              }
+
+              .xaaj-mobile-category-item strong {
+                width: 100%;
+                margin-top: 6px;
+                color: #292824;
+                font-size: 8px;
+                line-height: 1.2;
+                font-weight: 500;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+
+              .xaaj-mobile-category-item > span {
+                display: inline-flex;
+                align-items: center;
+                gap: 2px;
+                margin-top: 2px;
+                color: #625d56;
+                font-size: 6.5px;
+                line-height: 1.2;
+                white-space: nowrap;
+              }
+
+              .xaaj-category-cinematic-inner {
+                display: none !important;
+              }
+
+              /* =================================================
                  MOBILE = NORMAL DOCUMENT SCROLL
+                 ================================================= */
                  No pinning / scrub / overlapping category scene.
                  Every category card stays in normal flow.
                  ================================================= */
