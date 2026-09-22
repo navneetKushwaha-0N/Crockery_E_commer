@@ -2172,6 +2172,12 @@ function Home() {
       return undefined
     }
 
+    // Mobile: keep this section completely normal.
+    // No pinning, no scrub, no card swapping.
+    if (window.matchMedia('(max-width: 850px)').matches) {
+      return undefined
+    }
+
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       return undefined
     }
@@ -2970,16 +2976,24 @@ function Home() {
             }
 
             @media (max-width: 850px) {
+              /* =================================================
+                 MOBILE = NORMAL DOCUMENT SCROLL
+                 No pinning / scrub / overlapping category scene.
+                 Every category card stays in normal flow.
+                 ================================================= */
+
               .xaaj-category-cinematic {
-                height: auto;
-                min-height: 100svh;
+                height: auto !important;
+                min-height: 0 !important;
+                overflow: visible !important;
               }
 
               .xaaj-category-cinematic-inner {
-                width: min(100% - 38px, 620px);
-                min-height: 100svh;
+                width: min(calc(100% - 38px), 620px);
+                height: auto !important;
+                min-height: 0 !important;
                 grid-template-columns: 1fr;
-                gap: 25px;
+                gap: 28px;
                 padding: 55px 0 45px;
               }
 
@@ -2996,23 +3010,51 @@ function Home() {
                 max-width: 330px;
               }
 
-              .xaaj-category-progress,
-              .xaaj-category-scroll-hint {
+              .xaaj-category-progress {
                 margin-top: 20px;
               }
 
+              /* This hint belongs to the desktop cinematic interaction. */
+              .xaaj-category-scroll-hint {
+                display: none;
+              }
+
               .xaaj-category-stage {
-                height: 58vh;
-                min-height: 400px;
-                transform: none;
+                width: 100%;
+                height: auto !important;
+                min-height: 0 !important;
+                display: flex;
+                flex-direction: column;
+                gap: 28px;
+                transform: none !important;
+              }
+
+              .xaaj-category-stage-glow {
+                display: none;
+              }
+
+              .xaaj-category-card {
+                position: relative !important;
+                inset: auto !important;
+                width: 100%;
+                height: auto !important;
+                min-height: 0 !important;
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                visibility: visible !important;
+                opacity: 1 !important;
+                transform: none !important;
+                will-change: auto !important;
               }
 
               .xaaj-category-card-link {
-                width: min(470px, 88%);
+                width: min(470px, 100%);
               }
 
               .xaaj-category-image-wrap {
                 width: min(390px, 100%);
+                aspect-ratio: 1 / 1;
               }
 
               .xaaj-category-card-info {
@@ -3022,7 +3064,6 @@ function Home() {
               .xaaj-category-card-info h3 {
                 font-size: clamp(28px, 8vw, 38px);
               }
-
             }
 
             @media (prefers-reduced-motion: reduce) {
@@ -13068,40 +13109,24 @@ function SmoothScrollShell({ children }) {
       return undefined
     }
 
-    // Use a lighter smoothing value on touch/mobile devices.
-    // This keeps the touch experience natural instead of feeling delayed.
-    const isMobile = window.matchMedia(
-      '(max-width: 850px)'
-    ).matches
+    // Phones use the browser's native scroll completely.
+    // Do not run ScrollSmoother on touch devices — it can make
+    // finger scrolling feel delayed, sticky or heavy.
+    if (window.matchMedia('(max-width: 850px)').matches) {
+      return undefined
+    }
 
     const ctx = gsap.context(() => {
       smoother.current = ScrollSmoother.create({
         wrapper,
         content,
-
-        // Desktop: premium smooth interpolation.
-        // Mobile: lighter smoothing for natural finger scrolling.
-        smooth: isMobile ? 0.65 : 1.2,
-
-        // ScrollSmoother touch smoothing.
-        // A small value avoids excessive touch lag.
-        smoothTouch: isMobile ? 0.15 : false,
-
-        // Keep ScrollTrigger data-speed/data-lag effects working.
+        smooth: 1.2,
         effects: true,
-
-        // Do not override the browser's scroll normalization.
         normalizeScroll: false,
-
-        // Helps prevent mobile viewport-resize jumps.
         ignoreMobileResize: true,
-
-        // Do not aggressively prevent native browser input.
         preventDefault: false
       })
 
-      // Recalculate all existing ScrollTrigger positions after
-      // ScrollSmoother has been initialized.
       ScrollTrigger.refresh()
     }, wrapper)
 
@@ -13175,6 +13200,8 @@ function SmoothScrollShell({ children }) {
             width: 100%;
             min-height: 100svh;
             overflow: visible;
+            transform: none !important;
+            will-change: auto !important;
           }
 
           /* Keep product grids stable on mobile. */
