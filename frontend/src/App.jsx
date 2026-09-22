@@ -3010,32 +3010,38 @@ function Home() {
             }
 
             @media (max-width: 850px) {
-              /* =================================================
-                 MOBILE = ORIGINAL COLLECTIONS STRIP
-                 Keep this section compact and fully native-scrollable.
-                 No pinning, scrub, or cinematic category animation.
-                 ================================================= */
+              /* Mobile only: compact horizontal collections strip.
+                 Keep the section in normal document flow so the page
+                 can be scrolled naturally without any empty 100vh area. */
 
               .xaaj-category-cinematic {
+                height: auto !important;
+                min-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: visible !important;
                 background: #f8f5ef !important;
-                overflow: hidden !important;
               }
 
               .xaaj-mobile-category-collections {
-                display: block;
+                display: block !important;
                 width: 100%;
-                padding: 20px 0 18px;
+                height: auto !important;
+                min-height: 0 !important;
+                padding: 14px 0 18px;
                 background: #f8f5ef;
+                overflow: hidden;
               }
 
               .xaaj-mobile-category-heading {
+                width: 100%;
                 text-align: center;
-                padding: 0 18px 15px;
+                padding: 0 16px 13px;
               }
 
               .xaaj-mobile-category-heading > span {
                 display: block;
-                margin-bottom: 3px;
+                margin: 0 0 4px;
                 color: #817a71;
                 font-size: 7px;
                 line-height: 1.2;
@@ -3047,8 +3053,8 @@ function Home() {
                 margin: 0;
                 color: #292824;
                 font-family: Georgia, 'Times New Roman', serif;
-                font-size: clamp(24px, 7vw, 31px);
-                line-height: 1.05;
+                font-size: clamp(29px, 8vw, 36px);
+                line-height: 1.03;
                 font-weight: 400;
                 letter-spacing: -.035em;
               }
@@ -3056,21 +3062,24 @@ function Home() {
               .xaaj-mobile-category-heading p {
                 margin: 5px 0 0;
                 color: #817a71;
-                font-size: 9px;
-                line-height: 1.4;
+                font-size: 10px;
+                line-height: 1.35;
               }
 
               .xaaj-mobile-category-scroll {
-                display: flex;
-                gap: 16px;
+                display: flex !important;
+                align-items: flex-start;
+                gap: 12px;
                 width: 100%;
-                padding: 0 18px 4px;
-                overflow-x: auto;
-                overflow-y: hidden;
+                height: auto !important;
+                padding: 0 14px 2px;
+                overflow-x: auto !important;
+                overflow-y: hidden !important;
                 -webkit-overflow-scrolling: touch;
                 overscroll-behavior-x: contain;
                 scroll-snap-type: x proximity;
                 scrollbar-width: none;
+                touch-action: auto;
               }
 
               .xaaj-mobile-category-scroll::-webkit-scrollbar {
@@ -3078,8 +3087,9 @@ function Home() {
               }
 
               .xaaj-mobile-category-item {
-                flex: 0 0 72px;
-                width: 72px;
+                flex: 0 0 86px;
+                width: 86px;
+                min-width: 86px;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -3091,12 +3101,13 @@ function Home() {
               }
 
               .xaaj-mobile-category-image {
-                width: 68px;
-                height: 68px;
+                width: 82px;
+                height: 82px;
+                flex: 0 0 82px;
                 border-radius: 50%;
                 overflow: hidden;
                 background: #e8e1d7;
-                box-shadow: 0 2px 9px rgba(41,40,36,.09);
+                box-shadow: 0 2px 10px rgba(41,40,36,.08);
                 border: 1px solid rgba(41,40,36,.06);
               }
 
@@ -3109,9 +3120,9 @@ function Home() {
 
               .xaaj-mobile-category-item strong {
                 width: 100%;
-                margin-top: 6px;
+                margin-top: 7px;
                 color: #292824;
-                font-size: 8px;
+                font-size: 9px;
                 line-height: 1.2;
                 font-weight: 500;
                 white-space: nowrap;
@@ -3123,105 +3134,25 @@ function Home() {
                 display: inline-flex;
                 align-items: center;
                 gap: 2px;
-                margin-top: 2px;
+                margin-top: 3px;
                 color: #625d56;
-                font-size: 6.5px;
+                font-size: 7px;
                 line-height: 1.2;
                 white-space: nowrap;
               }
 
+              /* Hide the desktop cinematic category scene on phones. */
               .xaaj-category-cinematic-inner {
                 display: none !important;
               }
 
-              /* =================================================
-                 MOBILE = NORMAL DOCUMENT SCROLL
-                 ================================================= */
-                 No pinning / scrub / overlapping category scene.
-                 Every category card stays in normal flow.
-                 ================================================= */
-
-              .xaaj-category-cinematic {
-                height: auto !important;
-                min-height: 0 !important;
-                overflow: visible !important;
-              }
-
-              .xaaj-category-cinematic-inner {
-                width: min(calc(100% - 38px), 620px);
-                height: auto !important;
-                min-height: 0 !important;
-                grid-template-columns: 1fr;
-                gap: 28px;
-                padding: 55px 0 45px;
-              }
-
-              .xaaj-category-copy {
-                max-width: 100%;
-              }
-
-              .xaaj-category-copy h2 {
-                font-size: clamp(48px, 15vw, 72px);
-                margin-bottom: 16px;
-              }
-
-              .xaaj-category-copy p {
-                max-width: 330px;
-              }
-
-              .xaaj-category-progress {
-                margin-top: 20px;
-              }
-
-              /* This hint belongs to the desktop cinematic interaction. */
-              .xaaj-category-scroll-hint {
-                display: none;
-              }
-
-              .xaaj-category-stage {
-                width: 100%;
-                height: auto !important;
-                min-height: 0 !important;
-                display: flex;
-                flex-direction: column;
-                gap: 28px;
-                transform: none !important;
-              }
-
-              .xaaj-category-stage-glow {
-                display: none;
-              }
-
+              /* Safety: no desktop height/pin styles can create a blank
+                 viewport-sized block on mobile. */
+              .xaaj-category-cinematic,
+              .xaaj-category-cinematic-inner,
+              .xaaj-category-stage,
               .xaaj-category-card {
-                position: relative !important;
-                inset: auto !important;
-                width: 100%;
-                height: auto !important;
-                min-height: 0 !important;
-                display: flex !important;
-                align-items: center;
-                justify-content: center;
-                visibility: visible !important;
-                opacity: 1 !important;
-                transform: none !important;
-                will-change: auto !important;
-              }
-
-              .xaaj-category-card-link {
-                width: min(470px, 100%);
-              }
-
-              .xaaj-category-image-wrap {
-                width: min(390px, 100%);
-                aspect-ratio: 1 / 1;
-              }
-
-              .xaaj-category-card-info {
-                bottom: -38px;
-              }
-
-              .xaaj-category-card-info h3 {
-                font-size: clamp(28px, 8vw, 38px);
+                max-height: none !important;
               }
             }
 
