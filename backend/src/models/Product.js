@@ -68,19 +68,59 @@ const productSchema = new mongoose.Schema(
 
     // ==========================================================
     // PRODUCT CATEGORY
+    // Main category used by the store navigation/filtering.
     // ==========================================================
 
     category: {
       type: String,
       required: true,
       enum: [
+        'Dinnerware',
+        'Glassware',
+        'Serveware',
+        'Gifting',
+        'Horeca',
+
+        // Legacy values kept temporarily so existing products can
+        // still be read/updated without breaking the old dataset.
         'Dinner Sets',
         'Plates',
         'Bowls',
-        'Cups & Mugs',
-        'Serveware',
-        'Glassware'
+        'Cups & Mugs'
       ],
+      index: true
+    },
+
+    // ==========================================================
+    // DINNERWARE COLLECTION (OPTIONAL)
+    // Only used when the main category is Dinnerware.
+    // The admin user may leave this empty.
+    // ==========================================================
+
+    dinnerwareCollection: {
+      type: String,
+      enum: [
+        'Speckled White',
+        'Dove Gray',
+        'Blush Pink',
+        'Beachgrass Green',
+        'Midnight Blue'
+      ],
+      default: null,
+      trim: true
+    },
+
+    // ==========================================================
+    // HSN CODE
+    // Stored as a string so leading zeroes are preserved.
+    // Supports 4, 6 or 8 digit HSN codes.
+    // ==========================================================
+
+    hsnCode: {
+      type: String,
+      required: true,
+      trim: true,
+      match: [/^\d{4}(?:\d{2})?(?:\d{2})?$/, 'HSN code must contain 4, 6, or 8 digits.'],
       index: true
     },
 
@@ -226,6 +266,18 @@ const productSchema = new mongoose.Schema(
 )
 
 // ==========================================================
+// VALIDATE DINNERWARE COLLECTION
+// If category is Dinnerware, the collection is optional.
+// For other categories it is cleared so the data stays clean.
+// ==========================================================
+
+productSchema.pre('validate', function validateDinnerwareCollection() {
+  if (this.category !== 'Dinnerware') {
+    this.dinnerwareCollection = null
+  }
+})
+
+// ==========================================================
 // VALIDATE PRICE
 // Selling price MRP se zyada nahi honi chahiye
 // ==========================================================
@@ -263,6 +315,7 @@ productSchema.index({
 
 productSchema.index({
   category: 1,
+  dinnerwareCollection: 1,
   isActive: 1
 })
 

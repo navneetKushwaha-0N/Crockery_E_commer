@@ -4,6 +4,7 @@ import {
   FiBell,
   FiImage,
   FiEdit3,
+  FiBookOpen,
   FiClock,
   FiPackage,
   FiLogOut,
@@ -63,6 +64,89 @@ export default function Admin() {
   const [savingHeroSlides, setSavingHeroSlides] = useState(false)
 
   // =========================
+  // Category Hero Media State
+  // =========================
+  const categoryHeroDefaults = [
+    {
+      categorySlug: 'glassware',
+      categoryName: 'Glassware',
+      mediaUrl: '',
+      mediaType: 'image',
+      alt: 'Glassware',
+      enabled: true
+    },
+    {
+      categorySlug: 'gifting',
+      categoryName: 'Gifting',
+      mediaUrl: '',
+      mediaType: 'image',
+      alt: 'Gifting',
+      enabled: true
+    },
+    {
+      categorySlug: 'dinnerware',
+      categoryName: 'Dinnerware',
+      mediaUrl: '',
+      mediaType: 'image',
+      alt: 'Dinnerware',
+      enabled: true
+    },
+    {
+      categorySlug: 'serveware',
+      categoryName: 'Serveware',
+      mediaUrl: '',
+      mediaType: 'image',
+      alt: 'Serveware',
+      enabled: true
+    },
+    {
+      categorySlug: 'horeca',
+      categoryName: 'Horeca',
+      mediaUrl: '',
+      mediaType: 'image',
+      alt: 'Horeca',
+      enabled: true
+    }
+  ]
+
+  const [categoryHeroMedia, setCategoryHeroMedia] = useState(
+    categoryHeroDefaults
+  )
+  const [loadingCategoryHero, setLoadingCategoryHero] = useState(false)
+  const [savingCategoryHero, setSavingCategoryHero] = useState(false)
+
+  // =========================
+  // Brand Story Media State
+  // =========================
+  const brandStoryDefault = {
+    mediaUrl: '',
+    mediaType: 'image',
+    alt: 'XAAJ handcrafted tableware arranged on a linen table',
+    enabled: true
+  }
+
+  const [brandStoryMedia, setBrandStoryMedia] = useState(
+    brandStoryDefault
+  )
+  const [loadingBrandStory, setLoadingBrandStory] = useState(false)
+  const [savingBrandStory, setSavingBrandStory] = useState(false)
+  const [uploadingBrandStory, setUploadingBrandStory] = useState(false)
+
+  // =========================
+  // Horeca Collection Media State
+  // =========================
+  const horecaMediaDefault = {
+    main: { mediaUrl: '', mediaType: 'image', alt: 'XAAJ Horeca collection' },
+    sideOne: { mediaUrl: '', mediaType: 'image', alt: 'XAAJ Horeca tableware' },
+    sideTwo: { mediaUrl: '', mediaType: 'image', alt: 'XAAJ Horeca serveware' }
+  }
+
+  const [horecaMedia, setHorecaMedia] = useState(horecaMediaDefault)
+  const [loadingHoreca, setLoadingHoreca] = useState(false)
+  const [savingHoreca, setSavingHoreca] = useState(false)
+  const [uploadingHorecaSlot, setUploadingHorecaSlot] = useState(null)
+
+  // =========================
   // Blog Management State
   // =========================
   const emptyBlog = {
@@ -88,11 +172,29 @@ export default function Admin() {
   // =========================
   // Product Form State
   // =========================
+  const dinnerwareSubcategories = [
+    'Speckled White',
+    'Dove Gray',
+    'Blush Pink',
+    'Beachgrass Green',
+    'Midnight Blue'
+  ]
+
+  const productCategoryOptions = [
+    'Dinnerware',
+    'Glassware',
+    'Serveware',
+    'Gifting',
+    'Horeca'
+  ]
+
   const emptyProduct = {
     name: '',
     slug: '',
     description: '',
     category: '',
+    dinnerwareCollection: '',
+    hsnCode: '',
     mrp: '',
     price: '',
     stock: '',
@@ -119,6 +221,9 @@ export default function Admin() {
     loadOrders()
     loadAnnouncement()
     loadHeroSlides()
+    loadCategoryHeroMedia()
+    loadBrandStoryMedia()
+    loadHorecaMedia()
     loadBlogs()
   }, [user])
 
@@ -375,6 +480,640 @@ export default function Admin() {
       setError(err.message || 'Unable to update hero images')
     } finally {
       setSavingHeroSlides(false)
+    }
+  }
+
+  // =========================
+  // Category Hero Media API
+  // =========================
+
+  const normalizeCategoryHeroMedia = (items = []) => {
+    const list = Array.isArray(items) ? items : []
+
+    return categoryHeroDefaults.map(defaultItem => {
+      const saved = list.find(item => {
+        const slug = String(
+          item?.categorySlug ||
+            item?.slug ||
+            item?.category?.slug ||
+            ''
+        )
+          .trim()
+          .toLowerCase()
+
+        return slug === defaultItem.categorySlug
+      })
+
+      return {
+        ...defaultItem,
+        categoryName:
+          saved?.categoryName ||
+          saved?.category?.name ||
+          defaultItem.categoryName,
+        mediaUrl:
+          saved?.mediaUrl ||
+          saved?.image ||
+          saved?.imageUrl ||
+          saved?.video ||
+          saved?.videoUrl ||
+          '',
+        mediaType:
+          saved?.mediaType === 'video' ? 'video' : 'image',
+        alt:
+          saved?.alt ||
+          saved?.title ||
+          defaultItem.alt,
+        enabled:
+          saved?.enabled !== undefined
+            ? Boolean(saved.enabled)
+            : defaultItem.enabled
+      }
+    })
+  }
+
+  const loadCategoryHeroMedia = async () => {
+    try {
+      setLoadingCategoryHero(true)
+
+      const result = await apiRequest('/cms/category-hero/admin')
+
+      const data =
+        result?.data?.categories ||
+        result?.data?.items ||
+        result?.categories ||
+        result?.items ||
+        result?.data ||
+        []
+
+      setCategoryHeroMedia(normalizeCategoryHeroMedia(data))
+    } catch (err) {
+      setError(err.message || 'Unable to load category hero media')
+    } finally {
+      setLoadingCategoryHero(false)
+    }
+  }
+
+  const updateCategoryHeroMedia = (categorySlug, field, value) => {
+    setCategoryHeroMedia(prev =>
+      prev.map(item => {
+        if (item.categorySlug !== categorySlug) return item
+
+        return {
+          ...item,
+          [field]: value
+        }
+      })
+    )
+  }
+
+  const handleSaveCategoryHeroMedia = async () => {
+    const categories = categoryHeroMedia.map(item => ({
+      categorySlug: item.categorySlug,
+      categoryName: item.categoryName,
+      mediaUrl: String(item.mediaUrl || '').trim(),
+      mediaType: item.mediaType === 'video' ? 'video' : 'image',
+      alt: String(item.alt || '').trim(),
+      enabled: Boolean(item.enabled)
+    }))
+
+    const invalidCategory = categories.find(
+      item => item.enabled && !item.mediaUrl
+    )
+
+    if (invalidCategory) {
+      setError(
+        `Please add a media URL for ${invalidCategory.categoryName}, or turn it off.`
+      )
+      return
+    }
+
+    try {
+      setSavingCategoryHero(true)
+      setError('')
+      setMessage('')
+
+      const result = await apiRequest('/cms/category-hero', {
+        method: 'PUT',
+        body: JSON.stringify({
+          categories
+        })
+      })
+
+      const data =
+        result?.data?.categories ||
+        result?.data?.items ||
+        result?.categories ||
+        result?.items ||
+        result?.data ||
+        categories
+
+      setCategoryHeroMedia(
+        normalizeCategoryHeroMedia(data)
+      )
+
+      setMessage(
+        'Category hero media updated successfully.'
+      )
+    } catch (err) {
+      setError(
+        err.message || 'Unable to update category hero media'
+      )
+    } finally {
+      setSavingCategoryHero(false)
+    }
+  }
+
+  // =========================
+  // Brand Story API
+  // =========================
+
+  const normalizeBrandStoryMedia = data => {
+    const item =
+      data?.brandStory ||
+      data?.story ||
+      data?.item ||
+      data?.data ||
+      data ||
+      {}
+
+    return {
+      mediaUrl:
+        item?.mediaUrl ||
+        item?.image ||
+        item?.imageUrl ||
+        item?.videoUrl ||
+        item?.url ||
+        '',
+      mediaType:
+        item?.mediaType === 'video'
+          ? 'video'
+          : 'image',
+      alt:
+        item?.alt ||
+        item?.title ||
+        brandStoryDefault.alt,
+      enabled:
+        item?.enabled !== undefined
+          ? Boolean(item.enabled)
+          : true
+    }
+  }
+
+  const loadBrandStoryMedia = async () => {
+    try {
+      setLoadingBrandStory(true)
+
+      const result =
+        await apiRequest('/cms/brand-story')
+
+      setBrandStoryMedia(
+        normalizeBrandStoryMedia(result)
+      )
+    } catch (err) {
+      setError(
+        err.message ||
+        'Unable to load Brand Story media'
+      )
+    } finally {
+      setLoadingBrandStory(false)
+    }
+  }
+
+  const updateBrandStoryField = (
+    field,
+    value
+  ) => {
+    setBrandStoryMedia(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const getBrandStoryMediaType = (
+    fileOrUrl,
+    fallback = 'image'
+  ) => {
+    const type =
+      typeof fileOrUrl === 'object'
+        ? fileOrUrl?.type || ''
+        : ''
+
+    if (type.startsWith('video/')) {
+      return 'video'
+    }
+
+    if (type.startsWith('image/')) {
+      return 'image'
+    }
+
+    const url =
+      String(
+        typeof fileOrUrl === 'string'
+          ? fileOrUrl
+          : ''
+      ).trim()
+
+    return /\.(mp4|webm|ogg|mov)(?:[?#].*)?$/i.test(url)
+      ? 'video'
+      : fallback === 'video'
+        ? 'video'
+        : 'image'
+  }
+
+  const handleBrandStoryFileUpload = async event => {
+    const file =
+      event.target.files?.[0]
+
+    event.target.value = ''
+
+    if (!file) return
+
+    const mediaType =
+      getBrandStoryMediaType(
+        file,
+        'image'
+      )
+
+    const maxSize =
+      mediaType === 'video'
+        ? 50 * 1024 * 1024
+        : 5 * 1024 * 1024
+
+    if (file.size > maxSize) {
+      setError(
+        mediaType === 'video'
+          ? 'Brand Story video cannot exceed 50 MB.'
+          : 'Brand Story image cannot exceed 5 MB.'
+      )
+      return
+    }
+
+    try {
+      setUploadingBrandStory(true)
+      setError('')
+      setMessage('')
+
+      const formData =
+        new FormData()
+
+      formData.append(
+        'media',
+        file
+      )
+
+      formData.append(
+        'folder',
+        'xaaj/brand-story'
+      )
+
+      const result =
+        await apiRequest(
+          '/uploads/media',
+          {
+            method: 'POST',
+            body: formData
+          }
+        )
+
+      const uploaded =
+        result?.data ||
+        result?.media ||
+        result ||
+        {}
+
+      const mediaUrl =
+        uploaded?.secure_url ||
+        uploaded?.url ||
+        uploaded?.mediaUrl ||
+        ''
+
+      if (!mediaUrl) {
+        throw new Error(
+          'Upload succeeded but no media URL was returned.'
+        )
+      }
+
+      setBrandStoryMedia(prev => ({
+        ...prev,
+        mediaUrl,
+        mediaType:
+          uploaded?.mediaType ||
+          getBrandStoryMediaType(
+            mediaUrl,
+            mediaType
+          )
+      }))
+
+      setMessage(
+        `${mediaType === 'video' ? 'Video' : 'Image'} uploaded. Click Save Brand Story to publish it.`
+      )
+    } catch (err) {
+      setError(
+        err.message ||
+        'Unable to upload Brand Story media'
+      )
+    } finally {
+      setUploadingBrandStory(false)
+    }
+  }
+
+  const handleRemoveBrandStoryMedia = async () => {
+    if (!window.confirm('Remove the current Brand Story media?')) {
+      return
+    }
+
+    try {
+      setSavingBrandStory(true)
+      setError('')
+      setMessage('')
+
+      const result =
+        await apiRequest(
+          '/cms/brand-story',
+          {
+            method: 'PUT',
+            body: JSON.stringify({
+              mediaUrl: '',
+              mediaType:
+                brandStoryMedia.mediaType === 'video'
+                  ? 'video'
+                  : 'image',
+              alt:
+                String(
+                  brandStoryMedia.alt ||
+                  brandStoryDefault.alt
+                ).trim(),
+              enabled: true
+            })
+          }
+        )
+
+      const data =
+        result?.data ||
+        result?.brandStory ||
+        result
+
+      setBrandStoryMedia(
+        normalizeBrandStoryMedia(data)
+      )
+
+      setMessage(
+        'Brand Story media removed successfully. The Brand Story section remains visible.'
+      )
+    } catch (err) {
+      setError(
+        err.message ||
+        'Unable to remove Brand Story media'
+      )
+    } finally {
+      setSavingBrandStory(false)
+    }
+  }
+
+  const handleSaveBrandStoryMedia = async () => {
+    const mediaUrl =
+      String(
+        brandStoryMedia.mediaUrl ||
+        ''
+      ).trim()
+
+    if (
+      brandStoryMedia.enabled &&
+      !mediaUrl
+    ) {
+      setError(
+        'Please upload or add a Brand Story media URL, or turn it off.'
+      )
+      return
+    }
+
+    const payload = {
+      mediaUrl,
+      mediaType:
+        brandStoryMedia.mediaType === 'video'
+          ? 'video'
+          : 'image',
+      alt:
+        String(
+          brandStoryMedia.alt ||
+          brandStoryDefault.alt
+        ).trim(),
+      enabled:
+        Boolean(
+          brandStoryMedia.enabled
+        )
+    }
+
+    try {
+      setSavingBrandStory(true)
+      setError('')
+      setMessage('')
+
+      const result =
+        await apiRequest(
+          '/cms/brand-story',
+          {
+            method: 'PUT',
+            body: JSON.stringify(
+              payload
+            )
+          }
+        )
+
+      const data =
+        result?.data ||
+        result?.brandStory ||
+        result
+
+      setBrandStoryMedia(
+        normalizeBrandStoryMedia(
+          data
+        )
+      )
+
+      setMessage(
+        'Brand Story media updated successfully.'
+      )
+    } catch (err) {
+      setError(
+        err.message ||
+        'Unable to update Brand Story media'
+      )
+    } finally {
+      setSavingBrandStory(false)
+    }
+  }
+
+  // =========================
+  // Horeca Collection API
+  // =========================
+
+  const normalizeHorecaMedia = data => {
+    const raw =
+      data?.items || data?.horeca || data?.media || data?.data || data || []
+
+    const list = Array.isArray(raw)
+      ? raw
+      : raw && typeof raw === 'object'
+        ? Object.entries(raw).map(([slot, item]) => ({
+            ...(item && typeof item === 'object' ? item : { mediaUrl: item }),
+            slot
+          }))
+        : []
+
+    const next = {
+      main: { ...horecaMediaDefault.main },
+      sideOne: { ...horecaMediaDefault.sideOne },
+      sideTwo: { ...horecaMediaDefault.sideTwo }
+    }
+
+    list.forEach(item => {
+      if (!item) return
+
+      const normalizedSlot = String(
+        item?.slot || item?.key || item?.position || item?.name || ''
+      )
+        .trim()
+        .toLowerCase()
+        .replace(/[\s_-]+/g, '')
+
+      const slot =
+        normalizedSlot === 'main' || normalizedSlot === 'primary' || normalizedSlot === 'left'
+          ? 'main'
+          : normalizedSlot === 'sideone' || normalizedSlot === 'side1' || normalizedSlot === 'top' || normalizedSlot === 'righttop'
+            ? 'sideOne'
+            : normalizedSlot === 'sidetwo' || normalizedSlot === 'side2' || normalizedSlot === 'bottom' || normalizedSlot === 'rightbottom'
+              ? 'sideTwo'
+              : null
+
+      if (!slot) return
+
+      next[slot] = {
+        mediaUrl: item?.mediaUrl || item?.image || item?.imageUrl || item?.url || '',
+        mediaType: 'image',
+        alt: item?.alt || item?.title || next[slot].alt
+      }
+    })
+
+    return next
+  }
+
+  const loadHorecaMedia = async () => {
+    try {
+      setLoadingHoreca(true)
+      const result = await apiRequest('/cms/horeca-collection')
+      setHorecaMedia(normalizeHorecaMedia(result))
+    } catch (err) {
+      setError(err.message || 'Unable to load Horeca collection media')
+    } finally {
+      setLoadingHoreca(false)
+    }
+  }
+
+  const updateHorecaField = (slot, field, value) => {
+    setHorecaMedia(prev => ({
+      ...prev,
+      [slot]: { ...prev[slot], [field]: value }
+    }))
+  }
+
+  const handleHorecaFileUpload = async (slot, event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image for the Horeca collection.')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Horeca image cannot exceed 5 MB.')
+      return
+    }
+
+    try {
+      setUploadingHorecaSlot(slot)
+      setError('')
+      setMessage('')
+
+      const formData = new FormData()
+      formData.append('media', file)
+      formData.append('folder', 'xaaj/horeca-collection')
+
+      const result = await apiRequest('/uploads/media', {
+        method: 'POST',
+        body: formData
+      })
+
+      const uploaded = result?.data || result?.media || result || {}
+      const mediaUrl = uploaded?.secure_url || uploaded?.url || uploaded?.mediaUrl || ''
+
+      if (!mediaUrl) throw new Error('Upload succeeded but no media URL was returned.')
+
+      updateHorecaField(slot, 'mediaUrl', mediaUrl)
+      updateHorecaField(slot, 'mediaType', 'image')
+      setMessage('Horeca image uploaded. Click Save Horeca Collection to publish it.')
+    } catch (err) {
+      setError(err.message || 'Unable to upload Horeca image')
+    } finally {
+      setUploadingHorecaSlot(null)
+    }
+  }
+
+  const handleRemoveHorecaMedia = async slot => {
+    if (!window.confirm('Remove this Horeca image from the homepage?')) return
+
+    try {
+      setSavingHoreca(true)
+      setError('')
+      setMessage('')
+
+      const items = Object.entries(horecaMedia).map(([key, item]) => ({
+        slot: key,
+        mediaUrl: key === slot ? '' : String(item.mediaUrl || '').trim(),
+        mediaType: 'image',
+        alt: String(item.alt || '').trim()
+      }))
+
+      const result = await apiRequest('/cms/horeca-collection', {
+        method: 'PUT',
+        body: JSON.stringify({ items })
+      })
+
+      setHorecaMedia(normalizeHorecaMedia(result?.data || result))
+      setMessage('Horeca image removed. The original fallback remains on the website.')
+    } catch (err) {
+      setError(err.message || 'Unable to remove Horeca image')
+    } finally {
+      setSavingHoreca(false)
+    }
+  }
+
+  const handleSaveHorecaMedia = async () => {
+    const items = Object.entries(horecaMedia).map(([slot, item]) => ({
+      slot,
+      mediaUrl: String(item.mediaUrl || '').trim(),
+      mediaType: 'image',
+      alt: String(item.alt || '').trim()
+    }))
+
+    try {
+      setSavingHoreca(true)
+      setError('')
+      setMessage('')
+
+      const result = await apiRequest('/cms/horeca-collection', {
+        method: 'PUT',
+        body: JSON.stringify({ items })
+      })
+
+      setHorecaMedia(normalizeHorecaMedia(result?.data || result))
+      setMessage('Horeca collection media updated successfully.')
+    } catch (err) {
+      setError(err.message || 'Unable to update Horeca collection media')
+    } finally {
+      setSavingHoreca(false)
     }
   }
 
@@ -756,11 +1495,39 @@ export default function Admin() {
   const handleEditProduct = product => {
     setEditingId(product._id)
 
+    const legacyDinnerwareCategories = new Set([
+      'Dinner Sets',
+      'Plates',
+      'Bowls',
+      'Cups & Mugs'
+    ])
+
+    const savedCategory = String(product.category || '').trim()
+    const rawDinnerwareCollection =
+      product.dinnerwareCollection ||
+      product.dinnerwareSubcategory ||
+      product.dinnerwareType ||
+      product.subcategory ||
+      ''
+
+    const savedDinnerwareCollection = dinnerwareSubcategories.includes(rawDinnerwareCollection)
+      ? rawDinnerwareCollection
+      : ''
+
+    const normalizedCategory =
+      legacyDinnerwareCategories.has(savedCategory)
+        ? 'Dinnerware'
+        : productCategoryOptions.includes(savedCategory)
+          ? savedCategory
+          : savedCategory
+
     setForm({
       name: product.name || '',
       slug: product.slug || '',
       description: product.description || '',
-      category: product.category || '',
+      category: normalizedCategory,
+      dinnerwareCollection: savedDinnerwareCollection,
+      hsnCode: product.hsnCode || product.hsn || '',
       mrp: product.mrp ?? product.compareAtPrice ?? '',
       price: product.price ?? '',
       stock: product.stock ?? '',
@@ -828,6 +1595,18 @@ export default function Admin() {
       return
     }
 
+    const hsnCode = String(form.hsnCode || '').trim()
+
+    if (!hsnCode) {
+      setError('HSN code is required.')
+      return
+    }
+
+    if (!/^(?:\d{4}|\d{6}|\d{8})$/.test(hsnCode)) {
+      setError('HSN code must contain 4, 6, or 8 digits.')
+      return
+    }
+
     if (form.mrp === '' || Number(form.mrp) < 0) {
       setError('Please enter a valid MRP.')
       return
@@ -883,6 +1662,11 @@ export default function Admin() {
       slug: form.slug.trim().toLowerCase(),
       description: form.description.trim(),
       category: form.category.trim(),
+      dinnerwareCollection:
+        form.category === 'Dinnerware'
+          ? form.dinnerwareCollection.trim() || null
+          : null,
+      hsnCode,
       mrp: Number(form.mrp),
       compareAtPrice: Number(form.mrp),
       price: Number(form.price),
@@ -1014,9 +1798,15 @@ export default function Admin() {
   // =========================
   return (
     <main className="page xaaj-admin-v2" data-active-section={activeSection}>
-      <style>{`.xaaj-admin-v2{--ink:#25231f;--muted:#777169;--line:#e7e0d6;min-height:100vh!important;max-width:none!important;margin:0!important;padding:0!important;background:radial-gradient(circle at 82% 0%,rgba(154,116,72,.09),transparent 28%),#f7f4ee!important;font-family:'DM Sans',sans-serif;color:var(--ink)}
-.xaaj-admin-v2 *{box-sizing:border-box}.xaaj-admin-v2 .admin-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}.xaaj-admin-v2 .admin-sidebar{position:sticky;top:0;height:100vh;background:linear-gradient(180deg,#10271c,#0b1f16);color:#fff;padding:28px 18px;display:flex;flex-direction:column;z-index:20;box-shadow:14px 0 45px rgba(34,29,23,.12)}.xaaj-admin-v2 .brand-mark{padding:6px 12px 30px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:22px}.xaaj-admin-v2 .brand-mark strong{font-family:'Playfair Display',serif;font-size:27px;letter-spacing:.08em;font-weight:500}.xaaj-admin-v2 .brand-mark span{display:block;margin-top:5px;color:#bdb5aa;font-size:9px;letter-spacing:.18em;text-transform:uppercase}.xaaj-admin-v2 .side-label{font-size:9px;text-transform:uppercase;letter-spacing:.18em;color:#8f887d;padding:0 12px 10px}.xaaj-admin-v2 .side-nav{display:grid;gap:5px}.xaaj-admin-v2 .side-nav button{width:100%!important;border:0!important;background:transparent!important;color:#bdb7ae!important;box-shadow:none!important;border-radius:12px!important;padding:12px 13px!important;display:flex!important;align-items:center!important;gap:12px!important;text-align:left!important;font:600 12px 'DM Sans',sans-serif!important;transform:none!important}.xaaj-admin-v2 .side-nav button:hover{background:rgba(47,112,72,.28)!important;color:#fff!important;border-color:rgba(82,157,105,.45)!important;transform:translateX(3px)!important}.xaaj-admin-v2 .side-nav button.active{background:linear-gradient(90deg,#2f7048,#245d3b)!important;color:#fff!important;box-shadow:0 8px 22px rgba(47,112,72,.28),inset 3px 0 #8bd19d!important}.xaaj-admin-v2 .side-nav button.active:hover{background:linear-gradient(90deg,#398356,#2f7048)!important}.xaaj-admin-v2 .side-icon{width:25px;height:25px;border:1px solid rgba(255,255,255,.13);border-radius:8px;display:grid;place-items:center;font-size:11px;color:#9dd5aa;flex:none}.xaaj-admin-v2 .side-footer{margin-top:auto;padding:15px 0 4px}.xaaj-admin-v2 .sidebar-logout{width:100%!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;background:rgba(255,255,255,.045)!important;color:#d8ddd9!important;border:1px solid rgba(255,255,255,.13)!important;border-radius:12px!important;padding:11px 14px!important;box-shadow:none!important}.xaaj-admin-v2 .sidebar-logout:hover{background:#2f7048!important;border-color:#4d9666!important;color:#fff!important;transform:translateY(-1px)!important;box-shadow:0 8px 20px rgba(47,112,72,.25)!important}.xaaj-admin-v2 .sidebar-logout span:first-child{font-size:15px;color:#9bcda7}.xaaj-admin-v2 .admin-main{min-width:0;padding:28px 34px 70px}.xaaj-admin-v2 .content-width{max-width:1320px;margin:0 auto}.xaaj-admin-v2 .topbar{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:26px;padding:22px 26px;background:rgba(255,253,249,.88);border:1px solid var(--line);border-radius:20px;box-shadow:0 12px 35px rgba(63,53,41,.055);backdrop-filter:blur(10px)}.xaaj-admin-v2 .topbar h1,.xaaj-admin-v2 h1,.xaaj-admin-v2 h2,.xaaj-admin-v2 h3{font-family:'Playfair Display',serif;letter-spacing:-.025em}.xaaj-admin-v2 .topbar h1{font-size:32px!important;margin:3px 0 4px!important}.xaaj-admin-v2 .topbar p{margin:0;color:var(--muted);font-size:13px}.xaaj-admin-v2 .top-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.xaaj-admin-v2 .live-store-btn{display:inline-flex!important;align-items:center!important;gap:9px!important;background:#fff!important;color:#205c36!important;border:1px solid #a9c9b1!important;border-radius:999px!important;padding:10px 15px!important;box-shadow:0 5px 16px rgba(47,112,72,.10)!important}.xaaj-admin-v2 .live-store-btn:hover{background:#2f7048!important;color:#fff!important;border-color:#2f7048!important;box-shadow:0 9px 22px rgba(47,112,72,.24)!important}.xaaj-admin-v2 .live-dot{width:9px;height:9px;border-radius:50%;background:#35a85a;box-shadow:0 0 0 0 rgba(53,168,90,.55);animation:xaaj-live-pulse 1.25s infinite}.xaaj-admin-v2 .live-store-btn:hover .live-dot{background:#fff;box-shadow:0 0 0 0 rgba(255,255,255,.55)}@keyframes xaaj-live-pulse{0%{box-shadow:0 0 0 0 rgba(53,168,90,.55);opacity:1}70%{box-shadow:0 0 0 7px rgba(53,168,90,0);opacity:.72}100%{box-shadow:0 0 0 0 rgba(53,168,90,0);opacity:1}}.xaaj-admin-v2 button,.xaaj-admin-v2 .button{appearance:none!important;border:1px solid #d8d0c4!important;background:#fff!important;color:#292621!important;border-radius:11px!important;padding:10px 15px!important;font:600 12px 'DM Sans',sans-serif!important;cursor:pointer!important;transition:all .2s ease!important;box-shadow:0 2px 0 rgba(0,0,0,.02)!important}.xaaj-admin-v2 button:hover:not(:disabled){transform:translateY(-1px)!important;border-color:#3b8758!important;background:#eef8f1!important;color:#1f5c35!important;box-shadow:0 8px 18px rgba(47,112,72,.12)!important}.xaaj-admin-v2 button.button,.xaaj-admin-v2 button[type=submit]{background:#292621!important;color:#fff!important;border-color:#292621!important;box-shadow:0 7px 18px rgba(41,38,33,.18)!important}.xaaj-admin-v2 button.button:hover,.xaaj-admin-v2 button[type=submit]:hover{background:#2f7048!important;border-color:#2f7048!important;color:#fff!important;box-shadow:0 9px 22px rgba(47,112,72,.24)!important}.xaaj-admin-v2 button:disabled{opacity:.45!important;cursor:not-allowed!important;transform:none!important}.xaaj-admin-v2 section{background:rgba(255,253,249,.94)!important;border:1px solid var(--line)!important;border-radius:20px!important;padding:28px!important;margin-bottom:26px!important;box-shadow:0 12px 35px rgba(63,53,41,.055)!important}.xaaj-admin-v2 .summary{background:linear-gradient(145deg,#fffefa,#f2ece2)!important;border:1px solid #e4dcd1!important;border-radius:18px!important;padding:23px!important;min-height:120px!important;box-shadow:0 10px 25px rgba(57,47,35,.065)!important}.xaaj-admin-v2 .summary strong{font-family:'Playfair Display',serif!important;font-size:30px!important}.xaaj-admin-v2 .summary span{display:block!important;margin-top:7px!important;color:var(--muted)!important;font-size:11px!important;text-transform:uppercase!important;letter-spacing:.12em!important}.xaaj-admin-v2 input:not([type=checkbox]),.xaaj-admin-v2 textarea,.xaaj-admin-v2 select{background:#fffefa!important;border:1px solid #ded7cd!important;border-radius:10px!important;padding:11px 13px!important;color:#2c2925!important;outline:none!important;transition:.2s!important}.xaaj-admin-v2 input:not([type=checkbox]):focus,.xaaj-admin-v2 textarea:focus,.xaaj-admin-v2 select:focus{border-color:#9b7c58!important;box-shadow:0 0 0 4px rgba(139,106,67,.10)!important}.xaaj-admin-v2 label{font-weight:600!important;font-size:12px!important;color:#4c4741!important}.xaaj-admin-v2 img{border-radius:13px}.xaaj-admin-v2 .eyebrow{text-transform:uppercase!important;letter-spacing:.16em!important;font-size:9px!important;font-weight:700!important;color:#9a7954!important}.xaaj-admin-v2 small{color:#8b857d!important}.xaaj-admin-v2[data-active-section=dashboard] [data-admin-section]:not([data-admin-section=dashboard]),.xaaj-admin-v2[data-active-section=announcement] [data-admin-section]:not([data-admin-section=announcement]),.xaaj-admin-v2[data-active-section=hero] [data-admin-section]:not([data-admin-section=hero]),.xaaj-admin-v2[data-active-section=blog] [data-admin-section]:not([data-admin-section=blog]),.xaaj-admin-v2[data-active-section=orders] [data-admin-section]:not([data-admin-section=orders]),.xaaj-admin-v2[data-active-section=products] [data-admin-section]:not([data-admin-section=products]){display:none!important}.xaaj-admin-v2 .side-icon svg{display:block}.xaaj-admin-v2 .sidebar-logout svg{color:#9bcda7;flex:none}.xaaj-admin-v2 .sidebar-logout:hover svg{color:#fff}.xaaj-admin-v2 .live-store-btn svg{flex:none}.xaaj-admin-v2 .product-header-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.xaaj-admin-v2 .product-header-actions button{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-height:39px!important}.xaaj-admin-v2 .product-add-btn{background:#292621!important;color:#fff!important;border-color:#292621!important;box-shadow:0 7px 18px rgba(41,38,33,.14)!important}.xaaj-admin-v2 .product-add-btn:hover{background:#2f7048!important;border-color:#2f7048!important;color:#fff!important;box-shadow:0 9px 22px rgba(47,112,72,.22)!important}.xaaj-admin-v2 .product-refresh-btn{background:#fff!important;color:#3f3a34!important}.xaaj-admin-v2 .product-refresh-btn:hover{background:#eef8f1!important;color:#1f5c35!important;border-color:#3b8758!important}.xaaj-admin-v2 .is-spinning{animation:xaaj-spin .8s linear infinite}@keyframes xaaj-spin{to{transform:rotate(360deg)}}
-@media(max-width:900px){.xaaj-admin-v2 .admin-shell{grid-template-columns:1fr}.xaaj-admin-v2 .admin-sidebar{position:sticky;top:0;height:auto;padding:13px 12px}.xaaj-admin-v2 .brand-mark,.xaaj-admin-v2 .side-label{display:none}.xaaj-admin-v2 .side-footer{display:block;margin:0 0 0 8px;padding:0;flex:none}.xaaj-admin-v2 .sidebar-logout{width:auto!important;padding:9px 12px!important}.xaaj-admin-v2 .side-nav{display:flex;overflow-x:auto;gap:5px}.xaaj-admin-v2 .side-nav button{width:auto!important;white-space:nowrap;padding:9px 11px!important}.xaaj-admin-v2 .side-icon{display:none}.xaaj-admin-v2 .admin-main{padding:18px 14px 50px}.xaaj-admin-v2 .topbar{padding:18px}.xaaj-admin-v2 .topbar h1{font-size:27px!important}}`}</style>
+      <style>{`.xaaj-admin-v2{--ink:#25231f;--muted:#777169;--line:#e7e0d6;width:100%;height:100vh;min-height:100vh!important;max-width:none!important;margin:0!important;padding:0!important;background:radial-gradient(circle at 82% 0%,rgba(154,116,72,.09),transparent 28%),#f7f4ee!important;font-family:'DM Sans',sans-serif;color:var(--ink);overflow:hidden!important}
+.xaaj-admin-v2 *{box-sizing:border-box}.xaaj-admin-v2 .admin-shell{display:flex;width:100%;height:100vh;min-height:100vh}.xaaj-admin-v2 .admin-sidebar{position:fixed;left:0;top:0;width:250px;height:100vh;min-height:100vh;background:linear-gradient(180deg,#10271c,#0b1f16);color:#fff;padding:28px 18px;display:flex;flex-direction:column;z-index:20;box-shadow:14px 0 45px rgba(34,29,23,.12);overflow:hidden}.xaaj-admin-v2 .admin-main{margin-left:250px;width:calc(100% - 250px);height:100vh;min-height:100vh;min-width:0;padding:28px 34px 70px;overflow-y:auto;overflow-x:hidden}.xaaj-admin-v2 .brand-mark{padding:6px 12px 30px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:22px}.xaaj-admin-v2 .brand-mark strong{font-family:'Playfair Display',serif;font-size:27px;letter-spacing:.08em;font-weight:500}.xaaj-admin-v2 .brand-mark span{display:block;margin-top:5px;color:#bdb5aa;font-size:9px;letter-spacing:.18em;text-transform:uppercase}.xaaj-admin-v2 .side-label{font-size:9px;text-transform:uppercase;letter-spacing:.18em;color:#8f887d;padding:0 12px 10px}.xaaj-admin-v2 .side-nav{display:grid;gap:5px}.xaaj-admin-v2 .side-nav button{width:100%!important;border:0!important;background:transparent!important;color:#bdb7ae!important;box-shadow:none!important;border-radius:12px!important;padding:12px 13px!important;display:flex!important;align-items:center!important;gap:12px!important;text-align:left!important;font:600 12px 'DM Sans',sans-serif!important;transform:none!important}.xaaj-admin-v2 .side-nav button:hover{background:rgba(47,112,72,.28)!important;color:#fff!important;border-color:rgba(82,157,105,.45)!important;transform:translateX(3px)!important}.xaaj-admin-v2 .side-nav button.active{background:linear-gradient(90deg,#2f7048,#245d3b)!important;color:#fff!important;box-shadow:0 8px 22px rgba(47,112,72,.28),inset 3px 0 #8bd19d!important}.xaaj-admin-v2 .side-nav button.active:hover{background:linear-gradient(90deg,#398356,#2f7048)!important}.xaaj-admin-v2 .side-icon{width:25px;height:25px;border:1px solid rgba(255,255,255,.13);border-radius:8px;display:grid;place-items:center;font-size:11px;color:#9dd5aa;flex:none}.xaaj-admin-v2 .side-footer{margin-top:auto;padding:15px 0 4px}.xaaj-admin-v2 .sidebar-logout{width:100%!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;background:rgba(255,255,255,.045)!important;color:#d8ddd9!important;border:1px solid rgba(255,255,255,.13)!important;border-radius:12px!important;padding:11px 14px!important;box-shadow:none!important}.xaaj-admin-v2 .sidebar-logout:hover{background:#2f7048!important;border-color:#4d9666!important;color:#fff!important}.xaaj-admin-v2 .sidebar-logout span:first-child{font-size:15px;color:#9bcda7}.xaaj-admin-v2 .content-width{max-width:1320px;margin:0 auto}.xaaj-admin-v2 .topbar{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:26px;padding:22px 26px;background:rgba(255,253,249,.88);border:1px solid var(--line);border-radius:20px;box-shadow:0 12px 35px rgba(63,53,41,.055);backdrop-filter:blur(10px)}.xaaj-admin-v2 .topbar h1,.xaaj-admin-v2 h1,.xaaj-admin-v2 h2,.xaaj-admin-v2 h3{font-family:'Playfair Display',serif;letter-spacing:-.025em}.xaaj-admin-v2 .topbar h1{font-size:32px!important;margin:3px 0 4px!important}.xaaj-admin-v2 .topbar p{margin:0;color:var(--muted);font-size:13px}.xaaj-admin-v2 .top-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.xaaj-admin-v2 .live-store-btn{display:inline-flex!important;align-items:center!important;gap:9px!important;background:#fff!important;color:#205c36!important;border:1px solid #a9c9b1!important;border-radius:999px!important;padding:10px 15px!important;box-shadow:0 5px 16px rgba(47,112,72,.10)!important}.xaaj-admin-v2 .live-store-btn:hover{background:#2f7048!important;color:#fff!important;border-color:#2f7048!important;box-shadow:0 9px 22px rgba(47,112,72,.24)!important}.xaaj-admin-v2 .live-dot{width:9px;height:9px;border-radius:50%;background:#35a85a;box-shadow:0 0 0 0 rgba(53,168,90,.55);animation:xaaj-live-pulse 1.25s infinite}.xaaj-admin-v2 .live-store-btn:hover .live-dot{background:#fff;box-shadow:0 0 0 0 rgba(255,255,255,.55)}@keyframes xaaj-live-pulse{0%{box-shadow:0 0 0 0 rgba(53,168,90,.55);opacity:1}70%{box-shadow:0 0 0 7px rgba(53,168,90,0);opacity:.72}100%{box-shadow:0 0 0 0 rgba(53,168,90,0);opacity:1}}.xaaj-admin-v2 button,.xaaj-admin-v2 .button{appearance:none!important;border:1px solid #d8d0c4!important;background:#fff!important;color:#292621!important;border-radius:11px!important;padding:10px 15px!important;font:600 12px 'DM Sans',sans-serif!important;cursor:pointer!important;transition:all .2s ease!important;box-shadow:0 2px 0 rgba(0,0,0,.02)!important}.xaaj-admin-v2 button:hover:not(:disabled){transform:translateY(-1px)!important;border-color:#3b8758!important;background:#eef8f1!important;color:#1f5c35!important;box-shadow:0 8px 18px rgba(47,112,72,.12)!important}.xaaj-admin-v2 button.button,.xaaj-admin-v2 button[type=submit]{background:#292621!important;color:#fff!important;border-color:#292621!important;box-shadow:0 7px 18px rgba(41,38,33,.18)!important}.xaaj-admin-v2 button.button:hover,.xaaj-admin-v2 button[type=submit]:hover{background:#2f7048!important;border-color:#2f7048!important;color:#fff!important;box-shadow:0 9px 22px rgba(47,112,72,.24)!important}.xaaj-admin-v2 button:disabled{opacity:.45!important;cursor:not-allowed!important;transform:none!important}.xaaj-admin-v2 section{background:rgba(255,253,249,.94)!important;border:1px solid var(--line)!important;border-radius:20px!important;padding:28px!important;margin-bottom:26px!important;box-shadow:0 12px 35px rgba(63,53,41,.055)!important}.xaaj-admin-v2 .summary{background:linear-gradient(145deg,#fffefa,#f2ece2)!important;border:1px solid #e4dcd1!important;border-radius:18px!important;padding:23px!important;min-height:120px!important;box-shadow:0 10px 25px rgba(57,47,35,.065)!important}.xaaj-admin-v2 .summary strong{font-family:'Playfair Display',serif!important;font-size:30px!important}.xaaj-admin-v2 .summary span{display:block!important;margin-top:7px!important;color:var(--muted)!important;font-size:11px!important;text-transform:uppercase!important;letter-spacing:.12em!important}.xaaj-admin-v2 input:not([type=checkbox]),.xaaj-admin-v2 textarea,.xaaj-admin-v2 select{background:#fffefa!important;border:1px solid #ded7cd!important;border-radius:10px!important;padding:11px 13px!important;color:#2c2925!important;outline:none!important;transition:.2s!important}.xaaj-admin-v2 input:not([type=checkbox]):focus,.xaaj-admin-v2 textarea:focus,.xaaj-admin-v2 select:focus{border-color:#9b7c58!important;box-shadow:0 0 0 4px rgba(139,106,67,.10)!important}.xaaj-admin-v2 label{font-weight:600!important;font-size:12px!important;color:#4c4741!important}.xaaj-admin-v2 img{border-radius:13px}.xaaj-admin-v2 .eyebrow{text-transform:uppercase!important;letter-spacing:.16em!important;font-size:9px!important;font-weight:700!important;color:#9a7954!important}.xaaj-admin-v2 small{color:#8b857d!important}.xaaj-admin-v2[data-active-section=dashboard] [data-admin-section]:not([data-admin-section=dashboard]),.xaaj-admin-v2[data-active-section=announcement] [data-admin-section]:not([data-admin-section=announcement]),.xaaj-admin-v2[data-active-section=hero] [data-admin-section]:not([data-admin-section=hero]),.xaaj-admin-v2[data-active-section=brand-story] [data-admin-section]:not([data-admin-section=brand-story]),.xaaj-admin-v2[data-active-section=horeca] [data-admin-section]:not([data-admin-section=horeca]),.xaaj-admin-v2[data-active-section=blog] [data-admin-section]:not([data-admin-section=blog]),.xaaj-admin-v2[data-active-section=orders] [data-admin-section]:not([data-admin-section=orders]),.xaaj-admin-v2[data-active-section=products] [data-admin-section]:not([data-admin-section=products]){display:none!important}.xaaj-admin-v2 .side-icon svg{display:block}.xaaj-admin-v2 .sidebar-logout svg{color:#9bcda7;flex:none}.xaaj-admin-v2 .sidebar-logout:hover svg{color:#fff}.xaaj-admin-v2 .live-store-btn svg{flex:none}.xaaj-admin-v2 .product-header-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.xaaj-admin-v2 .product-header-actions button{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-height:39px!important}.xaaj-admin-v2 .product-add-btn{background:#292621!important;color:#fff!important;border-color:#292621!important;box-shadow:0 7px 18px rgba(41,38,33,.14)!important}.xaaj-admin-v2 .product-add-btn:hover{background:#2f7048!important;border-color:#2f7048!important;color:#fff!important;box-shadow:0 9px 22px rgba(47,112,72,.22)!important}.xaaj-admin-v2 .product-refresh-btn{background:#fff!important;color:#3f3a34!important}.xaaj-admin-v2 .product-refresh-btn:hover{background:#eef8f1!important;color:#1f5c35!important;border-color:#3b8758!important}.xaaj-admin-v2 .is-spinning{animation:xaaj-spin .8s linear infinite}@keyframes xaaj-spin{to{transform:rotate(360deg)}}
+.xaaj-admin-v2 [data-admin-section="brand-story"] .brand-story-media-preview{min-height:220px}
+@media(max-width:760px){
+  .xaaj-admin-v2 [data-admin-section="brand-story"] > div:nth-child(2){
+    grid-template-columns:1fr!important;
+  }
+}
+@media(max-width:900px){.xaaj-admin-v2{height:auto;min-height:100vh;overflow:visible!important}.xaaj-admin-v2 .admin-shell{display:block;width:100%;height:auto;min-height:100vh}.xaaj-admin-v2 .admin-sidebar{position:sticky;left:auto;top:0;width:100%;height:auto;min-height:0;padding:13px 12px;overflow:visible}.xaaj-admin-v2 .brand-mark,.xaaj-admin-v2 .side-label{display:none}.xaaj-admin-v2 .side-footer{display:block;margin:0 0 0 8px;padding:0;flex:none}.xaaj-admin-v2 .sidebar-logout{width:auto!important;padding:9px 12px!important}.xaaj-admin-v2 .side-nav{display:flex;overflow-x:auto;gap:5px}.xaaj-admin-v2 .side-nav button{width:auto!important;white-space:nowrap;padding:9px 11px!important}.xaaj-admin-v2 .side-icon{display:none}.xaaj-admin-v2 .admin-main{margin-left:0;width:100%;height:auto;min-height:0;padding:18px 14px 50px;overflow:visible}.xaaj-admin-v2 .topbar{padding:18px}.xaaj-admin-v2 .topbar h1{font-size:27px!important}}`}</style>
       <div className="admin-shell">
         <aside className="admin-sidebar">
           <div className="brand-mark"><strong>XAAJ</strong><span>Stories Crafted in Earth</span></div>
@@ -1026,6 +1816,8 @@ export default function Admin() {
               ['dashboard', 'Overview', FiGrid],
               ['announcement', 'Announcement', FiBell],
               ['hero', 'Hero Media', FiImage],
+              ['brand-story', 'Brand Story', FiBookOpen],
+              ['horeca', 'Horeca Collection', FiImage],
               ['blog', 'Blog', FiEdit3],
               ['orders', 'Orders', FiClock],
               ['products', 'Products', FiPackage]
@@ -1067,7 +1859,7 @@ export default function Admin() {
         <div className="topbar">
           <div>
             <span className="eyebrow">XAAJ / Admin</span>
-            <h1>{activeSection === 'dashboard' ? 'Store overview' : activeSection === 'announcement' ? 'Announcement bar' : activeSection === 'hero' ? 'Hero media' : activeSection === 'blog' ? 'Blog management' : activeSection === 'orders' ? 'Customer orders' : 'Product management'}</h1>
+            <h1>{activeSection === 'dashboard' ? 'Store overview' : activeSection === 'announcement' ? 'Announcement bar' : activeSection === 'hero' ? 'Hero media' : activeSection === 'brand-story' ? 'Brand Story' : activeSection === 'horeca' ? 'Horeca Collection' : activeSection === 'blog' ? 'Blog management' : activeSection === 'orders' ? 'Customer orders' : 'Product management'}</h1>
             <p>Manage your XAAJ storefront from one place.</p>
           </div>
           <div className="top-actions">
@@ -1586,6 +2378,728 @@ export default function Admin() {
                   }
                 >
                   Refresh
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+
+        {/* =========================
+            Category Hero Media Management
+        ========================== */}
+        <section data-admin-section="hero"
+          style={{
+            marginBottom: '50px',
+            padding: '28px',
+            border: '1px solid #e5e5e5',
+            borderRadius: '12px'
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '20px',
+              flexWrap: 'wrap',
+              marginBottom: '24px'
+            }}
+          >
+            <div>
+              <span className="eyebrow">Homepage Categories</span>
+              <h2>Category Hero Media</h2>
+              <p>
+                Manage a separate image or video for each homepage category
+                card. Each category keeps its own stable slug, so changing
+                media does not change the category product link.
+              </p>
+            </div>
+
+            <div
+              style={{
+                padding: '8px 12px',
+                borderRadius: '999px',
+                background: '#f5f5f5',
+                color: '#555',
+                fontSize: '13px',
+                fontWeight: 600
+              }}
+            >
+              5 categories
+            </div>
+          </div>
+
+          {loadingCategoryHero ? (
+            <p>Loading category hero media...</p>
+          ) : (
+            <>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                  gap: '18px'
+                }}
+              >
+                {categoryHeroMedia.map(item => (
+                  <div
+                    key={item.categorySlug}
+                    style={{
+                      border: '1px solid #e5e5e5',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      background: '#faf9f6'
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '10px',
+                        marginBottom: '12px'
+                      }}
+                    >
+                      <div>
+                        <strong>{item.categoryName}</strong>
+                        <small
+                          style={{
+                            display: 'block',
+                            marginTop: '3px'
+                          }}
+                        >
+                          /shop?category={item.categorySlug}
+                        </small>
+                      </div>
+
+                      <span
+                        style={{
+                          padding: '5px 9px',
+                          borderRadius: '999px',
+                          background: item.enabled ? '#edf7ed' : '#f1f1f1',
+                          color: item.enabled ? '#246b2a' : '#666',
+                          fontSize: '11px',
+                          fontWeight: 700
+                        }}
+                      >
+                        {item.enabled ? 'Active' : 'Hidden'}
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '170px',
+                        borderRadius: '9px',
+                        overflow: 'hidden',
+                        background: '#f1eee8',
+                        marginBottom: '14px'
+                      }}
+                    >
+                      {item.mediaUrl ? (
+                        item.mediaType === 'video' ? (
+                          <video
+                            src={item.mediaUrl}
+                            muted
+                            autoPlay
+                            loop
+                            playsInline
+                            controls
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        ) : (
+                          <img
+                            src={item.mediaUrl}
+                            alt={item.alt || item.categoryName}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        )
+                      ) : (
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            display: 'grid',
+                            placeItems: 'center',
+                            padding: '20px',
+                            textAlign: 'center',
+                            color: '#777',
+                            fontSize: '12px'
+                          }}
+                        >
+                          No media configured
+                        </div>
+                      )}
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'grid',
+                        gap: '10px'
+                      }}
+                    >
+                      <label>
+                        Media URL *
+                      </label>
+
+                      <input
+                        value={item.mediaUrl}
+                        onChange={e =>
+                          updateCategoryHeroMedia(
+                            item.categorySlug,
+                            'mediaUrl',
+                            e.target.value
+                          )
+                        }
+                        placeholder="Image or video URL"
+                      />
+
+                      <label>
+                        Media type
+                      </label>
+
+                      <select
+                        value={item.mediaType}
+                        onChange={e =>
+                          updateCategoryHeroMedia(
+                            item.categorySlug,
+                            'mediaType',
+                            e.target.value
+                          )
+                        }
+                      >
+                        <option value="image">Image</option>
+                        <option value="video">Video</option>
+                      </select>
+
+                      <label>
+                        Alt text
+                      </label>
+
+                      <input
+                        value={item.alt}
+                        onChange={e =>
+                          updateCategoryHeroMedia(
+                            item.categorySlug,
+                            'alt',
+                            e.target.value
+                          )
+                        }
+                        placeholder={`${item.categoryName} hero media`}
+                      />
+
+                      <label
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={item.enabled}
+                          onChange={e =>
+                            updateCategoryHeroMedia(
+                              item.categorySlug,
+                              'enabled',
+                              e.target.checked
+                            )
+                          }
+                        />
+                        Show on homepage
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <small
+                style={{
+                  display: 'block',
+                  marginTop: '16px',
+                  color: '#777'
+                }}
+              >
+                Glassware, Gifting, Dinnerware, Serveware and Horeca are
+                stored separately by category slug. Their existing product
+                navigation remains unchanged.
+              </small>
+
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  marginTop: '18px'
+                }}
+              >
+                <button
+                  type="button"
+                  className="button"
+                  onClick={handleSaveCategoryHeroMedia}
+                  disabled={
+                    savingCategoryHero ||
+                    loadingCategoryHero
+                  }
+                >
+                  {savingCategoryHero
+                    ? 'Saving...'
+                    : 'Save Category Media'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={loadCategoryHeroMedia}
+                  disabled={
+                    savingCategoryHero ||
+                    loadingCategoryHero
+                  }
+                >
+                  {loadingCategoryHero
+                    ? 'Loading...'
+                    : 'Refresh'}
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+
+        {/* =========================
+            Brand Story Management
+        ========================== */}
+        <section data-admin-section="brand-story"
+          style={{
+            marginBottom: '50px',
+            padding: '28px',
+            border: '1px solid #e5e5e5',
+            borderRadius: '12px'
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '20px',
+              flexWrap: 'wrap',
+              marginBottom: '24px'
+            }}
+          >
+            <div>
+              <span className="eyebrow">Store Management</span>
+              <h2>Brand Story</h2>
+              <p>
+                Control the media shown beside “India, Made for the
+                Table.” on the homepage. Upload an image or video,
+                preview it, and save the change without changing the
+                story text or Read more link.
+              </p>
+            </div>
+
+            <div
+              style={{
+                padding: '8px 12px',
+                borderRadius: '999px',
+                background:
+                  brandStoryMedia.enabled
+                    ? '#edf7ed'
+                    : '#f5f5f5',
+                color:
+                  brandStoryMedia.enabled
+                    ? '#246b2a'
+                    : '#666',
+                fontSize: '13px',
+                fontWeight: 600
+              }}
+            >
+              {brandStoryMedia.enabled
+                ? 'Live on website'
+                : 'Hidden'}
+            </div>
+          </div>
+
+          {loadingBrandStory ? (
+            <p>Loading Brand Story media...</p>
+          ) : (
+            <>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns:
+                    'minmax(260px, 420px) minmax(0, 1fr)',
+                  gap: '22px',
+                  alignItems: 'start'
+                }}
+              >
+                <div
+                  style={{
+                    width: '100%',
+                    height: '250px',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    background: '#f1eee8',
+                    border:
+                      '1px solid #e5e5e5'
+                  }}
+                >
+                  {brandStoryMedia.mediaUrl ? (
+                    brandStoryMedia.mediaType === 'video' ? (
+                      <video
+                        src={
+                          brandStoryMedia.mediaUrl
+                        }
+                        muted
+                        autoPlay
+                        loop
+                        playsInline
+                        controls
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src={
+                          brandStoryMedia.mediaUrl
+                        }
+                        alt={
+                          brandStoryMedia.alt ||
+                          'Brand Story'
+                        }
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    )
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'grid',
+                        placeItems: 'center',
+                        padding: '20px',
+                        textAlign: 'center',
+                        color: '#777',
+                        fontSize: '12px'
+                      }}
+                    >
+                      No Brand Story media configured
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gap: '10px'
+                  }}
+                >
+                  <label>
+                    Upload Image / Video
+                  </label>
+
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={
+                      handleBrandStoryFileUpload
+                    }
+                    disabled={
+                      uploadingBrandStory ||
+                      savingBrandStory
+                    }
+                    style={{
+                      padding: '9px',
+                      background: '#fffefa'
+                    }}
+                  />
+
+                  <small>
+                    Images: max 5 MB · Videos: max 50 MB
+                  </small>
+
+                  <label
+                    style={{
+                      marginTop: '7px'
+                    }}
+                  >
+                    Media URL
+                  </label>
+
+                  <input
+                    value={
+                      brandStoryMedia.mediaUrl
+                    }
+                    onChange={e =>
+                      updateBrandStoryField(
+                        'mediaUrl',
+                        e.target.value
+                      )
+                    }
+                    onBlur={e =>
+                      updateBrandStoryField(
+                        'mediaType',
+                        getBrandStoryMediaType(
+                          e.target.value,
+                          brandStoryMedia.mediaType
+                        )
+                      )
+                    }
+                    placeholder="Cloudinary image or video URL"
+                  />
+
+                  <label>
+                    Media type
+                  </label>
+
+                  <select
+                    value={
+                      brandStoryMedia.mediaType
+                    }
+                    onChange={e =>
+                      updateBrandStoryField(
+                        'mediaType',
+                        e.target.value
+                      )
+                    }
+                  >
+                    <option value="image">
+                      Image
+                    </option>
+                    <option value="video">
+                      Video
+                    </option>
+                  </select>
+
+                  <label>
+                    Alt text
+                  </label>
+
+                  <input
+                    value={
+                      brandStoryMedia.alt
+                    }
+                    onChange={e =>
+                      updateBrandStoryField(
+                        'alt',
+                        e.target.value
+                      )
+                    }
+                    placeholder="Brand Story media alt text"
+                  />
+
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginTop: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={
+                        brandStoryMedia.enabled
+                      }
+                      onChange={e =>
+                        updateBrandStoryField(
+                          'enabled',
+                          e.target.checked
+                        )
+                      }
+                    />
+                    Show Brand Story media on homepage
+                  </label>
+                </div>
+              </div>
+
+              <small
+                style={{
+                  display: 'block',
+                  marginTop: '16px',
+                  color: '#777'
+                }}
+              >
+                The story heading, description and Read more link remain
+                unchanged. Only the left-side media is managed here.
+              </small>
+
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  marginTop: '18px'
+                }}
+              >
+                <button
+                  type="button"
+                  className="button"
+                  onClick={
+                    handleSaveBrandStoryMedia
+                  }
+                  disabled={
+                    savingBrandStory ||
+                    uploadingBrandStory ||
+                    loadingBrandStory
+                  }
+                >
+                  {savingBrandStory
+                    ? 'Saving...'
+                    : 'Save Brand Story'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={
+                    handleRemoveBrandStoryMedia
+                  }
+                  disabled={
+                    !brandStoryMedia.mediaUrl ||
+                    savingBrandStory ||
+                    uploadingBrandStory ||
+                    loadingBrandStory
+                  }
+                  style={{
+                    border: '1px solid #c44',
+                    color: '#a22',
+                    background: '#fff'
+                  }}
+                >
+                  {savingBrandStory
+                    ? 'Removing...'
+                    : 'Remove Media'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={
+                    loadBrandStoryMedia
+                  }
+                  disabled={
+                    savingBrandStory ||
+                    uploadingBrandStory ||
+                    loadingBrandStory
+                  }
+                >
+                  {loadingBrandStory
+                    ? 'Loading...'
+                    : 'Refresh'}
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+
+        {/* =========================
+            Horeca Collection Management
+        ========================== */}
+        <section data-admin-section="horeca"
+          style={{
+            marginBottom: '50px',
+            padding: '28px',
+            border: '1px solid #e5e5e5',
+            borderRadius: '12px'
+          }}
+        >
+          <div style={{ marginBottom: '24px' }}>
+            <span className="eyebrow">Store Management</span>
+            <h2>Horeca Collection</h2>
+            <p>
+              Change the three images in the “Discover our Horeca collections”
+              section. Remove clears only the custom CMS image; the original
+              image remains as the homepage fallback.
+            </p>
+          </div>
+
+          {loadingHoreca ? (
+            <p>Loading Horeca collection media...</p>
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '18px' }}>
+                {[
+                  ['main', 'Main Image'],
+                  ['sideOne', 'Right Top Image'],
+                  ['sideTwo', 'Right Bottom Image']
+                ].map(([slot, label]) => {
+                  const item = horecaMedia[slot]
+                  const uploading = uploadingHorecaSlot === slot
+
+                  return (
+                    <div key={slot} style={{ border: '1px solid #e5e5e5', borderRadius: '12px', padding: '14px', background: '#fff' }}>
+                      <strong style={{ display: 'block', marginBottom: '10px' }}>{label}</strong>
+
+                      <div style={{ width: '100%', height: '190px', overflow: 'hidden', borderRadius: '9px', background: '#f1eee8', marginBottom: '12px' }}>
+                        {item.mediaUrl ? (
+                          <img src={item.mediaUrl} alt={item.alt || label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', padding: '16px', textAlign: 'center', color: '#777', fontSize: '12px' }}>
+                            No custom image — original fallback will show
+                          </div>
+                        )}
+                      </div>
+
+                      <label>Upload Image</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={e => handleHorecaFileUpload(slot, e)}
+                        disabled={savingHoreca || uploading}
+                        style={{ width: '100%', marginTop: '7px', marginBottom: '8px', padding: '8px' }}
+                      />
+                      <small style={{ display: 'block', marginBottom: '10px' }}>Maximum 5 MB</small>
+
+                      <label>Image URL</label>
+                      <input
+                        value={item.mediaUrl}
+                        onChange={e => updateHorecaField(slot, 'mediaUrl', e.target.value)}
+                        placeholder="Cloudinary image URL"
+                        disabled={savingHoreca || uploading}
+                        style={{ width: '100%', marginTop: '7px', marginBottom: '10px' }}
+                      />
+
+                      <label>Alt text</label>
+                      <input
+                        value={item.alt}
+                        onChange={e => updateHorecaField(slot, 'alt', e.target.value)}
+                        placeholder="Horeca collection image"
+                        disabled={savingHoreca || uploading}
+                        style={{ width: '100%', marginTop: '7px', marginBottom: '12px' }}
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveHorecaMedia(slot)}
+                        disabled={!item.mediaUrl || savingHoreca || uploading}
+                        style={{ width: '100%', border: '1px solid #c44', color: '#a22', background: '#fff' }}
+                      >
+                        {uploading ? 'Uploading...' : savingHoreca ? 'Removing...' : 'Remove Image'}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '18px' }}>
+                <button type="button" className="button" onClick={handleSaveHorecaMedia} disabled={savingHoreca || loadingHoreca || Boolean(uploadingHorecaSlot)}>
+                  {savingHoreca ? 'Saving...' : 'Save Horeca Collection'}
+                </button>
+                <button type="button" onClick={loadHorecaMedia} disabled={savingHoreca || loadingHoreca || Boolean(uploadingHorecaSlot)}>
+                  {loadingHoreca ? 'Loading...' : 'Refresh'}
                 </button>
               </div>
             </>
@@ -2190,19 +3704,77 @@ export default function Admin() {
               <select
                 name="category"
                 value={form.category}
-                onChange={handleChange}
+                onChange={event => {
+                  handleChange(event)
+                  if (event.target.value !== 'Dinnerware') {
+                    setForm(prev => ({
+                      ...prev,
+                      dinnerwareCollection: ''
+                    }))
+                  }
+                }}
                 required
               >
                 <option value="">
                   Select Category
                 </option>
-                <option value="Dinner Sets">Dinner Sets</option>
-                <option value="Plates">Plates</option>
-                <option value="Bowls">Bowls</option>
-                <option value="Cups & Mugs">Cups & Mugs</option>
-                <option value="Serveware">Serveware</option>
-                <option value="Glassware">Glassware</option>
+                {productCategoryOptions.map(category => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
               </select>
+
+              {form.category === 'Dinnerware' && (
+                <div
+                  style={{
+                    padding: '14px 16px',
+                    marginTop: '4px',
+                    border: '1px solid #e1d9cf',
+                    borderRadius: '12px',
+                    background: '#fffdf9'
+                  }}
+                >
+                  <label htmlFor="dinnerware-subcategory">
+                    Dinnerware collection <span style={{ color: '#948b81', fontWeight: 400 }}>(Optional)</span>
+                  </label>
+                  <select
+                    id="dinnerware-subcategory"
+                    name="dinnerwareCollection"
+                    value={form.dinnerwareCollection}
+                    onChange={handleChange}
+                  >
+                    <option value="">
+                      Select collection (optional)
+                    </option>
+                    {dinnerwareSubcategories.map(type => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                  <small style={{ display: 'block', marginTop: '8px' }}>
+                    You can leave this blank. The product will still be saved under Dinnerware.
+                  </small>
+                </div>
+              )}
+
+              {/* HSN Code */}
+              <label htmlFor="product-hsn-code">
+                HSN Code *
+              </label>
+
+              <input
+                id="product-hsn-code"
+                name="hsnCode"
+                value={form.hsnCode}
+                onChange={handleChange}
+                placeholder="e.g. 69120010"
+                inputMode="numeric"
+                pattern="(?:[0-9]{4}|[0-9]{6}|[0-9]{8})"
+                maxLength={8}
+                required
+              />
 
               {/* MRP */}
               <label>

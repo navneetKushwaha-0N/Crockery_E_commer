@@ -485,6 +485,735 @@ router.put(
 )
 
 // ==========================================================
+// CATEGORY HERO MEDIA - PUBLIC GET
+// GET /api/cms/category-hero
+//
+// Homepage category associations use stable slugs.
+// ==========================================================
+
+const CATEGORY_HEROES = [
+  { categorySlug: 'glassware', categoryName: 'Glassware', order: 0 },
+  { categorySlug: 'gifting', categoryName: 'Gifting', order: 1 },
+  { categorySlug: 'dinnerware', categoryName: 'Dinnerware', order: 2 },
+  { categorySlug: 'serveware', categoryName: 'Serveware', order: 3 },
+  { categorySlug: 'horeca', categoryName: 'Horeca', order: 4 }
+]
+
+const normalizeCategoryHero = (content, fallback) => ({
+  id: content?._id || null,
+  categorySlug:
+    content?.metadata?.categorySlug ||
+    fallback?.categorySlug ||
+    '',
+  categoryName:
+    content?.metadata?.categoryName ||
+    content?.title ||
+    fallback?.categoryName ||
+    '',
+  mediaUrl: content?.image || '',
+  mobileMediaUrl:
+    content?.mobileImage ||
+    content?.image ||
+    '',
+  mediaType:
+    content?.mediaType === 'video'
+      ? 'video'
+      : 'image',
+  alt:
+    content?.metadata?.alt ||
+    content?.title ||
+    fallback?.categoryName ||
+    'XAAJ category',
+  enabled:
+    content?.enabled !== undefined
+      ? Boolean(content.enabled)
+      : content?.isActive !== false,
+  order:
+    Number.isFinite(content?.order)
+      ? content.order
+      : Number(fallback?.order || 0)
+})
+
+router.get(
+  '/category-hero',
+  asyncHandler(async (_req, res) => {
+    const content = await Content.find({
+      type: 'category-hero',
+      'metadata.categorySlug': {
+        $in: CATEGORY_HEROES.map(item => item.categorySlug)
+      }
+    })
+      .sort({
+        order: 1,
+        createdAt: 1
+      })
+      .lean()
+
+    const bySlug = new Map(
+      content.map(item => [
+        item?.metadata?.categorySlug,
+        item
+      ])
+    )
+
+    const categoryHeroes = CATEGORY_HEROES
+      .map(fallback =>
+        normalizeCategoryHero(
+          bySlug.get(fallback.categorySlug),
+          fallback
+        )
+      )
+      .filter(item => item.enabled && item.mediaUrl)
+
+    res.json({
+      success: true,
+      data: {
+        categories: categoryHeroes,
+        categoryHeroes
+      }
+    })
+  })
+)
+
+
+// ==========================================================
+// CATEGORY HERO MEDIA - ADMIN GET
+// GET /api/cms/category-hero/admin
+// ==========================================================
+
+router.get(
+  '/category-hero/admin',
+  protect,
+  adminOnly,
+  asyncHandler(async (_req, res) => {
+    const content = await Content.find({
+      type: 'category-hero',
+      'metadata.categorySlug': {
+        $in: CATEGORY_HEROES.map(item => item.categorySlug)
+      }
+    })
+      .sort({
+        order: 1,
+        createdAt: 1
+      })
+      .lean()
+
+    const bySlug = new Map(
+      content.map(item => [
+        item?.metadata?.categorySlug,
+        item
+      ])
+    )
+
+    const categoryHeroes = CATEGORY_HEROES.map(
+      fallback =>
+        normalizeCategoryHero(
+          bySlug.get(fallback.categorySlug),
+          fallback
+        )
+    )
+
+    res.json({
+      success: true,
+      data: {
+        categories: categoryHeroes,
+        categoryHeroes
+      }
+    })
+  })
+)
+
+
+// ==========================================================
+// CATEGORY HERO MEDIA - ADMIN UPDATE
+// PUT /api/cms/category-hero
+// ==========================================================
+
+router.put(
+  '/category-hero',
+  protect,
+  adminOnly,
+  asyncHandler(async (req, res) => {
+    const incoming =
+      Array.isArray(req.body?.categoryHeroes)
+        ? req.body.categoryHeroes
+        : Array.isArray(req.body?.categories)
+          ? req.body.categories
+          : null
+
+    if (!incoming) {
+      return res.status(422).json({
+        success: false,
+        message:
+          'Category hero media must be provided as an array.'
+      })
+    }
+
+    const allowedSlugs = new Map(
+      CATEGORY_HEROES.map(item => [
+        item.categorySlug,
+        item
+      ])
+    )
+
+    const updates = []
+    const seen = new Set()
+
+    for (const item of incoming) {
+      const categorySlug = String(
+        item?.categorySlug ||
+        item?.slug ||
+        ''
+      )
+        .trim()
+        .toLowerCase()
+
+      if (!allowedSlugs.has(categorySlug)) {
+        return res.status(422).json({
+          success: false,
+          message:
+            `Unsupported category slug: ${categorySlug || 'missing'}`
+        })
+      }
+
+      if (seen.has(categorySlug)) {
+        continue
+      }
+
+      seen.add(categorySlug)
+
+      const fallback = allowedSlugs.get(categorySlug)
+
+      const mediaUrl = String(
+        item?.mediaUrl ||
+        item?.image ||
+        item?.imageUrl ||
+        ''
+      ).trim()
+
+      const mobileMediaUrl = String(
+        item?.mobileMediaUrl ||
+        item?.mobileImage ||
+        mediaUrl
+      ).trim()
+
+      const mediaType =
+        item?.mediaType === 'video'
+          ? 'video'
+          : 'image'
+
+      const alt = String(
+        item?.alt ||
+        fallback.categoryName
+      ).trim()
+
+      const enabled =
+        item?.enabled !== false
+
+      updates.push({
+        updateOne: {
+          filter: {
+            type: 'category-hero',
+            'metadata.categorySlug': categorySlug
+          },
+          update: {
+            $set: {
+              type: 'category-hero',
+              title: fallback.categoryName,
+              image: mediaUrl,
+              mobileImage: mobileMediaUrl,
+              mediaType,
+              enabled,
+              isActive: enabled,
+              order: fallback.order,
+              startsAt: null,
+              endsAt: null,
+              metadata: {
+                categorySlug,
+                categoryName: fallback.categoryName,
+                alt
+              }
+            }
+          },
+          upsert: true
+        }
+      })
+    }
+
+    if (updates.length > 0) {
+      await Content.bulkWrite(updates)
+    }
+
+    const content = await Content.find({
+      type: 'category-hero',
+      'metadata.categorySlug': {
+        $in: CATEGORY_HEROES.map(item => item.categorySlug)
+      }
+    })
+      .sort({
+        order: 1,
+        createdAt: 1
+      })
+      .lean()
+
+    const bySlug = new Map(
+      content.map(item => [
+        item?.metadata?.categorySlug,
+        item
+      ])
+    )
+
+    const categoryHeroes = CATEGORY_HEROES.map(
+      fallback =>
+        normalizeCategoryHero(
+          bySlug.get(fallback.categorySlug),
+          fallback
+        )
+    )
+
+    res.json({
+      success: true,
+      message:
+        'Category hero media updated successfully.',
+      data: {
+        categories: categoryHeroes,
+        categoryHeroes
+      }
+    })
+  })
+)
+
+
+
+// ==========================================================
+// HORECA COLLECTION MEDIA - PUBLIC GET
+// GET /api/cms/horeca-collection
+//
+// Homepage Horeca collection ke 3 image slots.
+// Empty media URL ka matlab uploaded image remove hai;
+// homepage apni original fallback image dikha sakta hai.
+// ==========================================================
+
+const HORECA_COLLECTION_SLOTS = [
+  {
+    slot: 'main',
+    title: 'Horeca Main',
+    alt: 'XAAJ Horeca collection',
+    order: 0
+  },
+  {
+    slot: 'sideOne',
+    title: 'Horeca Side One',
+    alt: 'XAAJ Horeca tableware',
+    order: 1
+  },
+  {
+    slot: 'sideTwo',
+    title: 'Horeca Side Two',
+    alt: 'XAAJ Horeca serveware',
+    order: 2
+  }
+]
+
+const normalizeHorecaCollection = (content = []) => {
+  const list = Array.isArray(content) ? content : []
+
+  return HORECA_COLLECTION_SLOTS.map(slotDefault => {
+    const saved = list.find(item => {
+      const savedSlot = String(
+        item?.metadata?.slot ||
+        item?.slot ||
+        ''
+      )
+        .trim()
+        .toLowerCase()
+
+      return savedSlot === slotDefault.slot.toLowerCase()
+    })
+
+    return {
+      id: saved?._id || null,
+      slot: slotDefault.slot,
+      mediaUrl: saved?.image || '',
+      mediaType:
+        saved?.mediaType === 'video'
+          ? 'video'
+          : 'image',
+      alt:
+        saved?.metadata?.alt ||
+        saved?.title ||
+        slotDefault.alt,
+      enabled:
+        saved?.enabled !== undefined
+          ? Boolean(saved.enabled)
+          : saved?.isActive !== false,
+      order: slotDefault.order
+    }
+  })
+}
+
+router.get(
+  '/horeca-collection',
+  asyncHandler(async (_req, res) => {
+    const content = await Content.find({
+      type: 'settings',
+      'metadata.section': 'horeca-collection'
+    })
+      .sort({
+        order: 1,
+        createdAt: 1
+      })
+      .lean()
+
+    const items = normalizeHorecaCollection(content)
+
+    res.json({
+      success: true,
+      data: {
+        items,
+        horeca: items,
+        media: items
+      }
+    })
+  })
+)
+
+// ==========================================================
+// HORECA COLLECTION MEDIA - ADMIN GET
+// GET /api/cms/horeca-collection/admin
+// ==========================================================
+
+router.get(
+  '/horeca-collection/admin',
+  protect,
+  adminOnly,
+  asyncHandler(async (_req, res) => {
+    const content = await Content.find({
+      type: 'settings',
+      'metadata.section': 'horeca-collection'
+    })
+      .sort({
+        order: 1,
+        createdAt: 1
+      })
+      .lean()
+
+    const items = normalizeHorecaCollection(content)
+
+    res.json({
+      success: true,
+      data: {
+        items,
+        horeca: items,
+        media: items
+      }
+    })
+  })
+)
+
+// ==========================================================
+// HORECA COLLECTION MEDIA - ADMIN UPDATE
+// PUT /api/cms/horeca-collection
+//
+// Admin panel se 3 Horeca image slots save/remove.
+// Empty media URL sirf us slot ka media clear karta hai;
+// collection section enabled/visible rehta hai.
+// ==========================================================
+
+router.put(
+  '/horeca-collection',
+  protect,
+  adminOnly,
+  asyncHandler(async (req, res) => {
+    const incoming = Array.isArray(req.body?.items)
+      ? req.body.items
+      : Array.isArray(req.body?.horeca)
+        ? req.body.horeca
+        : Array.isArray(req.body?.media)
+          ? req.body.media
+          : null
+
+    if (!incoming) {
+      return res.status(422).json({
+        success: false,
+        message:
+          'Horeca collection media must be provided as an array.'
+      })
+    }
+
+    const allowedSlots = new Map(
+      HORECA_COLLECTION_SLOTS.map(item => [
+        item.slot,
+        item
+      ])
+    )
+
+    const updates = []
+    const seen = new Set()
+
+    for (const item of incoming) {
+      const rawSlot = String(
+        item?.slot ||
+        item?.key ||
+        item?.position ||
+        ''
+      )
+        .trim()
+        .toLowerCase()
+        .replace(/[\s_-]+/g, '')
+
+      const slot =
+        rawSlot === 'main' ||
+        rawSlot === 'primary' ||
+        rawSlot === 'left'
+          ? 'main'
+          : rawSlot === 'sideone' ||
+              rawSlot === 'side1' ||
+              rawSlot === 'top' ||
+              rawSlot === 'righttop'
+            ? 'sideOne'
+            : rawSlot === 'sidetwo' ||
+                rawSlot === 'side2' ||
+                rawSlot === 'bottom' ||
+                rawSlot === 'rightbottom'
+              ? 'sideTwo'
+              : null
+
+      if (!slot || seen.has(slot)) {
+        continue
+      }
+
+      seen.add(slot)
+
+      const fallback = allowedSlots.get(slot)
+
+      const mediaUrl = String(
+        item?.mediaUrl ||
+        item?.image ||
+        item?.imageUrl ||
+        ''
+      ).trim()
+
+      const mediaType =
+        item?.mediaType === 'video'
+          ? 'video'
+          : 'image'
+
+      const alt = String(
+        item?.alt ||
+        fallback.alt
+      ).trim()
+
+      const enabled =
+        item?.enabled !== false
+
+      updates.push({
+        updateOne: {
+          filter: {
+            type: 'settings',
+            'metadata.section': 'horeca-collection',
+            'metadata.slot': slot
+          },
+          update: {
+            $set: {
+              type: 'settings',
+              title: fallback.title,
+              image: mediaUrl,
+              mediaType,
+              enabled,
+              isActive: enabled,
+              order: fallback.order,
+              startsAt: null,
+              endsAt: null,
+              metadata: {
+                section: 'horeca-collection',
+                slot,
+                alt
+              }
+            }
+          },
+          upsert: true
+        }
+      })
+    }
+
+    if (updates.length > 0) {
+      await Content.bulkWrite(updates)
+    }
+
+    const content = await Content.find({
+      type: 'settings',
+      'metadata.section': 'horeca-collection'
+    })
+      .sort({
+        order: 1,
+        createdAt: 1
+      })
+      .lean()
+
+    const items = normalizeHorecaCollection(content)
+
+    res.json({
+      success: true,
+      message: 'Horeca collection media updated successfully.',
+      data: {
+        items,
+        horeca: items,
+        media: items
+      }
+    })
+  })
+)
+
+
+// ==========================================================
+// BRAND STORY MEDIA - PUBLIC GET
+// GET /api/cms/brand-story
+//
+// Homepage Brand Story section ke liye image/video.
+// ==========================================================
+
+const normalizeBrandStory = (content) => ({
+  id: content?._id || null,
+  mediaUrl: content?.image || '',
+  mediaType: content?.mediaType === 'video' ? 'video' : 'image',
+  alt:
+    content?.metadata?.alt ||
+    content?.title ||
+    'XAAJ handcrafted tableware arranged on a linen table',
+  enabled:
+    content?.enabled !== undefined
+      ? Boolean(content.enabled)
+      : content?.isActive !== false
+})
+
+router.get(
+  '/brand-story',
+  asyncHandler(async (_req, res) => {
+    const content = await Content.findOne({
+      type: 'settings',
+      'metadata.section': 'brand-story'
+    })
+      .sort({ updatedAt: -1 })
+      .lean()
+
+    const brandStory = normalizeBrandStory(content)
+
+    res.json({
+      success: true,
+      data: {
+        brandStory
+      }
+    })
+  })
+)
+
+// ==========================================================
+// BRAND STORY MEDIA - ADMIN GET
+// GET /api/cms/brand-story/admin
+// ==========================================================
+
+router.get(
+  '/brand-story/admin',
+  protect,
+  adminOnly,
+  asyncHandler(async (_req, res) => {
+    const content = await Content.findOne({
+      type: 'settings',
+      'metadata.section': 'brand-story'
+    })
+      .sort({ updatedAt: -1 })
+      .lean()
+
+    const brandStory = normalizeBrandStory(content)
+
+    res.json({
+      success: true,
+      data: {
+        brandStory
+      }
+    })
+  })
+)
+
+// ==========================================================
+// BRAND STORY MEDIA - ADMIN UPDATE
+// PUT /api/cms/brand-story
+//
+// Admin panel se Brand Story ka image/video + enabled state save.
+// ==========================================================
+
+router.put(
+  '/brand-story',
+  protect,
+  adminOnly,
+  asyncHandler(async (req, res) => {
+    const mediaUrl = String(
+      req.body?.mediaUrl ||
+      req.body?.image ||
+      req.body?.imageUrl ||
+      req.body?.videoUrl ||
+      ''
+    ).trim()
+
+    const mediaType =
+      req.body?.mediaType === 'video'
+        ? 'video'
+        : 'image'
+
+    const alt = String(
+      req.body?.alt ||
+      'XAAJ handcrafted tableware arranged on a linen table'
+    ).trim()
+
+    const enabled = req.body?.enabled !== false
+
+    // Empty media URL means only the current Brand Story media is removed.
+    // The Brand Story section itself stays enabled on the homepage.
+
+    const content = await Content.findOneAndUpdate(
+      {
+        type: 'settings',
+        'metadata.section': 'brand-story'
+      },
+      {
+        $set: {
+          type: 'settings',
+          title: 'Brand Story',
+          image: mediaUrl,
+          mediaType,
+          enabled,
+          isActive: enabled,
+          order: 0,
+          startsAt: null,
+          endsAt: null,
+          metadata: {
+            section: 'brand-story',
+            alt
+          }
+        }
+      },
+      {
+        returnDocument: 'after',
+        upsert: true,
+        runValidators: true,
+        setDefaultsOnInsert: true
+      }
+    )
+
+    res.json({
+      success: true,
+      message: mediaUrl
+        ? 'Brand Story updated successfully.'
+        : 'Brand Story media removed successfully.',
+      data: {
+        brandStory: normalizeBrandStory(content)
+      }
+    })
+  })
+)
+
+// ==========================================================
 // HOME CMS DATA
 // GET /api/cms/home
 // ==========================================================

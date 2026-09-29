@@ -8,14 +8,15 @@ import {
 } from '../middleware/index.js'
 
 import {
-  uploadImage
+  uploadImage,
+  uploadMedia
 } from '../services/integrations.js'
 
 const router = Router()
 
 
 // ============================================================
-// MULTER CONFIGURATION
+// MULTER - IMAGE CONFIGURATION
 // ============================================================
 
 const upload = multer({
@@ -24,7 +25,7 @@ const upload = multer({
     multer.memoryStorage(),
 
   limits: {
-    // Maximum 5 MB
+    // Maximum 5 MB for normal images
     fileSize:
       5 * 1024 * 1024
   },
@@ -55,6 +56,59 @@ const upload = multer({
 
 
 // ============================================================
+// MULTER - IMAGE / VIDEO MEDIA CONFIGURATION
+// ============================================================
+
+const uploadMediaFile = multer({
+
+  storage:
+    multer.memoryStorage(),
+
+  limits: {
+    // Maximum 50 MB for hero media.
+    // This allows practical video uploads while keeping
+    // the existing 5 MB image endpoint unchanged.
+    fileSize:
+      50 * 1024 * 1024
+  },
+
+  fileFilter:
+    (_req, file, callback) => {
+
+      // ------------------------------------------------------
+      // Images and videos allowed
+      // ------------------------------------------------------
+
+      const isImage =
+        Boolean(
+          file.mimetype &&
+          file.mimetype.startsWith(
+            'image/'
+          )
+        )
+
+      const isVideo =
+        Boolean(
+          file.mimetype &&
+          file.mimetype.startsWith(
+            'video/'
+          )
+        )
+
+      if (!isImage && !isVideo) {
+        return callback(
+          new Error(
+            'Only image and video files are allowed'
+          )
+        )
+      }
+
+      callback(null, true)
+    }
+})
+
+
+// ============================================================
 // UPLOAD PRODUCT / CMS IMAGE
 //
 // POST /api/uploads/image
@@ -66,6 +120,8 @@ const upload = multer({
 // folder
 //
 // Admin only
+//
+// Existing image upload endpoint is preserved.
 // ============================================================
 
 router.post(
@@ -151,6 +207,121 @@ router.post(
 
 
 // ============================================================
+// UPLOAD IMAGE / VIDEO MEDIA
+//
+// POST /api/uploads/media
+//
+// Field name:
+// media
+//
+// Optional:
+// folder
+//
+// Optional:
+// resourceType = image | video | auto
+//
+// Admin only
+//
+// Intended for homepage/category hero media.
+// ============================================================
+
+router.post(
+  '/media',
+
+  protect,
+  adminOnly,
+
+  uploadMediaFile.single('media'),
+
+  asyncHandler(
+    async (req, res) => {
+
+      // ------------------------------------------------------
+      // File required
+      // ------------------------------------------------------
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message:
+            'Image or video is required'
+        })
+      }
+
+
+      // ------------------------------------------------------
+      // Safe folder
+      // ------------------------------------------------------
+
+      const requestedFolder =
+        String(
+          req.body?.folder ||
+          'xaaj/category-heroes'
+        )
+          .trim()
+          .replace(
+            /[^a-zA-Z0-9/_-]/g,
+            ''
+          )
+
+
+      const folder =
+        requestedFolder ||
+        'xaaj/category-heroes'
+
+
+      // ------------------------------------------------------
+      // Resource type
+      // ------------------------------------------------------
+
+      const resourceType =
+        req.file.mimetype.startsWith('video/')
+          ? 'video'
+          : 'image'
+
+
+      // ------------------------------------------------------
+      // Upload buffer directly to Cloudinary
+      // ------------------------------------------------------
+
+      const data =
+        await uploadMedia(
+          req.file.buffer,
+          folder,
+          resourceType
+        )
+
+
+      // ------------------------------------------------------
+      // Response
+      // ------------------------------------------------------
+
+      res.status(201).json({
+
+        success: true,
+
+        message:
+          `${resourceType === 'video' ? 'Video' : 'Image'} uploaded successfully`,
+
+        data: {
+          ...data,
+
+          mediaType:
+            resourceType,
+
+          mimeType:
+            req.file.mimetype,
+
+          originalName:
+            req.file.originalname
+        }
+      })
+    }
+  )
+)
+
+
+// ============================================================
 // MULTER ERROR HANDLER
 // ============================================================
 
@@ -169,7 +340,7 @@ router.use(
         return res.status(400).json({
           success: false,
           message:
-            'Image size cannot exceed 5 MB'
+            'Media size cannot exceed 50 MB'
         })
       }
 
@@ -177,7 +348,7 @@ router.use(
         success: false,
         message:
           err.message ||
-          'Image upload failed'
+          'Media upload failed'
       })
     }
 
@@ -190,6 +361,18 @@ router.use(
         success: false,
         message:
           'Only image files are allowed'
+      })
+    }
+
+
+    if (
+      err?.message ===
+      'Only image and video files are allowed'
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'Only image and video files are allowed'
       })
     }
 

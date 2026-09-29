@@ -16,6 +16,28 @@ import {
 const router = Router()
 
 // ============================================================
+// PRODUCT CATEGORY / DINNERWARE COLLECTION RULES
+// ============================================================
+
+const PRODUCT_CATEGORIES = [
+  'Dinnerware',
+  'Glassware',
+  'Serveware',
+  'Gifting',
+  'Horeca'
+]
+
+const DINNERWARE_COLLECTIONS = [
+  'Speckled White',
+  'Dove Gray',
+  'Blush Pink',
+  'Beachgrass Green',
+  'Midnight Blue'
+]
+
+const HSN_REGEX = /^\d{4}(?:\d{2})?(?:\d{2})?$/
+
+// ============================================================
 // NEWSLETTER PRODUCT ANNOUNCEMENT
 // ============================================================
 
@@ -269,6 +291,7 @@ router.get(
       maxPrice,
       inStock,
       tag,
+      dinnerwareCollection,
       sort = 'newest'
     } = req.query
 
@@ -292,6 +315,14 @@ router.get(
     // Category
     if (category) {
       filter.category = String(category).trim()
+    }
+
+    // Dinnerware collection
+    // This is optional and only matches products that have a
+    // Dinnerware collection value saved.
+    if (dinnerwareCollection) {
+      filter.dinnerwareCollection =
+        String(dinnerwareCollection).trim()
     }
 
     // Search
@@ -618,6 +649,26 @@ router.post(
       ...req.validated.body
     }
 
+    // Normalize the optional Dinnerware collection.
+    if (
+      productData.dinnerwareCollection === '' ||
+      productData.dinnerwareCollection === null ||
+      productData.dinnerwareCollection === undefined
+    ) {
+      productData.dinnerwareCollection = null
+    }
+
+    if (
+      productData.category !== 'Dinnerware'
+    ) {
+      productData.dinnerwareCollection = null
+    }
+
+    // Keep HSN as a string so leading zeroes are preserved.
+    if (productData.hsnCode !== undefined) {
+      productData.hsnCode = String(productData.hsnCode).trim()
+    }
+
     // MRP = compareAtPrice
     productData.compareAtPrice =
       productData.mrp
@@ -685,6 +736,94 @@ router.patch(
 
     const updateData = {
       ...req.body
+    }
+
+    // --------------------------------------------------------
+    // Category / Dinnerware collection
+    // --------------------------------------------------------
+
+    if (updateData.category !== undefined) {
+      updateData.category =
+        String(updateData.category).trim()
+
+      if (
+        !PRODUCT_CATEGORIES.includes(
+          updateData.category
+        )
+      ) {
+        return res.status(422).json({
+          success: false,
+          message:
+            'Invalid product category'
+        })
+      }
+    }
+
+    if (
+      updateData.dinnerwareCollection !== undefined
+    ) {
+      const collection =
+        updateData.dinnerwareCollection === null
+          ? ''
+          : String(
+              updateData.dinnerwareCollection
+            ).trim()
+
+      if (!collection) {
+        updateData.dinnerwareCollection = null
+      } else if (
+        !DINNERWARE_COLLECTIONS.includes(
+          collection
+        )
+      ) {
+        return res.status(422).json({
+          success: false,
+          message:
+            'Invalid Dinnerware collection'
+        })
+      } else {
+        updateData.dinnerwareCollection =
+          collection
+      }
+    }
+
+    // If the product is not Dinnerware, its optional
+    // Dinnerware collection must always remain empty.
+    const finalCategory =
+      updateData.category !== undefined
+        ? updateData.category
+        : product.category
+
+    if (finalCategory !== 'Dinnerware') {
+      if (
+        updateData.dinnerwareCollection !== undefined &&
+        updateData.dinnerwareCollection !== null
+      ) {
+        return res.status(422).json({
+          success: false,
+          message:
+            'Dinnerware collection can only be used with Dinnerware products'
+        })
+      }
+
+      updateData.dinnerwareCollection = null
+    }
+
+    // --------------------------------------------------------
+    // HSN code
+    // --------------------------------------------------------
+
+    if (updateData.hsnCode !== undefined) {
+      updateData.hsnCode =
+        String(updateData.hsnCode).trim()
+
+      if (!HSN_REGEX.test(updateData.hsnCode)) {
+        return res.status(422).json({
+          success: false,
+          message:
+            'HSN code must contain 4, 6, or 8 digits'
+        })
+      }
     }
 
     // Protected fields

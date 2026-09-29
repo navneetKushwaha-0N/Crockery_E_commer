@@ -11,6 +11,7 @@ const contentSchema = new mongoose.Schema(
       enum: [
         'announcement',
         'hero',
+        'category-hero',
         'promotion',
         'testimonial',
         'gallery',
@@ -132,6 +133,13 @@ const contentSchema = new mongoose.Schema(
     // EXTRA DATA
     // ==========================================================
 
+    // Category hero records store stable category information
+    // here, for example:
+    // {
+    //   categorySlug: 'serveware',
+    //   categoryName: 'Serveware',
+    //   alt: 'XAAJ Serveware'
+    // }
     metadata: {
       type: mongoose.Schema.Types.Mixed
     }

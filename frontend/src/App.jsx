@@ -89,7 +89,7 @@ gsap.registerPlugin(ScrollTrigger, ScrollSmoother)
 // ============================================================
 
 const logoUrl =
-  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/XAAJ-2yUrpJO9vc2pmdbPlcTgeW8taxlHLN.png'
+  '/xaaj-logo-no-tagline.png'
 
 const heroImage =
   'https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=1800&q=88'
@@ -115,1304 +115,1513 @@ const defaultHeroSlides = [
 const tableImage =
   'https://images.unsplash.com/photo-1603199506016-b9a594b593c0?auto=format&fit=crop&w=1200&q=86'
 
+// Homepage collection cards — dedicated XAAJ category photography.
+const dinnerSetsHeroImage =
+  'https://res.cloudinary.com/kswukbpp/image/upload/v1790273032/ChatGPT_Image_Sep_24_2026_11_33_30_PM.png'
+
+const cupsMugsHeroImage =
+  'https://res.cloudinary.com/kswukbpp/image/upload/v1790269006/ChatGPT_Image_Sep_24_2026_10_26_10_PM.png'
+
+// Horeca collection gallery defaults. Admin CMS media can replace any slot;
+// clearing a CMS slot falls back to the original image so the section stays visible.
+const horecaDefaultMedia = {
+  main: {
+    url: tableImage,
+    alt: 'XAAJ Horeca collection'
+  },
+  sideOne: {
+    url: dinnerSetsHeroImage,
+    alt: 'XAAJ Horeca tableware'
+  },
+  sideTwo: {
+    url: 'https://res.cloudinary.com/kswukbpp/image/upload/v1790269104/ChatGPT_Image_Sep_24_2026_10_27_52_PM.png',
+    alt: 'XAAJ Horeca serveware'
+  }
+}
+
+// Homepage category hero cards are keyed by stable slugs.
+// Admin-managed media can replace these fallback images without changing
+// the category links or product/category filtering.
+const categoryHeroDefinitions = [
+  {
+    name: 'Glassware',
+    slug: 'glassware',
+    fallback:
+      'https://images.unsplash.com/photo-1577937927133-66ef06acdf18?auto=format&fit=crop&w=1200&q=88'
+  },
+  {
+    name: 'Gifting',
+    slug: 'gifting',
+    fallback: tableImage
+  },
+  {
+    name: 'Dinnerware',
+    slug: 'dinnerware',
+    fallback: dinnerSetsHeroImage
+  },
+  {
+    name: 'Serveware',
+    slug: 'serveware',
+    fallback:
+      'https://res.cloudinary.com/kswukbpp/image/upload/v1790269104/ChatGPT_Image_Sep_24_2026_10_27_52_PM.png'
+  },
+  {
+    name: 'Horeca',
+    slug: 'horeca',
+    fallback: heroImage
+  }
+]
+
+const toCategoryHeroSlug = value =>
+  String(value || '')
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+const getCategoryHeroMediaType = (url, mediaType) => {
+  if (mediaType === 'video') return 'video'
+
+  return /\.(mp4|webm|ogg|mov)(?:[?#].*)?$/i.test(String(url || '').trim())
+    ? 'video'
+    : 'image'
+}
+
+const getBrandStoryMediaType = (url, mediaType) =>
+  getCategoryHeroMediaType(url, mediaType)
+
 
 // ============================================================
-// HEADER
+// HEADER — XAAJ EDITORIAL / AMALA-STYLE SHELL
 // ============================================================
 
 function Header() {
-
-  // Mobile menu + premium mega-menu state
-  const [open, setOpen] = useState(false)
-  const [activeMegaMenu, setActiveMegaMenu] = useState(null)
-
-  // Search bar state
-  const [search, setSearch] = useState(false)
-
-  // Authentication
   const { user } = useAuth()
+  const { count, cart, total } = useStore()
+  const navigate = useNavigate()
+  const location = useLocation()
 
-  // Cart item count + premium cart micro-interaction
-  const {
-    count,
-    newArrivals
-  } = useStore()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuMounted, setMenuMounted] = useState(false)
+  const [menuClosing, setMenuClosing] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [cartOpen, setCartOpen] = useState(false)
+  const [cartMounted, setCartMounted] = useState(false)
+  const [cartClosing, setCartClosing] = useState(false)
+  const [search, setSearch] = useState('')
+  const drawerTimerRef = useRef(null)
+  const [announcementText, setAnnouncementText] = useState('Free shipping on orders above ₹1,000')
+  const [announcementEnabled, setAnnouncementEnabled] = useState(true)
+  const [homeScrolled, setHomeScrolled] = useState(false)
+  const [mobileDinnerwareOpen, setMobileDinnerwareOpen] = useState(false)
 
-  // Live blog content for the Blog mega menu.
-  // useBlogPosts() is declared later in this file and is safe to call here.
-  const {
-    posts: blogPosts
-  } = useBlogPosts()
+  const clearDrawerTimer = () => {
+    if (drawerTimerRef.current) {
+      window.clearTimeout(drawerTimerRef.current)
+      drawerTimerRef.current = null
+    }
+  }
 
-  const [cartBump, setCartBump] = useState(false)
+  const closeMenu = () => {
+    clearDrawerTimer()
+    setMobileDinnerwareOpen(false)
+    setMenuOpen(false)
+    setMenuClosing(true)
+    drawerTimerRef.current = window.setTimeout(() => {
+      setMenuMounted(false)
+      setMenuClosing(false)
+      drawerTimerRef.current = null
+    }, 420)
+  }
 
-  // GSAP refs for mega-menu entrance animations.
-  const megaMenuRefs = useRef({})
-  const megaCloseTimer = useRef(null)
+  const closeCart = () => {
+    clearDrawerTimer()
+    setCartOpen(false)
+    setCartClosing(true)
+    drawerTimerRef.current = window.setTimeout(() => {
+      setCartMounted(false)
+      setCartClosing(false)
+      drawerTimerRef.current = null
+    }, 380)
+  }
+
+  const closeAll = () => {
+    setSearchOpen(false)
+    if (menuMounted) closeMenu()
+    if (cartMounted) closeCart()
+  }
+
+  const openMenu = () => {
+    clearDrawerTimer()
+    setMobileDinnerwareOpen(false)
+    setCartOpen(false)
+    setCartMounted(false)
+    setCartClosing(false)
+    setSearchOpen(false)
+    setMenuMounted(true)
+    requestAnimationFrame(() => setMenuOpen(true))
+  }
+
+  const openCart = () => {
+    clearDrawerTimer()
+    setMenuOpen(false)
+    setMenuMounted(false)
+    setMenuClosing(false)
+    setSearchOpen(false)
+    setCartClosing(false)
+    setCartMounted(true)
+    setCartOpen(true)
+  }
 
   useEffect(() => {
-    const handleCartAdded = () => {
-      setCartBump(true)
-
-      window.setTimeout(() => {
-        setCartBump(false)
-      }, 520)
+    const isHome = location.pathname === '/'
+    if (!isHome) {
+      setHomeScrolled(false)
+      return undefined
     }
+    const onScroll = () => setHomeScrolled(window.scrollY > 55)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [location.pathname])
 
-    window.addEventListener('xaaj:cart-added', handleCartAdded)
-
+  useEffect(() => {
+    document.body.classList.add('xaaj-header-mounted')
     return () => {
-      window.removeEventListener('xaaj:cart-added', handleCartAdded)
+      document.body.classList.remove('xaaj-header-mounted')
+      clearDrawerTimer()
     }
   }, [])
 
-  // Announcement bar state
-  const [announcementText, setAnnouncementText] = useState(
-    'Free shipping on orders above ₹1,000'
-  )
-  const [announcementEnabled, setAnnouncementEnabled] = useState(true)
-
-  // Load announcement from backend
   useEffect(() => {
     let cancelled = false
-
     async function loadAnnouncement() {
       try {
         const result = await apiRequest('/cms/announcement')
         const data = result?.data || result?.announcement || result || {}
-
         if (cancelled) return
-
-        if (data?.text || data?.message) {
-          setAnnouncementText(data.text || data.message)
-        }
-
-        if (data?.enabled !== undefined) {
-          setAnnouncementEnabled(Boolean(data.enabled))
-        }
+        if (data?.text || data?.message) setAnnouncementText(data.text || data.message)
+        if (data?.enabled !== undefined) setAnnouncementEnabled(Boolean(data.enabled))
       } catch (error) {
         console.error('Announcement load error:', error)
       }
     }
-
     loadAnnouncement()
-
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [])
-
-  // Navigation
-  const navigate = useNavigate()
-  const location = useLocation()
-
-  // Fixed on every page except Collections.
-  // Portal to body so ScrollSmoother cannot transform the fixed header.
-  const isCollectionsPage = location.pathname === '/collections'
-  const shouldFixHeader = !isCollectionsPage
-  const headerShellRef = useRef(null)
-  const [headerShellHeight, setHeaderShellHeight] = useState(0)
-
-  useLayoutEffect(() => {
-    if (!shouldFixHeader) {
-      setHeaderShellHeight(0)
-      return undefined
-    }
-
-    const element = headerShellRef.current
-    if (!element) return undefined
-
-    const updateHeight = () => {
-      setHeaderShellHeight(Math.ceil(element.getBoundingClientRect().height))
-    }
-
-    updateHeight()
-    const observer = new ResizeObserver(updateHeight)
-    observer.observe(element)
-    window.addEventListener('resize', updateHeight)
-
-    return () => {
-      observer.disconnect()
-      window.removeEventListener('resize', updateHeight)
-    }
-  }, [shouldFixHeader, announcementEnabled, announcementText, open, activeMegaMenu, search])
-
-  const clearMegaCloseTimer = () => {
-    if (megaCloseTimer.current) {
-      window.clearTimeout(megaCloseTimer.current)
-      megaCloseTimer.current = null
-    }
-  }
-
-  const isMobileViewport = () =>
-    typeof window !== 'undefined' && window.matchMedia('(max-width: 850px)').matches
-
-  const openMegaMenu = menu => {
-    // On phones, dropdown state is controlled only by the Shop button.
-    // This prevents touch/hover emulation from opening/closing menus twice.
-    if (isMobileViewport()) return
-
-    clearMegaCloseTimer()
-    setActiveMegaMenu(menu)
-  }
-
-  const scheduleMegaMenuClose = () => {
-    // Mobile uses explicit tap-to-open / tap-to-close behavior.
-    if (isMobileViewport()) return
-
-    clearMegaCloseTimer()
-
-    megaCloseTimer.current = window.setTimeout(() => {
-      setActiveMegaMenu(null)
-      megaCloseTimer.current = null
-    }, 150)
-  }
-
-  const closeMenus = () => {
-    clearMegaCloseTimer()
-    setOpen(false)
-    setActiveMegaMenu(null)
-  }
-
-  const goToShop = (target = '/shop') => {
-    closeMenus()
-    navigate(target)
-  }
 
   useEffect(() => {
-    return () => clearMegaCloseTimer()
-  }, [])
-
-  // GSAP-powered mega-menu entrance. The menu itself remains in React state;
-  // GSAP only animates it, so it cannot interfere with the site's content reveal.
-  useLayoutEffect(() => {
-    if (!activeMegaMenu) return undefined
-
-    const menu = megaMenuRefs.current[activeMegaMenu]
-
-    if (!menu) return undefined
-
-    const items = menu.querySelectorAll('[data-xaaj-mega-item]')
-
-    const mobile = isMobileViewport()
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        menu,
-        {
-          autoAlpha: 0,
-          y: mobile ? -6 : -14,
-          scaleY: mobile ? 0.995 : 0.985,
-          transformOrigin: 'top center'
-        },
-        {
-          autoAlpha: 1,
-          y: 0,
-          scaleY: 1,
-          duration: mobile ? 0.24 : 0.42,
-          ease: mobile ? 'power2.out' : 'power3.out',
-          overwrite: true
-        }
-      )
-
-      if (items.length) {
-        gsap.fromTo(
-          items,
-          {
-            autoAlpha: 0,
-            y: mobile ? 4 : 10
-          },
-          {
-            autoAlpha: 1,
-            y: 0,
-            duration: mobile ? 0.2 : 0.34,
-            delay: mobile ? 0.02 : 0.07,
-            stagger: mobile ? 0.018 : 0.035,
-            ease: 'power2.out',
-            overwrite: true
-          }
-        )
-      }
-    }, menu)
-
-    return () => ctx.revert()
-  }, [activeMegaMenu])
-
-  // Keep XAAJ's own categories/content inside the mega menu.
-  const shopCategories = Array.isArray(categories)
-    ? categories.filter(Boolean)
-    : []
-
-  const featuredCategories = shopCategories.slice(0, 2)
-
-  const categoryLink = category =>
-    `/shop?category=${encodeURIComponent(category)}`
-
-  const headerContent = (
-    <div
-      ref={headerShellRef}
-      className={`xaaj-header-shell ${shouldFixHeader ? 'is-fixed' : 'is-flow'}`}
-    >
-      {/* Announcement Bar */}
-      {announcementEnabled && announcementText && (
-        <div
-          className="announcement"
-          role="status"
-          aria-label="Store announcement"
-          style={{
-            overflow: 'hidden',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          <div
-            style={{
-              display: 'inline-block',
-              minWidth: '100%',
-              animation: 'xaajAnnouncement 18s linear infinite'
-            }}
-          >
-            <span style={{ marginRight: '60px' }}>
-              {announcementText}
-            </span>
-            <span style={{ marginRight: '60px' }}>
-              {announcementText}
-            </span>
-          </div>
-
-          <style>{`
-            @keyframes xaajAnnouncement {
-              from { transform: translateX(0); }
-              to { transform: translateX(-50%); }
-            }
-          `}</style>
-        </div>
-      )}
-
-      {/* Main Header */}
-      <header className="header">
-
-        {/* Mobile Menu Button */}
-        <button
-          className="icon mobile-menu"
-          onClick={() => {
-            setOpen(current => !current)
-            setActiveMegaMenu(null)
-          }}
-          aria-label="Open menu"
-          aria-expanded={open}
-        >
-          {open ? <X /> : <Menu />}
-        </button>
-
-        {/* Desktop Search Button */}
-        <button
-          className="icon desktop-search"
-          onClick={() => setSearch(!search)}
-          aria-label="Search"
-        >
-          <Search />
-        </button>
-
-        {/* Logo */}
-        <Link
-          to="/"
-          className="brand"
-          onClick={closeMenus}
-        >
-          <img
-            src={logoUrl}
-            alt="XAAJ Stores Crafted in Earth"
-          />
-
-          <span>
-            STORES CRAFTED IN EARTH
-          </span>
-        </Link>
-
-        {/* Header Actions */}
-        <div className="header-actions">
-
-          {/* Account */}
-          <button
-            className="icon"
-            aria-label="Account"
-            onClick={() => {
-              closeMenus()
-              navigate(user?.role === 'admin' ? '/admin' : '/account')
-            }}
-          >
-            <UserRound />
-          </button>
-
-          {/* Wishlist */}
-          <button
-            className="icon"
-            aria-label="Wishlist"
-            onClick={() => {
-              closeMenus()
-              navigate('/wishlist')
-            }}
-          >
-            <Heart />
-          </button>
-
-          {/* Cart */}
-          <button
-            className={`bag ${cartBump ? 'cart-bump' : ''}`}
-            data-xaaj-cart-target="true"
-            aria-label="Cart"
-            onClick={() => {
-              closeMenus()
-              navigate('/cart')
-            }}
-          >
-            <ShoppingBag />
-
-            {count > 0 && <b>{count}</b>}
-          </button>
-
-        </div>
-
-      </header>
-
-      {/* Search Bar */}
-      {search && (
-        <form
-          className="searchbar"
-          onSubmit={e => {
-            e.preventDefault()
-            navigate(`/shop?search=${e.target.q.value}`)
-            closeMenus()
-            setSearch(false)
-          }}
-        >
-          <Search />
-
-          <input
-            name="q"
-            autoFocus
-            placeholder="Search for plates, mugs, vessels..."
-          />
-
-          <button>
-            Search
-          </button>
-        </form>
-      )}
-
-      {/* ==========================================================
-          NAVIGATION + XAAJ SHOP MEGA MENU
-          ========================================================== */}
-      <div className="xaaj-navigation-wrap">
-        <nav
-          className={`nav ${open ? 'nav-open' : ''}`}
-          aria-label="Primary navigation"
-        >
-
-          {/* SHOP */}
-          <div
-            className={`xaaj-nav-mega-item ${
-              activeMegaMenu === 'shop' ? 'is-open' : ''
-            }`}
-            onMouseEnter={() => openMegaMenu('shop')}
-            onMouseLeave={scheduleMegaMenuClose}
-          >
-            <button
-              type="button"
-              className="nav-shop-trigger"
-              aria-expanded={activeMegaMenu === 'shop'}
-              aria-controls="xaaj-shop-mega-menu"
-              onClick={() =>
-                setActiveMegaMenu(current =>
-                  current === 'shop' ? null : 'shop'
-                )
-              }
-            >
-              <span>Shop</span>
-              <ChevronDown
-                size={13}
-                strokeWidth={1.5}
-                className="nav-shop-chevron"
-              />
-            </button>
-
-            {activeMegaMenu === 'shop' && (
-              <div
-                id="xaaj-shop-mega-menu"
-                ref={element => {
-                  megaMenuRefs.current.shop = element
-                }}
-                className="xaaj-shop-mega-menu"
-                onMouseEnter={clearMegaCloseTimer}
-                onMouseLeave={scheduleMegaMenuClose}
-              >
-                <div className="xaaj-shop-mega-inner">
-
-                  <div className="xaaj-mega-column xaaj-mega-categories">
-                    <span className="xaaj-mega-label">SHOP BY FORM</span>
-
-                    <button
-                      type="button"
-                      className="xaaj-mega-main-link"
-                      data-xaaj-mega-item
-                      onClick={() => goToShop('/shop')}
-                    >
-                      Shop all
-                      <ArrowRight size={14} />
-                    </button>
-
-                    {shopCategories.map(category => (
-                      <Link
-                        key={category.name}
-                        to={categoryLink(category.name)}
-                        data-xaaj-mega-item
-                        onClick={closeMenus}
-                      >
-                        {category.name}
-                      </Link>
-                    ))}
-                  </div>
-
-                  <div className="xaaj-mega-column xaaj-mega-featured">
-                    <span className="xaaj-mega-label">FEATURED</span>
-
-                    <div className="xaaj-mega-feature-grid">
-                      {featuredCategories.map(category => (
-                        <Link
-                          key={`featured-${category.name}`}
-                          to={categoryLink(category.name)}
-                          className="xaaj-mega-feature-card"
-                          data-xaaj-mega-item
-                          onClick={closeMenus}
-                        >
-                          <div className="xaaj-mega-feature-image">
-                            <img
-                              src={category.image}
-                              alt={category.name}
-                              loading="lazy"
-                            />
-                          </div>
-                          <span>{category.name}</span>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="xaaj-mega-column">
-                    <span className="xaaj-mega-label">DINING</span>
-
-                    {['Dinner Sets', 'Plates', 'Bowls'].map(name => (
-                      <Link
-                        key={name}
-                        to={categoryLink(name)}
-                        data-xaaj-mega-item
-                        onClick={closeMenus}
-                      >
-                        {name}
-                      </Link>
-                    ))}
-
-                    <span className="xaaj-mega-label xaaj-mega-label-spaced">
-                      SERVEWARE
-                    </span>
-
-                    {['Serveware', 'Glassware'].map(name => (
-                      <Link
-                        key={name}
-                        to={categoryLink(name)}
-                        data-xaaj-mega-item
-                        onClick={closeMenus}
-                      >
-                        {name}
-                      </Link>
-                    ))}
-                  </div>
-
-                  <div className="xaaj-mega-column">
-                    <span className="xaaj-mega-label">DRINKWARE</span>
-
-                    <Link
-                      to={categoryLink('Cups & Mugs')}
-                      data-xaaj-mega-item
-                      onClick={closeMenus}
-                    >
-                      Cups &amp; Mugs
-                    </Link>
-
-                    <Link
-                      to={categoryLink('Glassware')}
-                      data-xaaj-mega-item
-                      onClick={closeMenus}
-                    >
-                      Glassware
-                    </Link>
-
-                    <span className="xaaj-mega-label xaaj-mega-label-spaced">
-                      XAAJ COLLECTIONS
-                    </span>
-
-                    <Link
-                      to="/shop?filter=new"
-                      data-xaaj-mega-item
-                      onClick={closeMenus}
-                    >
-                      New Arrivals
-                    </Link>
-                    <Link
-                      to="/shop?filter=best-selling"
-                      data-xaaj-mega-item
-                      onClick={closeMenus}
-                    >
-                      Best Sellers
-                    </Link>
-                    <Link
-                      to="/shop"
-                      data-xaaj-mega-item
-                      onClick={closeMenus}
-                    >
-                      Everyday Collection
-                    </Link>
-                  </div>
-
-                  <div className="xaaj-mega-footer" data-xaaj-mega-item>
-                    <span>
-                      Thoughtful tableware, shaped slowly in India.
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => goToShop('/shop')}
-                    >
-                      Explore the collection
-                      <ArrowRight size={14} />
-                    </button>
-                  </div>
-
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Collections */}
-          <Link
-            to="/collections"
-            onClick={closeMenus}
-          >
-            Collections
-          </Link>
-
-          {/* NEW ARRIVALS + HOVER MENU */}
-          <div
-            className={`xaaj-nav-mega-item ${
-              activeMegaMenu === 'new-arrivals' ? 'is-open' : ''
-            }`}
-            onMouseEnter={() => openMegaMenu('new-arrivals')}
-            onMouseLeave={scheduleMegaMenuClose}
-          >
-            <Link
-              to="/shop?filter=new"
-              className="xaaj-nav-mega-trigger"
-              onClick={closeMenus}
-            >
-              <span>New Arrivals</span>
-              <ChevronDown
-                size={13}
-                strokeWidth={1.5}
-                className="nav-shop-chevron"
-              />
-            </Link>
-
-            {activeMegaMenu === 'new-arrivals' && (
-              <div
-                ref={element => {
-                  megaMenuRefs.current['new-arrivals'] = element
-                }}
-                className="xaaj-content-mega-menu xaaj-new-arrivals-menu"
-                onMouseEnter={clearMegaCloseTimer}
-                onMouseLeave={scheduleMegaMenuClose}
-              >
-                <div className="xaaj-content-mega-inner">
-
-                  <div
-                    className="xaaj-content-mega-intro"
-                    data-xaaj-mega-item
-                  >
-                    <span className="xaaj-mega-label">
-                      JUST IN
-                    </span>
-                    <h3>
-                      New pieces for
-                      <br />
-                      everyday rituals.
-                    </h3>
-                    <Link
-                      to="/shop?filter=new"
-                      onClick={closeMenus}
-                    >
-                      View all new arrivals
-                      <ArrowRight size={14} />
-                    </Link>
-                  </div>
-
-                  <div className="xaaj-content-mega-products">
-                    {(Array.isArray(newArrivals)
-                      ? newArrivals.slice(0, 3)
-                      : []
-                    ).map((product, index) => (
-                      <Link
-                        key={product.id || product._id || index}
-                        to={`/product/${product.slug}`}
-                        className="xaaj-mini-product"
-                        data-xaaj-mega-item
-                        onClick={closeMenus}
-                      >
-                        <div className="xaaj-mini-product-image">
-                          <img
-                            src={
-                              product.image ||
-                              product.images?.[0] ||
-                              ''
-                            }
-                            alt={product.name}
-                            loading="lazy"
-                          />
-                        </div>
-                        <span className="xaaj-mini-product-category">
-                          {product.category}
-                        </span>
-                        <strong>{product.name}</strong>
-                      </Link>
-                    ))}
-                  </div>
-
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ABOUT */}
-          <Link to="/about" onClick={closeMenus}>
-            About Us
-          </Link>
-
-          {/* BLOG + HOVER MENU */}
-          <div
-            className={`xaaj-nav-mega-item ${
-              activeMegaMenu === 'blog' ? 'is-open' : ''
-            }`}
-            onMouseEnter={() => openMegaMenu('blog')}
-            onMouseLeave={scheduleMegaMenuClose}
-          >
-            <Link
-              to="/blog"
-              className="xaaj-nav-mega-trigger"
-              onClick={closeMenus}
-            >
-              <span>Blog</span>
-              <ChevronDown
-                size={13}
-                strokeWidth={1.5}
-                className="nav-shop-chevron"
-              />
-            </Link>
-
-            {activeMegaMenu === 'blog' && (
-              <div
-                ref={element => {
-                  megaMenuRefs.current.blog = element
-                }}
-                className="xaaj-content-mega-menu xaaj-blog-mega-menu"
-                onMouseEnter={clearMegaCloseTimer}
-                onMouseLeave={scheduleMegaMenuClose}
-              >
-                <div className="xaaj-content-mega-inner">
-
-                  <div
-                    className="xaaj-content-mega-intro"
-                    data-xaaj-mega-item
-                  >
-                    <span className="xaaj-mega-label">
-                      FROM THE JOURNAL
-                    </span>
-                    <h3>
-                      Stories for
-                      <br />
-                      beautiful living.
-                    </h3>
-                    <Link
-                      to="/blog"
-                      onClick={closeMenus}
-                    >
-                      Read all stories
-                      <ArrowRight size={14} />
-                    </Link>
-                  </div>
-
-                  <div className="xaaj-blog-mini-grid">
-                    {(Array.isArray(blogPosts)
-                      ? blogPosts.filter(post => post?.isPublished !== false).slice(0, 3)
-                      : []
-                    ).map((post, index) => (
-                      <Link
-                        key={post.id || post.slug || index}
-                        to={`/blog/${post.slug}`}
-                        className="xaaj-mini-blog"
-                        data-xaaj-mega-item
-                        onClick={closeMenus}
-                      >
-                        <div className="xaaj-mini-blog-image">
-                          {post.coverImage ? (
-                            <img
-                              src={post.coverImage}
-                              alt={post.title}
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div />
-                          )}
-                          <span>
-                            {String(index + 1).padStart(2, '0')}
-                          </span>
-                        </div>
-                        <small>{post.category}</small>
-                        <strong>{post.title}</strong>
-                      </Link>
-                    ))}
-                  </div>
-
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* CONTACT */}
-          <Link to="/contact" onClick={closeMenus}>
-            Contact
-          </Link>
-
-        </nav>
-      </div>
-
-      {/* Click outside the active mega menu to close it */}
-      {activeMegaMenu && (
-        <button
-          type="button"
-          className="xaaj-mega-backdrop"
-          aria-label="Close navigation menu"
-          onClick={() => setActiveMegaMenu(null)}
-        />
-      )}
-
-      {/* Self-contained premium mega-menu styling */}
-      <style>{`
-        /* Header fixed on every route except /collections. */
-        .xaaj-header-shell.is-fixed {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          width: 100%;
-          z-index: 5000;
-          background: #fffdf9;
-          isolation: isolate;
-        }
-
-        .xaaj-header-shell.is-flow {
-          position: relative;
-          width: 100%;
-          z-index: 5000;
-        }
-
-        .xaaj-fixed-header-spacer {
-          width: 100%;
-          pointer-events: none;
-        }
-
-        .xaaj-navigation-wrap {
-          position: relative;
-          z-index: 1000;
-        }
-
-        .xaaj-nav-mega-item {
-          position: static;
-          display: flex;
-          align-items: center;
-          height: 100%;
-        }
-
-        .nav-shop-trigger,
-        .xaaj-nav-mega-trigger {
-          appearance: none;
-          border: 0;
-          background: transparent;
-          padding: 0;
-          margin: 0;
-          height: 100%;
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          color: inherit;
-          font: inherit;
-          cursor: pointer;
-          text-decoration: none;
-          text-transform: inherit;
-          letter-spacing: inherit;
-        }
-
-        .nav-shop-chevron {
-          transition: transform .35s cubic-bezier(.22,1,.36,1);
-        }
-
-        .xaaj-nav-mega-item.is-open .nav-shop-chevron {
-          transform: rotate(180deg);
-        }
-
-        .xaaj-shop-mega-menu,
-        .xaaj-content-mega-menu {
-          position: absolute;
-          top: 100%;
-          left: 0;
-          right: 0;
-          z-index: 1200;
-          background: rgba(255, 253, 249, .985);
-          border-top: 1px solid rgba(41, 40, 36, .09);
-          border-bottom: 1px solid rgba(41, 40, 36, .10);
-          box-shadow: 0 24px 55px rgba(41, 40, 36, .13);
-          will-change: transform, opacity;
-        }
-
-        .xaaj-shop-mega-inner {
-          width: min(1380px, calc(100% - 70px));
-          margin: 0 auto;
-          padding: 34px 0 25px;
-          display: grid;
-          grid-template-columns: 1.05fr 1.45fr 1fr 1fr;
-          gap: 34px;
-          position: relative;
-        }
-
-        .xaaj-mega-column {
-          min-width: 0;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          padding-right: 24px;
-          border-right: 1px solid rgba(41, 40, 36, .10);
-        }
-
-        .xaaj-mega-column:last-of-type {
-          border-right: 0;
-        }
-
-        .xaaj-mega-label {
-          display: block;
-          margin-bottom: 14px;
-          color: #292824;
-          font-size: 10px;
-          line-height: 1.2;
-          letter-spacing: 1.8px;
-          font-weight: 700;
-          text-transform: uppercase;
-        }
-
-        .xaaj-mega-column > a,
-        .xaaj-mega-main-link {
-          appearance: none;
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          width: fit-content;
-          margin: 0 0 10px;
-          padding: 0;
-          border: 0;
-          background: transparent;
-          color: #514d47;
-          font: inherit;
-          font-size: 13px;
-          line-height: 1.45;
-          text-decoration: none;
-          cursor: pointer;
-          transition: color .22s ease, transform .22s ease;
-        }
-
-        .xaaj-mega-column > a:hover,
-        .xaaj-mega-main-link:hover {
-          color: #2f7048;
-          transform: translateX(3px);
-        }
-
-        .xaaj-mega-main-link {
-          color: #2f7048;
-          font-weight: 600;
-          margin-bottom: 15px;
-        }
-
-        .xaaj-mega-label-spaced {
-          margin-top: 22px;
-        }
-
-        .xaaj-mega-feature-grid {
-          width: 100%;
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 14px;
-        }
-
-        .xaaj-mega-feature-card {
-          display: block !important;
-          width: 100% !important;
-          margin: 0 !important;
-          color: #292824 !important;
-          transform: none !important;
-        }
-
-        .xaaj-mega-feature-image {
-          width: 100%;
-          aspect-ratio: 1.18 / 1;
-          overflow: hidden;
-          margin-bottom: 9px;
-          background: #eee9e1;
-        }
-
-        .xaaj-mega-feature-image img {
-          width: 100%;
-          height: 100%;
-          display: block;
-          object-fit: cover;
-          transition: transform .65s cubic-bezier(.22,1,.36,1);
-        }
-
-        .xaaj-mega-feature-card:hover .xaaj-mega-feature-image img {
-          transform: scale(1.045);
-        }
-
-        .xaaj-mega-feature-card > span {
-          font-size: 12px;
-          line-height: 1.4;
-        }
-
-        .xaaj-mega-footer {
-          grid-column: 1 / -1;
-          margin-top: 4px;
-          padding-top: 19px;
-          border-top: 1px solid rgba(41, 40, 36, .10);
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 20px;
-        }
-
-        .xaaj-mega-footer > span {
-          color: #77716a;
-          font-family: inherit;
-          font-size: 13px;
-          font-style: normal;
-          font-weight: 400;
-          letter-spacing: .01em;
-          line-height: 1.45;
-        }
-
-        .xaaj-mega-footer button,
-        .xaaj-content-mega-intro a {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          border: 0;
-          background: transparent;
-          color: #292824;
-          font-size: 12px;
-          font-weight: 600;
-          cursor: pointer;
-          text-decoration: none;
-          transition: color .2s ease, transform .2s ease;
-        }
-
-        .xaaj-mega-footer button:hover,
-        .xaaj-content-mega-intro a:hover {
-          color: #2f7048;
-          transform: translateX(3px);
-        }
-
-        /* New Arrivals + Blog dropdown */
-        .xaaj-content-mega-menu {
-          background:
-            linear-gradient(
-              180deg,
-              rgba(255,253,249,.99),
-              rgba(250,247,241,.985)
-            );
-        }
-
-        .xaaj-content-mega-inner {
-          width: min(1240px, calc(100% - 70px));
-          margin: 0 auto;
-          padding: 30px 0 27px;
-          display: grid;
-          grid-template-columns: 250px 1fr;
-          gap: 42px;
-          align-items: stretch;
-        }
-
-        .xaaj-content-mega-intro {
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          padding-right: 34px;
-          border-right: 1px solid rgba(41,40,36,.10);
-        }
-
-        .xaaj-content-mega-intro .xaaj-mega-label {
-          margin-bottom: 12px;
-        }
-
-        .xaaj-content-mega-intro h3 {
-          margin: 0 0 20px;
-          color: #292824;
-          font-family: Georgia, 'Times New Roman', serif;
-          font-size: clamp(25px, 2.2vw, 34px);
-          font-weight: 400;
-          line-height: 1.08;
-          letter-spacing: -.025em;
-        }
-
-        .xaaj-content-mega-products,
-        .xaaj-blog-mini-grid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 20px;
-        }
-
-        .xaaj-mini-product,
-        .xaaj-mini-blog {
-          min-width: 0;
-          color: #292824;
-          text-decoration: none;
-          display: block;
-        }
-
-        .xaaj-mini-product-image,
-        .xaaj-mini-blog-image {
-          position: relative;
-          overflow: hidden;
-          width: 100%;
-          aspect-ratio: 1.25 / 1;
-          margin-bottom: 10px;
-          background: #eee9e1;
-        }
-
-        .xaaj-mini-product-image img,
-        .xaaj-mini-blog-image img {
-          width: 100%;
-          height: 100%;
-          display: block;
-          object-fit: cover;
-          transition: transform .7s cubic-bezier(.22,1,.36,1);
-        }
-
-        .xaaj-mini-product:hover .xaaj-mini-product-image img,
-        .xaaj-mini-blog:hover .xaaj-mini-blog-image img {
-          transform: scale(1.055);
-        }
-
-        .xaaj-mini-product-category,
-        .xaaj-mini-blog small {
-          display: block;
-          margin-bottom: 5px;
-          color: #77716a;
-          font-size: 9px;
-          line-height: 1.2;
-          letter-spacing: 1.4px;
-          text-transform: uppercase;
-        }
-
-        .xaaj-mini-product strong,
-        .xaaj-mini-blog strong {
-          display: block;
-          color: #292824;
-          font-size: 13px;
-          line-height: 1.35;
-          font-weight: 500;
-          transition: color .22s ease;
-        }
-
-        .xaaj-mini-product:hover strong,
-        .xaaj-mini-blog:hover strong {
-          color: #2f7048;
-        }
-
-        .xaaj-mini-blog-image span {
-          position: absolute;
-          left: 10px;
-          bottom: 9px;
-          color: #fff;
-          font-size: 10px;
-          letter-spacing: 1.5px;
-          text-shadow: 0 2px 10px rgba(0,0,0,.35);
-        }
-
-        .xaaj-mega-backdrop {
-          position: fixed;
-          inset: 0;
-          z-index: 999;
-          border: 0;
-          padding: 0;
-          background: rgba(25, 27, 24, .055);
-          cursor: default;
-        }
-
-        @media (max-width: 850px) {
-          /* Phones: only Shop keeps a dropdown. New Arrivals and Blog stay
-             simple links, which makes the touch navigation predictable. */
-          .xaaj-nav-mega-item:has(> .xaaj-nav-mega-trigger) > .xaaj-content-mega-menu {
-            display: none !important;
-          }
-
-          .xaaj-nav-mega-item:has(> .xaaj-nav-mega-trigger) > .xaaj-nav-mega-trigger .nav-shop-chevron {
-            display: none !important;
-          }
-
-          .xaaj-nav-mega-item:has(> .xaaj-nav-mega-trigger) {
-            width: 100%;
-          }
-
-          .xaaj-nav-mega-item:has(> .xaaj-nav-mega-trigger) > .xaaj-nav-mega-trigger {
-            width: 100%;
-            justify-content: space-between;
-          }
-
-          /* Shop is the only touch dropdown. Keep it compact and scrollable
-             inside the fixed mobile header instead of creating a giant page. */
-          .xaaj-shop-mega-menu {
-            max-height: calc(100svh - 112px);
-            overflow-y: auto;
-            overscroll-behavior: contain;
-            -webkit-overflow-scrolling: touch;
-          }
-
-          .xaaj-shop-mega-inner {
-            padding: 18px 18px 20px;
-            gap: 18px;
-          }
-
-          .xaaj-shop-mega-inner .xaaj-mega-column {
-            padding-bottom: 15px;
-          }
-
-          .xaaj-shop-mega-inner .xaaj-mega-footer {
-            margin-top: 0;
-            padding-top: 15px;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 10px;
-          }
-
-          .xaaj-shop-mega-inner .xaaj-mega-feature-grid {
-            gap: 10px;
-          }
-
-          .xaaj-shop-mega-inner .xaaj-mega-feature-image {
-            aspect-ratio: 1.25 / 1;
-          }
-
-          .xaaj-shop-mega-inner .xaaj-mega-column > a,
-          .xaaj-shop-mega-inner .xaaj-mega-main-link {
-            min-height: 34px;
-            margin-bottom: 4px;
-            display: flex;
-            align-items: center;
-          }
-
-          .xaaj-shop-mega-menu,
-          .xaaj-content-mega-menu {
-            position: relative;
-            top: auto;
-            left: auto;
-            right: auto;
-            width: 100%;
-            box-shadow: none;
-            border-top: 1px solid rgba(41, 40, 36, .08);
-          }
-
-          .xaaj-shop-mega-inner,
-          .xaaj-content-mega-inner {
-            width: 100%;
-            padding: 22px 20px;
-            grid-template-columns: 1fr;
-            gap: 22px;
-          }
-
-          .xaaj-mega-column {
-            border-right: 0;
-            border-bottom: 1px solid rgba(41, 40, 36, .09);
-            padding: 0 0 20px;
-          }
-
-          .xaaj-content-mega-intro {
-            border-right: 0;
-            border-bottom: 1px solid rgba(41,40,36,.10);
-            padding: 0 0 20px;
-          }
-
-          .xaaj-content-mega-products,
-          .xaaj-blog-mini-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .xaaj-mini-product,
-          .xaaj-mini-blog {
-            display: grid;
-            grid-template-columns: 92px 1fr;
-            column-gap: 13px;
-            align-items: center;
-          }
-
-          .xaaj-mini-product-image,
-          .xaaj-mini-blog-image {
-            grid-row: 1 / span 3;
-            margin: 0;
-            aspect-ratio: 1 / 1;
-          }
-
-          .xaaj-mini-product-category,
-          .xaaj-mini-blog small {
-            margin: 0 0 4px;
-          }
-
-          .xaaj-mega-backdrop {
-            display: none;
-          }
-
-          .xaaj-nav-mega-item {
-            height: auto;
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .xaaj-shop-mega-menu,
-          .xaaj-content-mega-menu,
-          .xaaj-mini-product-image img,
-          .xaaj-mini-blog-image img {
-            transition: none !important;
-          }
-        }
-      `}</style>
-    </div>
-  )
-
-  if (shouldFixHeader) {
-    return (
-      <>
-        <div
-          aria-hidden="true"
-          className="xaaj-fixed-header-spacer"
-          style={{ height: `${headerShellHeight}px` }}
-        />
-        {createPortal(headerContent, document.body)}
-      </>
-    )
+    const onKeyDown = event => {
+      if (event.key === 'Escape') closeAll()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    const panelOpen = menuMounted || cartMounted || searchOpen
+    document.body.style.overflow = panelOpen ? 'hidden' : ''
+    document.body.style.paddingRight = panelOpen
+      ? `${window.innerWidth - document.documentElement.clientWidth}px`
+      : ''
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = ''
+      document.body.style.paddingRight = ''
+    }
+  }, [menuMounted, cartMounted, searchOpen])
+
+  const go = path => {
+    closeAll()
+    navigate(path)
   }
 
-  return headerContent
-}
+  const shopCategories = Array.isArray(categories) ? categories.filter(Boolean) : []
+  const menuFeatured = shopCategories.slice(0, 2)
+  const cartItems = Array.isArray(cart)
+    ? cart
+    : Array.isArray(cart?.items)
+      ? cart.items
+      : cart && typeof cart === 'object'
+        ? Object.values(cart).filter(item => item && typeof item === 'object' && (item.id || item._id || item.name))
+        : []
 
+  return (
+    <>
+      <div className={`xaaj-ref-header-shell ${location.pathname === '/' ? 'xaaj-home-header' : ''} ${homeScrolled ? 'is-scrolled' : ''}`}>
+        {announcementEnabled && announcementText && (
+          <div className={`xaaj-ref-announcement ${homeScrolled ? 'is-hidden' : ''}`}>
+            <span>{announcementText}</span>
+          </div>
+        )}
+
+        <header className="xaaj-ref-header">
+          <div className="xaaj-ref-header-side xaaj-ref-header-side-left" aria-hidden="true" />
+
+          <button
+            type="button"
+            className={`xaaj-ref-mobile-menu-toggle ${menuMounted && menuOpen ? 'is-open' : ''}`}
+            aria-label={menuMounted && menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuMounted && menuOpen}
+            onClick={() => {
+              if (menuMounted && menuOpen) closeMenu()
+              else openMenu()
+            }}
+          >
+            {menuMounted && menuOpen
+              ? <X size={31} strokeWidth={1.15} />
+              : <Menu size={31} strokeWidth={1.15} />}
+          </button>
+
+          <div className="xaaj-ref-header-center">
+            <Link to="/" className="xaaj-ref-logo" onClick={closeAll} aria-label="XAAJ home">
+              <img src={logoUrl} alt="XAAJ" />
+              <span>STORES CRAFTED IN EARTH</span>
+            </Link>
+
+            <nav className="xaaj-ref-main-nav" aria-label="Collection navigation">
+              <div className="xaaj-ref-nav-dropdown">
+                <Link
+                  className={`xaaj-ref-nav-trigger ${new URLSearchParams(location.search).get('category') === 'Dinnerware' ? 'active' : ''}`}
+                  to="/shop?category=Dinnerware"
+                  aria-haspopup="true"
+                >
+                  <span>Dinnerware</span>
+                  <ChevronDown className="xaaj-ref-nav-chevron" size={13} strokeWidth={1.35} />
+                </Link>
+
+                <div className="xaaj-ref-nav-menu" role="menu" aria-label="Dinnerware categories">
+                  {['Speckled White', 'Dove Gray', 'Blush Pink', 'Beachgrass Green', 'Midnight Blue'].map(name => (
+                    <Link
+                      key={name}
+                      to="/shop?category=Dinnerware"
+                      role="menuitem"
+                      onClick={closeAll}
+                    >
+                      {name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              <Link
+                className={new URLSearchParams(location.search).get('category') === 'Glassware' ? 'active' : ''}
+                to="/shop?category=Glassware"
+              >
+                Glassware
+              </Link>
+
+              <Link
+                className={new URLSearchParams(location.search).get('category') === 'Serveware' ? 'active' : ''}
+                to="/shop?category=Serveware"
+              >
+                Serveware
+              </Link>
+
+              <Link
+                className={new URLSearchParams(location.search).get('category') === 'Gifting' ? 'active' : ''}
+                to="/shop?category=Gifting"
+              >
+                Gifting
+              </Link>
+
+              <Link
+                className={new URLSearchParams(location.search).get('category') === 'Horeca' ? 'active' : ''}
+                to="/shop?category=Horeca"
+              >
+                Horeca
+              </Link>
+            </nav>
+          </div>
+
+          <div className="xaaj-ref-actions">
+            <button
+              type="button"
+              className="xaaj-ref-header-icon"
+              aria-label="Search"
+              onClick={() => {
+                if (searchOpen) setSearchOpen(false)
+                else {
+                  if (menuMounted) closeMenu()
+                  if (cartMounted) closeCart()
+                  setSearchOpen(true)
+                }
+              }}
+            >
+              <Search size={19} strokeWidth={1.45} />
+            </button>
+            <button
+              type="button"
+              className="xaaj-ref-header-icon"
+              aria-label="Account"
+              onClick={() => go(user?.role === 'admin' ? '/admin' : '/account')}
+            >
+              <UserRound size={19} strokeWidth={1.45} />
+            </button>
+            <button
+              type="button"
+              className={`xaaj-ref-cart-button ${cartOpen ? 'is-active' : ''}`}
+              aria-label="View cart"
+              onClick={event => {
+                event.preventDefault()
+                event.stopPropagation()
+                closeAll()
+                navigate('/cart')
+              }}
+            >
+              <ShoppingBag size={19} strokeWidth={1.45} />
+              {count > 0 && <span>{count}</span>}
+            </button>
+          </div>
+        </header>
+      </div>
+
+      {searchOpen && (
+        <>
+          <button
+            type="button"
+            className="xaaj-ref-search-backdrop"
+            aria-label="Close search"
+            onClick={() => setSearchOpen(false)}
+          />
+
+          <div
+            className="xaaj-ref-search-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Search products"
+          >
+            <div className="xaaj-ref-search-row">
+              <form
+                className="xaaj-ref-search-form"
+                onSubmit={event => {
+                  event.preventDefault()
+                  const value = search.trim()
+                  if (value) go(`/shop?search=${encodeURIComponent(value)}`)
+                }}
+              >
+                <input
+                  autoFocus
+                  value={search}
+                  onChange={event => setSearch(event.target.value)}
+                  placeholder="Search"
+                  aria-label="Search products"
+                />
+
+                <button
+                  type="submit"
+                  className="xaaj-ref-search-submit"
+                  aria-label="Submit search"
+                >
+                  <Search size={20} strokeWidth={1.35} />
+                </button>
+              </form>
+
+              <button
+                type="button"
+                className="xaaj-ref-search-close"
+                aria-label="Close search"
+                onClick={() => setSearchOpen(false)}
+              >
+                <X size={27} strokeWidth={1.25} />
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {(menuMounted || cartMounted) && (
+        <button
+          type="button"
+          className="xaaj-ref-overlay"
+          aria-label="Close panel"
+          onClick={closeAll}
+        />
+      )}
+
+      {menuMounted && (
+        <aside className={`xaaj-ref-menu-drawer ${menuOpen ? 'is-open' : 'is-closing'}`} aria-label="Main menu">
+          <div className="xaaj-ref-mobile-menu-content">
+            <nav aria-label="Mobile collection navigation">
+              {!mobileDinnerwareOpen ? (
+                <>
+                  <button
+                    type="button"
+                    className="xaaj-ref-mobile-dinnerware-toggle"
+                    onClick={() => setMobileDinnerwareOpen(true)}
+                    aria-expanded="false"
+                  >
+                    <span>Dinnerware</span>
+                    <ArrowRight size={22} strokeWidth={1.15} />
+                  </button>
+
+                  <Link to="/shop?category=Glassware" onClick={closeMenu}>
+                    <span>Glassware</span>
+                  </Link>
+
+                  <Link to="/shop?category=Serveware" onClick={closeMenu}>
+                    <span>Serveware</span>
+                  </Link>
+
+                  <Link to="/shop?category=Gifting" onClick={closeMenu}>
+                    <span>Gifting</span>
+                  </Link>
+
+                  <Link to="/shop?category=Horeca" onClick={closeMenu}>
+                    <span>Horeca</span>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="xaaj-ref-mobile-dinnerware-back"
+                    onClick={() => setMobileDinnerwareOpen(false)}
+                    aria-label="Back to collections"
+                  >
+                    <ArrowRight className="xaaj-ref-mobile-dinnerware-back-icon" size={22} strokeWidth={1.15} />
+                    <span>Dinnerware</span>
+                  </button>
+
+                  {['Speckled White', 'Dove Gray', 'Blush Pink', 'Beachgrass Green', 'Midnight Blue'].map(name => (
+                    <Link key={name} to="/shop?category=Dinnerware" onClick={closeMenu}>
+                      <span>{name}</span>
+                    </Link>
+                  ))}
+                </>
+              )}
+            </nav>
+
+            <div className="xaaj-ref-mobile-menu-secondary">
+              <button type="button" onClick={() => go('/about')}>Our Story</button>
+              <button type="button" onClick={() => go('/faq')}>FAQs</button>
+              <button type="button" onClick={() => go('/contact')}>Contact Us</button>
+            </div>
+          </div>
+
+          <div className="xaaj-ref-menu-links">
+            <div className="xaaj-ref-menu-primary">
+              <button onClick={() => go('/shop')}>Shop all <ArrowRight size={14} /></button>
+              <button onClick={() => go('/collections')}>Collections <ArrowRight size={14} /></button>
+              <button onClick={() => go('/shop?filter=new')}>New arrivals <ArrowRight size={14} /></button>
+              <button onClick={() => go('/shop?filter=best-selling')}>Best sellers <ArrowRight size={14} /></button>
+            </div>
+
+            <div className="xaaj-ref-menu-columns">
+              <div>
+                <span>DINING</span>
+                {['Dinner Sets', 'Plates', 'Bowls', 'Serveware'].map(name => (
+                  <button key={name} onClick={() => go(`/shop?category=${encodeURIComponent(name)}`)}>{name}</button>
+                ))}
+              </div>
+              <div>
+                <span>DRINKWARE</span>
+                {['Cups & Mugs', 'Glassware'].map(name => (
+                  <button key={name} onClick={() => go(`/shop?category=${encodeURIComponent(name)}`)}>{name}</button>
+                ))}
+              </div>
+              <div>
+                <span>ABOUT XAAJ</span>
+                <button onClick={() => go('/about')}>Our story</button>
+                <button onClick={() => go('/contact')}>Contact</button>
+                <button onClick={() => go('/faq')}>FAQs</button>
+              </div>
+            </div>
+
+            <div className="xaaj-ref-menu-bottom">
+              <button onClick={() => go('/account')}>My account</button>
+              <button onClick={() => go('/wishlist')}>Wishlist</button>
+              <small>Thoughtful tableware, shaped slowly in India.</small>
+            </div>
+          </div>
+
+          <div className="xaaj-ref-menu-feature">
+            {menuFeatured[0] ? (
+              <Link to={`/shop?category=${encodeURIComponent(menuFeatured[0].name)}`} onClick={closeAll}>
+                <img src={menuFeatured[0].image} alt={menuFeatured[0].name} />
+                <div><span>{menuFeatured[0].name}</span><strong>Explore collection <ArrowRight size={14} /></strong></div>
+              </Link>
+            ) : (
+              <Link to="/shop" onClick={closeAll}>
+                <img src={heroImage} alt="XAAJ collection" />
+                <div><span>XAAJ</span><strong>Explore collection <ArrowRight size={14} /></strong></div>
+              </Link>
+            )}
+          </div>
+        </aside>
+      )}
+
+      {cartMounted && createPortal(
+        <aside className={`xaaj-ref-cart-drawer ${cartOpen ? 'is-open' : 'is-closing'}`} aria-label="Shopping cart">
+          <div className="xaaj-ref-drawer-head">
+            <div>
+              <span>Your selection</span>
+              <h2>Cart <small>{cartItems.length}</small></h2>
+            </div>
+            <button
+              type="button"
+              onClick={event => {
+                event.preventDefault()
+                event.stopPropagation()
+                closeCart()
+              }}
+              aria-label="Close cart"
+            >
+              <X size={20} strokeWidth={1.35} />
+            </button>
+          </div>
+
+          <div className="xaaj-ref-cart-items">
+            {cartItems.length === 0 ? (
+              <div className="xaaj-ref-empty-cart">
+                <div className="xaaj-ref-empty-cart-mark">
+                  <ShoppingBag size={25} strokeWidth={1.15} />
+                </div>
+                <span>Nothing here yet</span>
+                <p>Your table is waiting for something beautiful.</p>
+                <button type="button" onClick={() => go('/shop')}>
+                  Explore the collection <ArrowRight size={14} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="xaaj-ref-cart-intro">
+                  <span>{cartItems.length} {cartItems.length === 1 ? 'piece' : 'pieces'} selected</span>
+                  <small>Curated for everyday rituals</small>
+                </div>
+
+                {cartItems.map(item => (
+                  <div className="xaaj-ref-cart-item" key={item.id || item._id}>
+                    <img src={item.image} alt={item.name} />
+                    <div className="xaaj-ref-cart-item-copy">
+                      <span>{item.category || 'XAAJ'}</span>
+                      <strong>{item.name}</strong>
+                      <p>{money(item.price)} <em>× {item.qty || 1}</em></p>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+
+          {cartItems.length > 0 && (
+            <div className="xaaj-ref-cart-footer">
+              <div className="xaaj-ref-cart-subtotal">
+                <span>Subtotal</span>
+                <strong>{money(total)}</strong>
+              </div>
+              <p className="xaaj-ref-cart-note">Shipping calculated at checkout</p>
+
+              <button type="button" onClick={() => go('/cart')}>
+                View cart <ArrowRight size={15} />
+              </button>
+              <button type="button" className="secondary" onClick={() => go('/checkout')}>
+                Checkout <ArrowRight size={15} />
+              </button>
+            </div>
+          )}
+        </aside>,
+        document.body
+      )}
+
+      <style>{`
+        body.xaaj-header-mounted{padding-top:0!important;background:#ffffff}
+        .xaaj-ref-header-shell{position:relative;z-index:9000;width:100%;background:#fffdf9}
+        .xaaj-ref-header-shell,.xaaj-ref-header-shell.xaaj-home-header,.xaaj-ref-header-shell.xaaj-home-header.is-scrolled{background:#ffffff!important}
+        .xaaj-ref-header-shell .xaaj-ref-header,.xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-header{background:#ffffff!important}
+        .xaaj-ref-announcement{height:42px;max-height:42px;background:#252923;color:#f8f3e9;display:flex;align-items:center;justify-content:center;font-family:'Gotham Book','Gotham',Arial,sans-serif;font-size:11px;font-weight:400;letter-spacing:1.45px;line-height:1;text-transform:none;overflow:hidden;white-space:nowrap;transition:max-height .35s ease,opacity .25s ease,visibility .35s ease,padding .35s ease}
+        .xaaj-ref-announcement::before,.xaaj-ref-announcement::after{display:none!important}
+        .xaaj-ref-announcement.is-hidden{max-height:42px;height:42px;opacity:0;visibility:hidden;pointer-events:none}
+        .xaaj-ref-header{height:144px;background:#fffdf9;border:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:start;padding:15px 4.2vw 0;position:relative;color:#302d28}
+        .xaaj-ref-header-center{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-width:290px}
+        .xaaj-ref-logo{display:flex;flex-direction:column;align-items:center;justify-content:center;text-decoration:none;color:#302d28;line-height:1}
+        .xaaj-ref-logo img{width:96px;height:66px;object-fit:contain;object-position:center}
+        .xaaj-ref-logo span{font-family:'Gotham Book','Gotham',Arial,sans-serif;font-size:7px;letter-spacing:2.4px;margin-top:-2px;color:#777168;text-transform:uppercase}
+        .xaaj-ref-main-nav{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:31px;
+            margin-top:34px;
+            padding:0 10px;
+            white-space:nowrap;
+          }
+
+          .xaaj-ref-nav-dropdown{
+            position:relative;
+            display:flex;
+            align-items:center;
+            height:25px;
+          }
+
+          .xaaj-ref-nav-trigger{
+            gap:4px;
+          }
+
+          .xaaj-ref-nav-chevron{
+            margin-top:1px;
+            transition:transform .28s cubic-bezier(.22,1,.36,1);
+          }
+
+          .xaaj-ref-nav-dropdown:hover .xaaj-ref-nav-chevron,
+          .xaaj-ref-nav-dropdown:focus-within .xaaj-ref-nav-chevron{
+            transform:rotate(180deg);
+          }
+
+          .xaaj-ref-nav-menu{
+            position:absolute;
+            top:calc(100% + 13px);
+            left:50%;
+            min-width:208px;
+            padding:12px 0;
+            background:#ffffff!important;
+            border:1px solid rgba(48,45,40,.22);
+            border-radius:7px;
+            box-shadow:0 12px 32px rgba(48,45,40,.10);
+            transform:translate(-50%, -7px);
+            opacity:0;
+            visibility:hidden;
+            pointer-events:none;
+            transition:opacity .22s ease, transform .25s cubic-bezier(.22,1,.36,1), visibility .22s ease;
+            z-index:10000;
+          }
+
+          .xaaj-ref-nav-menu::before{
+            content:"";
+            position:absolute;
+            top:-7px;
+            left:50%;
+            width:12px;
+            height:12px;
+            background:#fffdf9;
+            border-left:1px solid rgba(48,45,40,.22);
+            border-top:1px solid rgba(48,45,40,.22);
+            transform:translateX(-50%) rotate(45deg);
+          }
+
+          .xaaj-ref-nav-dropdown:hover .xaaj-ref-nav-menu,
+          .xaaj-ref-nav-dropdown:focus-within .xaaj-ref-nav-menu{
+            opacity:1;
+            visibility:visible;
+            pointer-events:auto;
+            transform:translate(-50%, 0);
+          }
+
+          .xaaj-ref-nav-menu a{
+            display:flex!important;
+            width:100%;
+            min-height:38px;
+            align-items:center;
+            padding:0 20px!important;
+            color:#5d5750!important;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+            font-size:13px!important;
+            font-weight:400;
+            letter-spacing:.01em;
+            text-decoration:none;
+            transition:background .2s ease, color .2s ease, padding-left .2s ease;
+          }
+
+          .xaaj-ref-nav-menu a::after{
+            display:none!important;
+          }
+
+          .xaaj-ref-nav-menu a:hover{
+            color:#302d28!important;
+            background:rgba(48,45,40,.045);
+            padding-left:24px!important;
+          }
+
+          .xaaj-ref-nav-menu a.active{
+            color:#302d28!important;
+          }
+
+          .xaaj-ref-main-nav a{
+            position:relative;
+            display:inline-flex;
+            align-items:center;
+            height:25px;
+            color:#57534e;
+            text-decoration:none;
+            font-family:inherit;
+            font-size:13px;
+            font-weight:400;
+            line-height:1;
+            letter-spacing:.015em;
+            transition:color .25s ease, opacity .25s ease;
+          }
+
+          .xaaj-ref-main-nav a::after{
+            content:"";
+            position:absolute;
+            left:0;
+            right:0;
+            bottom:-7px;
+            height:1px;
+            background:#2d2a26;
+            transform:scaleX(0);
+            transform-origin:center;
+            transition:transform .28s cubic-bezier(.22,1,.36,1);
+          }
+
+          .xaaj-ref-main-nav a:hover{
+            color:#24211e;
+          }
+
+          .xaaj-ref-main-nav a:hover::after,
+          .xaaj-ref-main-nav a.active::after{
+            transform:scaleX(1);
+          }
+
+          .xaaj-ref-main-nav a.active{
+            color:#24211e;
+          }
+
+          @media(max-width:850px){
+            .xaaj-ref-main-nav{
+              gap:20px;
+              margin-top:18px;
+              overflow-x:auto;
+              justify-content:flex-start;
+              scrollbar-width:none;
+              -webkit-overflow-scrolling:touch;
+            }
+
+            .xaaj-ref-main-nav::-webkit-scrollbar{
+              display:none;
+            }
+
+            .xaaj-ref-main-nav a{
+              flex:0 0 auto;
+              font-size:12px;
+            }
+
+            .xaaj-ref-nav-dropdown{
+              flex:0 0 auto;
+            }
+
+            .xaaj-ref-nav-menu{
+              left:0;
+              transform:translate(0, -7px);
+            }
+
+            .xaaj-ref-nav-menu::before{
+              left:30px;
+            }
+
+            .xaaj-ref-nav-dropdown:hover .xaaj-ref-nav-menu,
+            .xaaj-ref-nav-dropdown:focus-within .xaaj-ref-nav-menu{
+              transform:translate(0, 0);
+            }
+          }
+
+          @media(max-width:520px){
+            .xaaj-ref-main-nav{
+              gap:18px;
+              padding:0 4px;
+            }
+
+            .xaaj-ref-main-nav a{
+              font-size:11px;
+            }
+          }.xaaj-ref-main-nav a{font-family:'Gotham Book','Gotham',Arial,sans-serif;font-size:13px!important;line-height:1;color:#5d5750;text-decoration:none;position:relative;padding:3px 0;transition:color .25s ease}
+        .xaaj-ref-main-nav a::after{content:'';position:absolute;left:0;right:0;bottom:-4px;height:1px;background:#302d28;transform:scaleX(0);transform-origin:center;transition:transform .25s ease}
+        .xaaj-ref-main-nav a:hover,.xaaj-ref-main-nav a.active{color:#302d28}
+        .xaaj-ref-main-nav a.active::after{transform:scaleX(1)}
+        .xaaj-ref-header-side{min-width:1px}
+        .xaaj-ref-actions{justify-self:end;display:flex;align-items:center;gap:7px;padding-top:18px}
+        .xaaj-ref-header-icon,.xaaj-ref-cart-button{appearance:none;border:0;background:transparent;color:#302d28;width:39px;height:39px;display:grid;place-items:center;padding:0;cursor:pointer;transition:transform .2s ease,color .2s ease}
+        .xaaj-ref-header-icon:hover,.xaaj-ref-cart-button:hover{transform:translateY(-1px);color:#8d4e3d}
+        .xaaj-ref-cart-button{position:relative}.xaaj-ref-cart-button span{position:absolute;right:1px;top:1px;min-width:14px;height:14px;border-radius:50%;background:#b84d38;color:#fff;font:600 8px/1 'Gotham Book','Gotham',Arial,sans-serif;display:grid;place-items:center}
+        /* Keep the logo/nav geometry identical while scrolling. Only the surface changes. */
+        .xaaj-ref-header-shell.xaaj-home-header.is-scrolled{position:relative;top:auto}
+        .xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-header-center,.xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-logo,.xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-main-nav,.xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-actions{transform:none}
+        .xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-header{height:144px;padding-top:15px;align-items:start;border-bottom:1px solid rgba(48,45,40,.08);background:#fffdf9;box-shadow:0 6px 20px rgba(48,45,40,.035);backdrop-filter:none;-webkit-backdrop-filter:none}
+        .xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-logo img{width:96px;height:66px}
+        .xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-logo span{display:block}
+        .xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-main-nav{margin-top:18px;gap:31px}
+        .xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-actions{padding-top:18px}
+        .xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-header-center{flex-direction:column;gap:0;align-items:center}
+        .xaaj-ref-overlay{
+          position:fixed!important;
+          top:42px!important;
+          right:0!important;
+          bottom:0!important;
+          left:0!important;
+          border:0!important;
+          background:rgba(26,25,22,.34)!important;
+          z-index:8999!important;
+          cursor:pointer!important;
+        }
+        .xaaj-ref-cart-drawer{
+          position:fixed!important;
+          top:42px!important;
+          right:0!important;
+          bottom:0!important;
+          left:auto!important;
+          width:min(520px,92vw)!important;
+          height:calc(100dvh - 42px)!important;
+          max-height:calc(100dvh - 42px)!important;
+          min-height:0!important;
+          margin:0!important;
+          padding:0!important;
+          background:#fffdf9!important;
+          z-index:2147483647!important;
+          display:flex!important;
+          flex-direction:column!important;
+          overflow:hidden!important;
+          box-sizing:border-box!important;
+          box-shadow:-28px 0 70px rgba(25,22,18,.17)!important;
+          transform:translateX(100%)!important;
+          transition:transform .38s cubic-bezier(.22,1,.36,1)!important;
+          will-change:transform;
+        }
+        .xaaj-ref-cart-drawer.is-open{transform:translateX(0)!important}
+        .xaaj-ref-cart-drawer.is-closing{transform:translateX(100%)!important}
+        .xaaj-ref-drawer-head{padding:28px 28px 20px;border-bottom:1px solid rgba(42,39,34,.1);display:flex;justify-content:space-between;align-items:flex-start}.xaaj-ref-drawer-head span{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#8a8379}.xaaj-ref-drawer-head h2{margin:5px 0 0;font:400 32px 'Gotham Book','Gotham',Arial,sans-serif}.xaaj-ref-drawer-head h2 small{font:400 11px 'Gotham Book','Gotham',Arial,sans-serif;color:#888;margin-left:4px}.xaaj-ref-drawer-head button{width:36px;height:36px;display:grid;place-items:center;border:0;background:transparent;color:#302d28;cursor:pointer}
+        .xaaj-ref-cart-intro{display:flex;justify-content:space-between;align-items:baseline;padding:0 0 16px;margin-bottom:18px;border-bottom:1px solid rgba(42,39,34,.08)}.xaaj-ref-cart-intro span{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#5f5a52}.xaaj-ref-cart-intro small{font-size:10px;color:#9a9389}.xaaj-ref-empty-cart-mark{width:58px;height:58px;border:1px solid rgba(42,39,34,.14);border-radius:50%;display:grid;place-items:center;margin-bottom:18px;color:#665f56}.xaaj-ref-empty-cart>span{font-size:9px;letter-spacing:1.6px;text-transform:uppercase;color:#8b847a}.xaaj-ref-empty-cart p{margin:7px 0 18px!important}.xaaj-ref-cart-item-copy{min-width:0}.xaaj-ref-cart-item-copy p em{font-style:normal;color:#8b857b;margin-left:3px}.xaaj-ref-cart-note{margin:0 0 14px;color:#8a8379;font-size:9px;letter-spacing:.3px}.xaaj-ref-cart-subtotal{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px}.xaaj-ref-cart-subtotal span{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#6a645c}.xaaj-ref-cart-subtotal strong{font:400 20px 'Gotham Book','Gotham',Arial,sans-serif;color:#292621}
+        .xaaj-ref-cart-items{padding:34px 34px 36px;overflow-y:auto;overflow-x:hidden;flex:1;min-height:0}.xaaj-ref-cart-item{display:grid;grid-template-columns:82px 1fr;gap:14px;padding:0 0 18px;margin-bottom:18px;border-bottom:1px solid rgba(42,39,34,.08)}.xaaj-ref-cart-item img{width:82px;height:102px;object-fit:cover;background:#eeeae1}.xaaj-ref-cart-item span{font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#8b857b}.xaaj-ref-cart-item strong{display:block;font:400 17px 'Gotham Book','Gotham',Arial,sans-serif;margin:5px 0}.xaaj-ref-cart-item p{margin:0;color:#68635c;font-size:11px}.xaaj-ref-empty-cart{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#787269}.xaaj-ref-empty-cart p{max-width:220px;font:400 20px 'Gotham Book','Gotham',Arial,sans-serif;line-height:1.25}.xaaj-ref-empty-cart button{display:flex;align-items:center;gap:7px;border:0;background:none;color:#8d4e3d;font-size:11px;cursor:pointer}.xaaj-ref-cart-footer{padding:24px 34px 30px;border-top:1px solid rgba(42,39,34,.1);flex:0 0 auto;background:#fffdf9}.xaaj-ref-cart-footer>div{display:flex;justify-content:space-between;margin-bottom:16px;color:#605b53;font-size:12px}.xaaj-ref-cart-footer>div strong{color:#292621;font-size:14px}.xaaj-ref-cart-footer button{width:100%;height:45px;border:1px solid #302d28;background:#302d28;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-size:10px;text-transform:uppercase;letter-spacing:1.3px;cursor:pointer;margin-top:8px}.xaaj-ref-cart-footer button.secondary{background:transparent;color:#302d28}
+        .xaaj-ref-search-backdrop{
+          position:fixed;
+          top:44px;
+          right:0;
+          bottom:0;
+          left:0;
+          border:0;
+          background:rgba(25,24,21,.48);
+          z-index:9490;
+          cursor:pointer;
+        }
+
+        .xaaj-ref-search-panel{
+          position:fixed;
+          top:44px;
+          left:0;
+          right:0;
+          height:144px;
+          z-index:9700;
+          background:#fffdf9;
+          border-bottom:1px solid rgba(42,39,34,.08);
+          box-shadow:0 10px 24px rgba(35,32,28,.05);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          padding:0 28px;
+          box-sizing:border-box;
+        }
+
+        .xaaj-ref-search-row{
+          width:min(824px,100%);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          gap:16px;
+        }
+
+        .xaaj-ref-search-form{
+          position:relative;
+          width:min(770px,calc(100vw - 112px));
+          height:51px;
+          margin:0;
+          border:1px solid #96928d;
+          border-radius:6px;
+          background:#fffdf9;
+          display:flex;
+          align-items:center;
+          box-sizing:border-box;
+          overflow:hidden;
+        }
+
+        .xaaj-ref-search-form input{
+          width:100%;
+          height:100%;
+          border:0;
+          outline:0;
+          background:transparent;
+          color:#3d3a36;
+          padding:0 58px 0 20px;
+          font:400 15px/1 'Gotham Book','Gotham',Arial,sans-serif;
+          letter-spacing:.25px;
+          box-sizing:border-box;
+        }
+
+        .xaaj-ref-search-form input::placeholder{
+          color:#66615c;
+          opacity:1;
+        }
+
+        .xaaj-ref-search-submit{
+          position:absolute;
+          top:0;
+          right:0;
+          width:52px;
+          height:50px;
+          border:0!important;
+          background:transparent!important;
+          color:#5b5752!important;
+          display:grid!important;
+          place-items:center!important;
+          padding:0!important;
+          cursor:pointer;
+        }
+
+        .xaaj-ref-search-close{
+          width:36px!important;
+          height:51px!important;
+          border:0!important;
+          background:transparent!important;
+          color:#413e39!important;
+          display:grid!important;
+          place-items:center!important;
+          padding:0!important;
+          cursor:pointer;
+          flex:0 0 36px;
+        }
+
+        .xaaj-ref-search-close:hover{
+          color:#8d4e3d!important;
+        }
+        .xaaj-ref-mobile-menu-toggle{
+          display:none;
+          position:absolute;
+          left:14px;
+          top:10px;
+          width:42px;
+          height:42px;
+          border:0;
+          background:transparent;
+          color:#292722;
+          padding:0;
+          align-items:center;
+          justify-content:center;
+          cursor:pointer;
+          z-index:5;
+        }
+
+        .xaaj-ref-mobile-menu-content{
+          display:none;
+        }
+
+        @media(max-width:850px){
+          .xaaj-ref-mobile-menu-toggle{
+            display:flex;
+          }
+
+          .xaaj-ref-menu-drawer{
+            position:fixed!important;
+            top:148px!important;
+            left:0!important;
+            right:auto!important;
+            bottom:0!important;
+            width:min(88vw, 420px)!important;
+            max-width:calc(100vw - 54px)!important;
+            height:calc(100dvh - 148px)!important;
+            margin:0!important;
+            padding:0!important;
+            background:#f8f5f5!important;
+            color:#292722!important;
+            border:0!important;
+            border-radius:0!important;
+            box-shadow:18px 0 55px rgba(28,25,22,.14)!important;
+            transform:translateX(-105%)!important;
+            transition:transform .42s cubic-bezier(.22,1,.36,1)!important;
+            overflow-y:auto!important;
+            overflow-x:hidden!important;
+            z-index:2147483000!important;
+          }
+
+          .xaaj-ref-menu-drawer.is-open{
+            transform:translateX(0)!important;
+          }
+
+          .xaaj-ref-menu-drawer.is-closing{
+            transform:translateX(-105%)!important;
+          }
+
+          .xaaj-ref-menu-drawer > .xaaj-ref-menu-links,
+          .xaaj-ref-menu-drawer > .xaaj-ref-menu-feature{
+            display:none!important;
+          }
+
+          .xaaj-ref-mobile-menu-content{
+            display:flex;
+            min-height:100%;
+            flex-direction:column;
+            justify-content:space-between;
+            padding:104px 0 24px;
+          }
+
+          .xaaj-ref-mobile-menu-content nav{
+            display:flex;
+            flex-direction:column;
+          }
+
+          .xaaj-ref-mobile-menu-content nav a{
+            min-height:76px;
+            display:flex!important;
+            align-items:center;
+            justify-content:space-between;
+            padding:0 28px 0 26px!important;
+            color:#292722!important;
+            text-decoration:none;
+            font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif!important;
+            font-size:28px!important;
+            font-weight:500!important;
+            line-height:1!important;
+            letter-spacing:-.02em!important;
+            border-bottom:1px solid rgba(42,39,34,.08);
+            transition:background .2s ease, padding-left .2s ease;
+          }
+
+          .xaaj-ref-mobile-menu-content nav a:first-child{
+            border-top:1px solid rgba(42,39,34,.08);
+          }
+
+          .xaaj-ref-mobile-menu-content nav a:hover,
+          .xaaj-ref-mobile-menu-content nav a:focus-visible{
+            background:rgba(42,39,34,.045);
+            padding-left:30px!important;
+            outline:none;
+          }
+
+          .xaaj-ref-mobile-menu-secondary{
+            display:flex;
+            align-items:center;
+            gap:22px;
+            padding:21px 26px 0;
+            border-top:1px solid rgba(42,39,34,.10);
+          }
+
+          .xaaj-ref-mobile-menu-secondary button{
+            border:0;
+            background:none;
+            padding:0;
+            color:#666059;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
+            font-size:11px;
+            letter-spacing:.06em;
+            cursor:pointer;
+          }
+
+          .xaaj-ref-mobile-menu-secondary button:hover{
+            color:#292722;
+          }
+
+          .xaaj-ref-actions{
+            padding-top:11px;
+          }
+
+          .xaaj-ref-actions .xaaj-ref-header-icon[aria-label="Account"]{
+            display:none;
+          }
+
+          .xaaj-ref-actions .xaaj-ref-header-icon,
+          .xaaj-ref-actions .xaaj-ref-cart-button{
+            width:37px;
+            height:37px;
+          }
+
+          .xaaj-ref-mobile-menu-toggle.is-open{
+            z-index:2147483001;
+          }
+
+          .xaaj-reference-hero{
+            padding:34px 14px 48px;
+          }
+
+          .xaaj-reference-hero-heading{
+            padding:0 8px 34px;
+          }
+
+          .xaaj-reference-hero-heading h1{
+            max-width:360px;
+            font-size:clamp(39px,10.3vw,49px);
+            line-height:1.02;
+            letter-spacing:-.035em;
+          }
+
+          .xaaj-reference-hero-grid{
+            grid-template-columns:repeat(2,minmax(0,1fr))!important;
+            gap:12px!important;
+          }
+
+          .xaaj-reference-hero-card-top{
+            height:auto!important;
+            aspect-ratio:.66 / 1!important;
+          }
+
+          .xaaj-reference-hero-bottom{
+            grid-column:1 / -1!important;
+            grid-template-columns:1fr!important;
+            gap:12px!important;
+            margin-top:0!important;
+          }
+
+          .xaaj-reference-hero-bottom-card{
+            height:auto;
+          }
+
+          .xaaj-reference-hero-bottom-card img,
+          .xaaj-reference-hero-bottom-card video{
+            height:auto!important;
+            aspect-ratio:.82 / 1!important;
+          }
+
+          .xaaj-reference-hero-label{
+            height:72px!important;
+            min-height:72px!important;
+            flex:0 0 72px!important;
+            padding:15px 15px!important;
+            gap:8px!important;
+            font-size:21px!important;
+          }
+
+          .xaaj-reference-hero-label svg{
+            width:17px;
+            height:17px;
+          }
+        }
+
+        @media(max-width:520px){
+          .xaaj-ref-menu-drawer{
+            top:140px!important;
+            height:calc(100dvh - 140px)!important;
+          }
+
+          .xaaj-ref-overlay{
+            top:140px!important;
+          }
+        }
+
+        @media(max-width:430px){
+          .xaaj-ref-mobile-menu-content{
+            padding-top:96px;
+          }
+
+          .xaaj-ref-mobile-menu-content nav a{
+            min-height:70px;
+            padding-left:23px!important;
+            padding-right:22px!important;
+            font-size:26px!important;
+          }
+
+          .xaaj-reference-hero{
+            padding-left:12px!important;
+            padding-right:12px!important;
+          }
+
+          .xaaj-reference-hero-grid{
+            gap:10px!important;
+          }
+
+          .xaaj-reference-hero-bottom{
+            gap:10px!important;
+          }
+
+          .xaaj-reference-hero-label{
+            height:68px;
+            min-height:68px;
+            flex-basis:68px;
+            padding-left:13px;
+            padding-right:13px;
+            font-size:20px!important;
+          }
+        }
+
+        @media(max-width:850px){
+          .xaaj-ref-overlay{
+            top:148px!important;
+          }
+
+          .xaaj-ref-cart-drawer{
+            top:36px!important;
+            height:calc(100dvh - 36px)!important;
+            max-height:calc(100dvh - 36px)!important;
+            width:min(520px,96vw)!important;
+          }
+          .xaaj-ref-announcement{height:36px;max-height:36px;font-size:10px;letter-spacing:1.15px}
+          .xaaj-ref-header{height:112px;padding:10px 15px 0}
+          .xaaj-ref-logo img{width:82px;height:54px}.xaaj-ref-logo span{font-size:5.5px;letter-spacing:1.8px}
+          .xaaj-ref-main-nav{gap:20px;margin-top:9px}.xaaj-ref-main-nav a{font-size:13px}
+          .xaaj-ref-actions{padding-top:11px;gap:0}.xaaj-ref-header-icon,.xaaj-ref-cart-button{width:34px;height:34px}
+          .xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-header{height:112px;padding-top:10px;align-items:start}.xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-header-center{gap:0;flex-direction:column}.xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-main-nav{gap:20px;margin-top:9px}.xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-logo img{width:82px;height:54px}.xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-logo span{display:block}.xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-actions{padding-top:11px}
+        }
+        @media(max-width:520px){
+          .xaaj-ref-cart-drawer{
+            top:38px!important;
+            width:100vw!important;
+            height:calc(100dvh - 38px)!important;
+            max-height:calc(100dvh - 38px)!important;
+          }
+          .xaaj-ref-header{height:104px;padding-left:10px;padding-right:10px}.xaaj-ref-header-center{min-width:0}.xaaj-ref-logo img{width:76px;height:50px}.xaaj-ref-logo span{font-size:4.8px;letter-spacing:1.5px}.xaaj-ref-main-nav{gap:15px}.xaaj-ref-main-nav a{font-size:14px}.xaaj-ref-actions{padding-top:8px}.xaaj-ref-header-icon,.xaaj-ref-cart-button{width:31px;height:31px}
+          .xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-header-center{gap:0;flex-direction:column}.xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-main-nav{gap:15px;margin-top:9px}.xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-main-nav a{font-size:14px}.xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-logo img{width:76px;height:50px}.xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-logo span{display:block}.xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-actions{padding-top:8px}
+        }
+        @media(max-width:850px){
+          .xaaj-ref-search-backdrop{
+            top:38px;
+          }
+
+          .xaaj-ref-search-panel{
+            top:38px;
+            height:124px;
+            padding:0 18px;
+          }
+
+          .xaaj-ref-search-row{
+            width:100%;
+            gap:9px;
+          }
+
+          .xaaj-ref-search-form{
+            width:calc(100vw - 73px);
+            height:50px;
+          }
+
+          .xaaj-ref-search-form input{
+            padding-left:16px;
+            padding-right:48px;
+            font-size:15px;
+          }
+
+          .xaaj-ref-search-submit{
+            width:48px;
+            height:49px;
+          }
+
+          .xaaj-ref-search-close{
+            width:34px!important;
+            flex-basis:34px!important;
+          }
+        }
+
+      
+
+        /* Final mobile navigation: premium, minimal, drawer-only. */
+        @media (max-width: 850px){
+          .xaaj-ref-main-nav{
+            display:none!important;
+          }
+
+          .xaaj-ref-header{
+            height:104px;
+            padding:8px 14px 0;
+          }
+
+          .xaaj-ref-header-center{
+            min-width:0;
+            height:92px;
+            justify-content:flex-start;
+          }
+
+          .xaaj-ref-logo{
+            gap:0;
+          }
+
+          .xaaj-ref-logo img{
+            width:82px;
+            height:58px;
+          }
+
+          .xaaj-ref-logo span{
+            display:block!important;
+            margin-top:1px!important;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+            font-size:6.2px!important;
+            line-height:1!important;
+            letter-spacing:2.05px!important;
+            color:#777168!important;
+            white-space:nowrap;
+          }
+
+          .xaaj-ref-actions{
+            padding-top:9px;
+            gap:0;
+          }
+
+          .xaaj-ref-actions .xaaj-ref-header-icon[aria-label="Account"]{
+            display:none!important;
+          }
+
+          .xaaj-ref-actions .xaaj-ref-header-icon,
+          .xaaj-ref-actions .xaaj-ref-cart-button{
+            width:36px;
+            height:36px;
+          }
+
+          .xaaj-ref-mobile-menu-toggle{
+            display:flex!important;
+            left:12px;
+            top:24px;
+            width:42px;
+            height:42px;
+          }
+
+          /* Premium mobile drawer */
+          .xaaj-ref-menu-drawer{
+            top:140px!important;
+            left:0!important;
+            width:min(88vw,420px)!important;
+            max-width:calc(100vw - 46px)!important;
+            height:calc(100dvh - 140px)!important;
+            padding:0!important;
+            background:#f8f5f5!important;
+            box-shadow:18px 0 55px rgba(28,25,22,.12)!important;
+          }
+
+          .xaaj-ref-overlay{
+            top:140px!important;
+          }
+
+          .xaaj-ref-menu-drawer > .xaaj-ref-menu-links,
+          .xaaj-ref-menu-drawer > .xaaj-ref-menu-feature{
+            display:none!important;
+          }
+
+          .xaaj-ref-mobile-menu-content{
+            display:flex!important;
+            min-height:100%;
+            padding:54px 0 24px!important;
+            justify-content:space-between;
+            box-sizing:border-box;
+          }
+
+          .xaaj-ref-mobile-menu-content nav{
+            display:flex;
+            flex-direction:column;
+            width:100%;
+          }
+
+          /* Clean menu items: no separators */
+          .xaaj-ref-mobile-menu-content nav a,
+          .xaaj-ref-mobile-dinnerware-toggle,
+          .xaaj-ref-mobile-dinnerware-back{
+            min-height:62px;
+            width:100%;
+            padding:0 24px!important;
+            display:flex!important;
+            align-items:center;
+            justify-content:space-between;
+            box-sizing:border-box;
+            color:#292722!important;
+            background:transparent!important;
+            border:0!important;
+            font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif!important;
+            font-size:22px!important;
+            font-weight:500!important;
+            line-height:1!important;
+            letter-spacing:-.015em!important;
+            text-decoration:none;
+            text-align:left;
+            cursor:pointer;
+            transition:color .25s ease,opacity .25s ease,transform .25s ease;
+          }
+
+          .xaaj-ref-mobile-menu-content nav a:first-child,
+          .xaaj-ref-mobile-dinnerware-toggle,
+          .xaaj-ref-mobile-dinnerware-back{
+            border-top:0!important;
+          }
+
+          .xaaj-ref-mobile-dinnerware-toggle:hover,
+          .xaaj-ref-mobile-dinnerware-toggle:focus-visible,
+          .xaaj-ref-mobile-menu-content nav a:hover,
+          .xaaj-ref-mobile-menu-content nav a:focus-visible,
+          .xaaj-ref-mobile-dinnerware-back:hover,
+          .xaaj-ref-mobile-dinnerware-back:focus-visible{
+            background:transparent!important;
+            padding-left:24px!important;
+            color:#756b62!important;
+            outline:none;
+            transform:translateX(2px);
+          }
+
+          .xaaj-ref-mobile-dinnerware-back{
+            justify-content:flex-start;
+            gap:14px;
+          }
+
+          .xaaj-ref-mobile-dinnerware-back-icon{
+            flex:0 0 auto;
+            transform:rotate(180deg);
+            opacity:.75;
+          }
+
+          /* Minimal footer links */
+          .xaaj-ref-mobile-menu-secondary{
+            display:flex;
+            align-items:center;
+            flex-wrap:wrap;
+            gap:16px 22px;
+            padding:20px 24px 0;
+            margin-top:auto;
+            border-top:0!important;
+          }
+
+          .xaaj-ref-mobile-menu-secondary button{
+            border:0;
+            background:none;
+            padding:0;
+            color:#706960;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
+            font-size:10px;
+            letter-spacing:.07em;
+            cursor:pointer;
+            transition:color .2s ease,opacity .2s ease;
+          }
+
+          .xaaj-ref-mobile-menu-secondary button:hover{
+            color:#292722;
+          }
+        }
+
+        @media (max-width:430px){
+          .xaaj-ref-mobile-menu-toggle{
+            left:10px;
+            top:21px;
+            width:40px;
+            height:40px;
+          }
+
+          .xaaj-ref-logo img{
+            width:76px!important;
+            height:52px!important;
+          }
+
+          .xaaj-ref-logo span{
+            font-size:5.5px!important;
+            letter-spacing:1.75px!important;
+            margin-top:1px!important;
+          }
+
+          .xaaj-ref-mobile-menu-content{
+            padding-top:48px!important;
+          }
+
+          .xaaj-ref-mobile-menu-content nav a,
+          .xaaj-ref-mobile-dinnerware-toggle,
+          .xaaj-ref-mobile-dinnerware-back{
+            min-height:59px;
+            padding-left:20px!important;
+            padding-right:20px!important;
+            font-size:21px!important;
+          }
+
+          .xaaj-ref-mobile-dinnerware-toggle:hover,
+          .xaaj-ref-mobile-dinnerware-toggle:focus-visible,
+          .xaaj-ref-mobile-menu-content nav a:hover,
+          .xaaj-ref-mobile-menu-content nav a:focus-visible,
+          .xaaj-ref-mobile-dinnerware-back:hover,
+          .xaaj-ref-mobile-dinnerware-back:focus-visible{
+            padding-left:20px!important;
+          }
+
+          .xaaj-ref-mobile-menu-secondary{
+            padding-left:20px;
+            padding-right:20px;
+            gap:14px 20px;
+          }
+        }
+`}</style>
+    </>
+  )
+}
 
 // ============================================================
 // BUTTON COMPONENT
@@ -1497,598 +1706,69 @@ function Rating({
 
 
 // ============================================================
-// PRODUCT CARD — PREMIUM REDESIGN
+// PRODUCT CARD — MINIMAL EDITORIAL
 // ============================================================
 
 let adminPreviewSessionActive = false
 
 const isAdminPreviewMode = () => {
   try {
-    return (
-      new URLSearchParams(window.location.search).get('xaajPreview') === '1' ||
-      adminPreviewSessionActive
-    )
+    return new URLSearchParams(window.location.search).get('xaajPreview') === '1' || adminPreviewSessionActive
   } catch {
     return adminPreviewSessionActive
   }
 }
 
-const productCardCartStyles = `
-  /* Reduced product-card corner radius */
-  .product-card {
-    border-radius: 8px !important;
-  }
-
-  .product-card .product-image,
-  .product-card .product-image-link {
-    border-radius: 8px !important;
-  }
-
-  .product-card .product-image img {
-    border-radius: 8px !important;
-  }
-
-  .product-card .xaaj-cart-button {
-    position: relative !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 0 !important;
-    width: 42px !important;
-    min-width: 42px !important;
-    height: 42px !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    border: 1px solid rgba(47, 112, 72, .22) !important;
-    border-radius: 999px !important;
-    background: #f4f0e8 !important;
-    color: #2f7048 !important;
-    cursor: pointer !important;
-    white-space: nowrap !important;
-    transition:
-      width .48s cubic-bezier(.22,1,.36,1),
-      min-width .48s cubic-bezier(.22,1,.36,1),
-      background-color .3s ease,
-      color .3s ease,
-      border-color .3s ease,
-      box-shadow .4s ease,
-      transform .35s cubic-bezier(.22,1,.36,1) !important;
-  }
-
-  .product-card .xaaj-cart-button:hover,
-  .product-card .xaaj-cart-button:focus-visible {
-    width: 142px !important;
-    min-width: 142px !important;
-    justify-content: flex-start !important;
-    gap: 9px !important;
-    padding: 0 16px !important;
-    background: #2f7048 !important;
-    color: #fff !important;
-    border-color: #2f7048 !important;
-    box-shadow: 0 12px 28px rgba(47, 112, 72, .20) !important;
-    transform: translateY(-1px) !important;
-    outline: none !important;
-  }
-
-  .product-card .xaaj-cart-button:active {
-    transform: translateY(0) scale(.97) !important;
-  }
-
-  .product-card .xaaj-cart-button:disabled {
-    width: 42px !important;
-    min-width: 42px !important;
-    opacity: .52 !important;
-    cursor: not-allowed !important;
-    transform: none !important;
-    box-shadow: none !important;
-  }
-
-  .product-card .xaaj-cart-button-icon {
-    width: 16px !important;
-    min-width: 16px !important;
-    height: 16px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    position: relative !important;
-    z-index: 2 !important;
-    transition: transform .42s cubic-bezier(.22,1,.36,1) !important;
-  }
-
-  .product-card .xaaj-cart-button:hover .xaaj-cart-button-icon,
-  .product-card .xaaj-cart-button:focus-visible .xaaj-cart-button-icon {
-    transform: rotate(-7deg) scale(1.08) !important;
-  }
-
-  .product-card .xaaj-cart-button-label {
-    display: block !important;
-    max-width: 0 !important;
-    overflow: hidden !important;
-    opacity: 0 !important;
-    transform: translateX(-8px) !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    letter-spacing: .04em !important;
-    line-height: 1 !important;
-    transition:
-      max-width .42s cubic-bezier(.22,1,.36,1),
-      opacity .28s ease .06s,
-      transform .42s cubic-bezier(.22,1,.36,1) !important;
-    position: relative !important;
-    z-index: 2 !important;
-  }
-
-  .product-card .xaaj-cart-button:hover .xaaj-cart-button-label,
-  .product-card .xaaj-cart-button:focus-visible .xaaj-cart-button-label {
-    max-width: 100px !important;
-    opacity: 1 !important;
-    transform: translateX(0) !important;
-  }
-
-  .product-card .xaaj-cart-button-shine {
-    position: absolute !important;
-    top: -40% !important;
-    left: -70% !important;
-    width: 35% !important;
-    height: 180% !important;
-    pointer-events: none !important;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255,255,255,.38),
-      transparent
-    ) !important;
-    transform: skewX(-18deg) !important;
-    opacity: 0 !important;
-  }
-
-  .product-card .xaaj-cart-button:hover .xaaj-cart-button-shine,
-  .product-card .xaaj-cart-button:focus-visible .xaaj-cart-button-shine {
-    opacity: 1 !important;
-    animation: xaajCartButtonShine .75s cubic-bezier(.22,1,.36,1) forwards !important;
-  }
-
-  .product-card .xaaj-cart-button.add-success {
-    background: #2f7048 !important;
-    color: #fff !important;
-    border-color: #2f7048 !important;
-  }
-
-  @keyframes xaajCartButtonShine {
-    from { left: -70%; }
-    to { left: 135%; }
-  }
-
-  @media (max-width: 850px) {
-    /* Two clean columns on phones; never let a card force horizontal scroll. */
-    .product-card {
-      min-width: 0 !important;
-      width: 100% !important;
-      overflow: hidden !important;
-    }
-
-    .product-card .product-image {
-      width: 100% !important;
-      aspect-ratio: 1 / 1.08 !important;
-      min-height: 0 !important;
-    }
-
-    .product-card .product-image img {
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: cover !important;
-    }
-
-    .product-card .product-copy {
-      min-width: 0 !important;
-      padding-left: 0 !important;
-      padding-right: 0 !important;
-    }
-
-    .product-card .product-title-link h3 {
-      font-size: 13px !important;
-      line-height: 1.3 !important;
-      display: -webkit-box !important;
-      -webkit-line-clamp: 2 !important;
-      -webkit-box-orient: vertical !important;
-      overflow: hidden !important;
-    }
-
-    .product-card .product-description {
-      font-size: 11px !important;
-      line-height: 1.45 !important;
-      display: -webkit-box !important;
-      -webkit-line-clamp: 2 !important;
-      -webkit-box-orient: vertical !important;
-      overflow: hidden !important;
-    }
-
-    .product-card .product-bottom-row {
-      gap: 7px !important;
-      align-items: center !important;
-    }
-
-    .product-card .price strong {
-      font-size: 13px !important;
-    }
-
-    .product-card .price del {
-      font-size: 10px !important;
-    }
-
-    .product-card .save-badge {
-      display: none !important;
-    }
-
-    .product-card .rating {
-      max-width: 100% !important;
-      white-space: nowrap !important;
-      overflow: hidden !important;
-    }
-
-    .product-card .heart {
-      width: 34px !important;
-      height: 34px !important;
-    }
-
-    .product-card .xaaj-cart-button {
-      width: 42px !important;
-      min-width: 42px !important;
-    }
-
-    .product-card .xaaj-cart-button:hover,
-    .product-card .xaaj-cart-button:focus-visible {
-      width: 42px !important;
-      min-width: 42px !important;
-      padding: 0 !important;
-      justify-content: center !important;
-      gap: 0 !important;
-    }
-
-    .product-card .xaaj-cart-button-label {
-      display: none !important;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .product-card .xaaj-cart-button,
-    .product-card .xaaj-cart-button-icon,
-    .product-card .xaaj-cart-button-label {
-      transition: none !important;
-    }
-
-    .product-card .xaaj-cart-button:hover .xaaj-cart-button-shine,
-    .product-card .xaaj-cart-button:focus-visible .xaaj-cart-button-shine {
-      animation: none !important;
-    }
-  }
-`
-
-function ProductCard({
-  product
-}) {
-  const {
-    add,
-    wish,
-    toggleWish
-  } = useStore()
-
-  const [wishlistPulse, setWishlistPulse] = useState(false)
-  const [cartPulse, setCartPulse] = useState(false)
-
-  // Always prefer the normalized id, with _id as a safe fallback.
+function ProductCard({ product }) {
+  const { add, wish, toggleWish } = useStore()
+  const [added, setAdded] = useState(false)
   const productId = product.id || product._id
-
   const liked = wish.includes(productId)
+  const secondary = product.images?.[1] || ''
 
-  // Second product image for hover.
-  const secondaryImage =
-    product.images?.[1] ||
-    product.image ||
-    ''
-
-  // ----------------------------------------------------------
-  // Wishlist
-  // ----------------------------------------------------------
-
-  const handleWishlist = event => {
+  const handleAdd = event => {
     event.preventDefault()
     event.stopPropagation()
-
-    if (!productId) return
-
-    toggleWish(productId)
-
-    setWishlistPulse(true)
-
-    window.setTimeout(() => {
-      setWishlistPulse(false)
-    }, 500)
-  }
-
-  // ----------------------------------------------------------
-  // Add to cart
-  // ----------------------------------------------------------
-
-  const handleAddToCart = event => {
-    event.preventDefault()
-    event.stopPropagation()
-
-    if (isAdminPreviewMode()) {
-      window.alert(
-        'Admin Preview Mode: adding products to cart is disabled.'
-      )
-      return
-    }
-
-    const card =
-      event.currentTarget.closest('.product-card')
-
-    const image =
-      card?.querySelector('.product-image-primary')
-
-    const cartTarget =
-      document.querySelector(
-        '[data-xaaj-cart-target="true"]'
-      )
-
-    const imageRect =
-      image?.getBoundingClientRect()
-
-    const cartRect =
-      cartTarget?.getBoundingClientRect()
-
+    if (isAdminPreviewMode()) return
     add(product)
-
-    setCartPulse(true)
-
-    window.setTimeout(() => {
-      setCartPulse(false)
-    }, 520)
-
-    window.dispatchEvent(
-      new CustomEvent('xaaj:cart-added')
-    )
-
-    if (!imageRect || !cartRect) return
-
-    const clone = image.cloneNode(true)
-
-    const startX = imageRect.left
-    const startY = imageRect.top
-
-    const endX =
-      cartRect.left +
-      cartRect.width / 2 -
-      25
-
-    const endY =
-      cartRect.top +
-      cartRect.height / 2 -
-      25
-
-    Object.assign(clone.style, {
-      position: 'fixed',
-      left: `${startX}px`,
-      top: `${startY}px`,
-      width: `${Math.min(imageRect.width, 82)}px`,
-      height: `${Math.min(imageRect.height, 82)}px`,
-      objectFit: 'cover',
-      borderRadius: '50%',
-      zIndex: '20000',
-      pointerEvents: 'none',
-      margin: '0',
-      boxShadow: '0 14px 40px rgba(41,40,37,.20)',
-      transform: 'translate3d(0,0,0) scale(1)',
-      opacity: '1',
-      transition:
-        'transform .78s cubic-bezier(.22,1,.36,1), opacity .78s ease'
-    })
-
-    document.body.appendChild(clone)
-
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        clone.style.transform =
-          `translate3d(${endX - startX}px, ${endY - startY}px, 0) scale(.12)`
-
-        clone.style.opacity = '0'
-      })
-    })
-
-    window.setTimeout(() => {
-      clone.remove()
-    }, 850)
+    setAdded(true)
+    window.dispatchEvent(new CustomEvent('xaaj:cart-added'))
+    window.setTimeout(() => setAdded(false), 800)
   }
 
   return (
-    <>
-      <style>{productCardCartStyles}</style>
-
-      <article className="product-card">
-
-      {/* ======================================================
-          PRODUCT IMAGE
-          ====================================================== */}
-
-      <div className="product-image">
-
-        <Link
-          to={`/product/${product.slug}`}
-          className="product-image-link"
-          aria-label={`View ${product.name}`}
-        >
-
-          {/* Original image */}
-          <img
-            className="product-image-primary"
-            src={product.image}
-            alt={product.name}
-            loading="lazy"
-          />
-
-          {/* Second image appears smoothly on hover */}
-          {secondaryImage && (
-            <img
-              className="product-image-secondary"
-              src={secondaryImage}
-              alt=""
-              aria-hidden="true"
-              loading="lazy"
-            />
-          )}
-
+    <article className="xaaj-editorial-card">
+      <div className="xaaj-editorial-card-media">
+        <Link to={`/product/${product.slug}`} aria-label={`View ${product.name}`}>
+          <img className="primary" src={product.image} alt={product.name} loading="lazy" />
+          {secondary && <img className="secondary" src={secondary} alt="" aria-hidden="true" loading="lazy" />}
         </Link>
-
-        {/* Product tag */}
-        {product.tag && (
-          <span className="tag">
-            {product.tag}
-          </span>
-        )}
-
-        {/* Wishlist */}
+        {product.tag && <span className="xaaj-editorial-tag">{product.tag}</span>}
         <button
           type="button"
-          className={`heart ${
-            liked ? 'liked' : ''
-          } ${
-            wishlistPulse ? 'wishlist-pop' : ''
-          }`}
-          onClick={handleWishlist}
-          aria-label={
-            liked
-              ? `Remove ${product.name} from wishlist`
-              : `Add ${product.name} to wishlist`
-          }
-          aria-pressed={liked}
+          className={`xaaj-editorial-wish ${liked ? 'liked' : ''}`}
+          onClick={event => { event.preventDefault(); event.stopPropagation(); toggleWish(productId) }}
+          aria-label={liked ? 'Remove from wishlist' : 'Add to wishlist'}
         >
-          <Heart
-            size={18}
-            strokeWidth={1.45}
-            fill={
-              liked
-                ? 'currentColor'
-                : 'none'
-            }
-          />
-
-          <span className="heart-tooltip">
-            {liked
-              ? 'Saved'
-              : 'Add to wishlist'}
-          </span>
+          <Heart size={16} fill={liked ? 'currentColor' : 'none'} />
         </button>
-
-        {/* Add to cart — kept in the original product-card position */}
-        <span className="product-image-bottom-spacer" aria-hidden="true" />
-
+        <button type="button" className={`xaaj-editorial-add ${added ? 'added' : ''}`} onClick={handleAdd}>
+          {added ? <Check size={15} /> : <Plus size={15} />}
+          <span>{added ? 'Added' : 'Add'}</span>
+        </button>
       </div>
-
-      {/* ======================================================
-          PRODUCT INFORMATION
-          ====================================================== */}
-
-      <div className="product-copy">
-
-        <div className="product-meta">
-          <span className="product-category">
-            {product.category}
-          </span>
-        </div>
-
-        <Link
-          to={`/product/${product.slug}`}
-          className="product-title-link"
-        >
-          <h3>{product.name}</h3>
-        </Link>
-
-        <p className="product-description">
-          {product.description ||
-            product.desc ||
-            product.shortDescription ||
-            'Beautifully crafted for everyday use.'}
-        </p>
-
-        <Rating
-          rating={product.rating}
-          reviews={
-            product.reviewCount ??
-            product.reviews ??
-            0
-          }
-        />
-
-        <div className="product-bottom-row">
-          <div className="price">
-            <strong>{money(product.price)}</strong>
-
-            {Number(product.old || 0) > Number(product.price || 0) && (
-              <del>{money(product.old)}</del>
-            )}
-
-            {Number(product.old || 0) > Number(product.price || 0) && (
-              <span className="save-badge">
-                {Math.round(
-                  ((Number(product.old) - Number(product.price)) /
-                    Number(product.old)) *
-                    100
-                )}% off
-              </span>
-            )}
-          </div>
-
-          <button
-            type="button"
-            className={`add xaaj-cart-button ${
-              cartPulse ? 'add-success' : ''
-            }`}
-            onClick={handleAddToCart}
-            disabled={Number(product.stock ?? 0) <= 0}
-            aria-label={
-              Number(product.stock ?? 0) <= 0
-                ? 'Out of stock'
-                : `Add ${product.name} to cart`
-            }
-          >
-            <span className="xaaj-cart-button-icon" aria-hidden="true">
-              {Number(product.stock ?? 0) <= 0 ? (
-                <ShoppingBag size={16} strokeWidth={1.7} />
-              ) : cartPulse ? (
-                <Check size={16} strokeWidth={2} />
-              ) : (
-                <ShoppingBag size={16} strokeWidth={1.7} />
-              )}
-            </span>
-
-            <span className="xaaj-cart-button-label">
-              {Number(product.stock ?? 0) <= 0
-                ? 'Out of stock'
-                : cartPulse
-                  ? 'Added to cart'
-                  : 'Add to Cart'}
-            </span>
-
-            <span className="xaaj-cart-button-shine" aria-hidden="true" />
-          </button>
-        </div>
-
-        {/* Subtle stock cue */}
-        {Number(product.stock ?? 0) > 0 &&
-          Number(product.stock ?? 0) <= 5 && (
-            <span className="low-stock">
-              Only {product.stock} left
-            </span>
-          )}
-
+      <div className="xaaj-editorial-card-copy">
+        <span>{product.category || 'XAAJ Collection'}</span>
+        <Link to={`/product/${product.slug}`}><h3>{product.name}</h3></Link>
+        <div><strong>{money(product.price)}</strong>{Number(product.old || 0) > Number(product.price || 0) && <del>{money(product.old)}</del>}</div>
       </div>
-
-      </article>
-    </>
+      <style>{`
+        .xaaj-editorial-card{min-width:0;color:#2c2924}.xaaj-editorial-card-media{position:relative;background:#f1eee7;overflow:hidden;aspect-ratio:4/5}.xaaj-editorial-card-media>a{display:block;width:100%;height:100%}.xaaj-editorial-card-media img{width:100%;height:100%;display:block;object-fit:cover;transition:opacity .45s ease,transform .8s cubic-bezier(.22,1,.36,1)}.xaaj-editorial-card-media .secondary{position:absolute;inset:0;opacity:0}.xaaj-editorial-card:hover .secondary{opacity:1}.xaaj-editorial-card:hover .primary{transform:scale(1.018)}.xaaj-editorial-tag{position:absolute;left:10px;top:10px;background:#fffdf9;padding:5px 7px;font-size:7px;letter-spacing:1px;text-transform:uppercase}.xaaj-editorial-wish{position:absolute;right:10px;top:10px;width:31px;height:31px;border:0;border-radius:50%;background:rgba(255,253,249,.9);display:grid;place-items:center;color:#302d28;cursor:pointer}.xaaj-editorial-wish.liked{color:#9a4c3d}.xaaj-editorial-add{position:absolute;right:10px;bottom:10px;height:34px;min-width:34px;border:1px solid rgba(255,255,255,.8);background:rgba(255,253,249,.92);color:#292621;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;font-size:9px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;transition:all .25s}.xaaj-editorial-add span{display:none}.xaaj-editorial-add:hover,.xaaj-editorial-add.added{background:#2f7048;color:#fff;border-color:#2f7048}.xaaj-editorial-add:hover span,.xaaj-editorial-add.added span{display:inline}.xaaj-editorial-card-copy{padding:10px 1px 0}.xaaj-editorial-card-copy>span{display:block;color:#8a8379;font-size:8px;letter-spacing:1.3px;text-transform:uppercase;margin-bottom:5px}.xaaj-editorial-card-copy h3{margin:0 0 6px;font:400 15px 'Gotham Book','Gotham',Arial,sans-serif;line-height:1.2}.xaaj-editorial-card-copy a{text-decoration:none;color:inherit}.xaaj-editorial-card-copy>div{display:flex;align-items:center;gap:7px;font-size:11px}.xaaj-editorial-card-copy del{color:#9b958b}.xaaj-editorial-card-copy strong{font-weight:500}
+        @media(max-width:600px){.xaaj-editorial-card-media{aspect-ratio:3/4}.xaaj-editorial-card-copy h3{font-size:14px}.xaaj-editorial-add{min-width:32px;width:32px;padding:0}.xaaj-editorial-add span{display:none!important}}
+      `}</style>
+    </article>
   )
 }
-
 
 // ============================================================
 // SECTION HEADING
@@ -2143,213 +1823,324 @@ function SectionHeading({
 // ============================================================
 
 function Home() {
+  const { products: liveProducts, bestSellingProducts, newArrivals } = useStore()
+  const productList = Array.isArray(liveProducts) ? liveProducts : []
+  const bestsellers = Array.isArray(bestSellingProducts) && bestSellingProducts.length ? bestSellingProducts : productList.slice(0, 4)
+  const arrivals = Array.isArray(newArrivals) && newArrivals.length ? newArrivals : productList.slice(4, 8)
+  const heroA = defaultHeroSlides[0]?.image || heroImage
+  const heroB = defaultHeroSlides[1]?.image || tableImage
+  const heroC = defaultHeroSlides[2]?.image || heroImage
+  const categoryItems = Array.isArray(categories) ? categories.slice(0, 5) : []
 
-  // Get live products from store
-  const {
-    products: liveProducts,
-    bestSellingProducts,
-    newArrivals
-  } = useStore()
-
-  // ==========================================================
-  // HERO SLIDER
-  // ==========================================================
-
-  const [heroSlides, setHeroSlides] = useState(defaultHeroSlides)
-  const [heroIndex, setHeroIndex] = useState(0)
-  const [heroPaused, setHeroPaused] = useState(false)
-
-  const heroTouchStart = useRef(null)
-  const heroOverlapStageRef = useRef(null)
-
-  // ==========================================================
-  // CINEMATIC CATEGORY SCROLL
-  // ==========================================================
-  const categorySceneRef = useRef(null)
-  useLayoutEffect(() => {
-    const section = categorySceneRef.current
-    if (!section || !Array.isArray(categories) || categories.length < 2) {
-      return undefined
-    }
-
-    // Mobile: keep this section completely normal.
-    // No pinning, no scrub, no card swapping.
-    if (window.matchMedia('(max-width: 850px)').matches) {
-      return undefined
-    }
-
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      return undefined
-    }
-
-    const cards = Array.from(
-      section.querySelectorAll('[data-xaaj-category-card]')
-    )
-    const progressItems = Array.from(
-      section.querySelectorAll('[data-xaaj-category-progress]')
-    )
-
-    if (!cards.length) return undefined
-
-    const ctx = gsap.context(() => {
-      gsap.set(cards, {
-        autoAlpha: 0,
-        yPercent: 5,
-        scale: 0.965
-      })
-
-      gsap.set(cards[0], {
-        autoAlpha: 1,
-        yPercent: 0,
-        scale: 1
-      })
-
-      gsap.set(progressItems, {
-        scaleX: 0.22,
-        transformOrigin: 'left center',
-        opacity: 0.35
-      })
-
-      if (progressItems[0]) {
-        gsap.set(progressItems[0], {
-          scaleX: 1,
-          opacity: 1
-        })
-      }
-
-      const timeline = gsap.timeline({
-        defaults: {
-          ease: 'power2.inOut'
-        },
-        scrollTrigger: {
-          trigger: section,
-          start: 'top top',
-          end: () => `+=${window.innerHeight * (categories.length - 1)}`,
-          pin: true,
-          scrub: 1.15,
-          anticipatePin: 1,
-          invalidateOnRefresh: true
-        }
-      })
-
-      for (let index = 1; index < cards.length; index += 1) {
-        const previous = cards[index - 1]
-        const current = cards[index]
-
-        timeline
-          .to(
-            previous,
-            {
-              autoAlpha: 0,
-              yPercent: -4,
-              scale: 0.965,
-              duration: 1
-            },
-            index - 1
-          )
-          .fromTo(
-            current,
-            {
-              autoAlpha: 0,
-              yPercent: 5,
-              scale: 0.965
-            },
-            {
-              autoAlpha: 1,
-              yPercent: 0,
-              scale: 1,
-              duration: 1
-            },
-            index - 1
-          )
-
-        if (progressItems[index - 1]) {
-          timeline.to(
-            progressItems[index - 1],
-            {
-              scaleX: 0.22,
-              opacity: 0.35,
-              duration: 0.7
-            },
-            index - 1
-          )
-        }
-
-        if (progressItems[index]) {
-          timeline.to(
-            progressItems[index],
-            {
-              scaleX: 1,
-              opacity: 1,
-              duration: 0.7
-            },
-            index - 1
-          )
-        }
-      }
-
-      ScrollTrigger.refresh()
-    }, section)
-
-    return () => ctx.revert()
-  }, [])
-
-  // ==========================================================
-  // HERO -> NEXT SECTION OVERLAP SCROLL
-  // The hero is pinned to the viewport while the next section
-  // continues through normal document flow and slides over it.
-  // This is driven only by scroll position — no autoplay motion.
-  // ==========================================================
-
-  useLayoutEffect(() => {
-    // Mobile uses normal document scrolling here. The pinned hero + overlap
-    // is intentionally desktop-only because it causes scroll hitching on
-    // smaller devices.
-    if (window.matchMedia('(max-width: 850px)').matches) {
-      return undefined
-    }
-
-    const stage = heroOverlapStageRef.current
-    if (!stage) return undefined
-
-    const hero = stage.querySelector('.hero.hero-slider')
-    const intro = stage.querySelector('.intro')
-
-    if (!hero || !intro) return undefined
-
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      return undefined
-    }
-
-    const ctx = gsap.context(() => {
-      ScrollTrigger.create({
-        trigger: hero,
-        start: 'top top',
-        end: () => `+=${hero.offsetHeight}`,
-        pin: hero,
-        pinSpacing: false,
-        anticipatePin: 1,
-        invalidateOnRefresh: true
-      })
-    }, stage)
-
-    ScrollTrigger.refresh()
-
-    return () => ctx.revert()
-  }, [])
-
-  // ==========================================================
-  // LOAD HERO SLIDES FROM CMS
-  //
-  // Admin panel se saved hero images yahan load hongi.
-  // Agar API unavailable ho ya koi slide saved na ho,
-  // default hero images automatically use hongi.
-  // ==========================================================
+  const [categoryHeroMedia, setCategoryHeroMedia] = useState({})
 
   useEffect(() => {
     let cancelled = false
 
-    async function loadHeroSlides() {
+    const loadCategoryHeroMedia = async () => {
+      try {
+        const result = await apiRequest('/cms/category-hero')
+
+        const data =
+          result?.data?.categories ||
+          result?.data?.items ||
+          result?.data?.heroes ||
+          result?.categories ||
+          result?.items ||
+          result?.heroes ||
+          result?.data ||
+          []
+
+        if (!Array.isArray(data) || cancelled) return
+
+        const mediaBySlug = {}
+
+        data.forEach(item => {
+          if (!item || item.enabled === false) return
+
+          const url =
+            item.mediaUrl ||
+            item.image ||
+            item.imageUrl ||
+            item.videoUrl ||
+            item.url ||
+            ''
+
+          const slug = toCategoryHeroSlug(
+            item.categorySlug ||
+            item.slug ||
+            item.categoryName ||
+            item.name ||
+            item.category?.slug ||
+            item.category?.name
+          )
+
+          if (!slug || !url) return
+
+          mediaBySlug[slug] = {
+            url,
+            mediaType: getCategoryHeroMediaType(url, item.mediaType),
+            alt: item.alt || item.title || ''
+          }
+        })
+
+        if (!cancelled) {
+          setCategoryHeroMedia(mediaBySlug)
+        }
+      } catch (error) {
+        // The existing category images remain the fallback when CMS data
+        // is unavailable, so a CMS/network failure does not break the hero.
+        if (!cancelled) {
+          console.error('Category hero CMS load error:', error)
+        }
+      }
+    }
+
+    loadCategoryHeroMedia()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const categoryHeroItems = categoryHeroDefinitions.map(category => ({
+    ...category,
+    ...(categoryHeroMedia[category.slug] || {})
+  }))
+
+  // Brand Story media is CMS-controlled.
+  // Removing the CMS media only removes the uploaded post; the Brand Story
+  // section itself remains visible and falls back to the original table image.
+  const [brandStoryMedia, setBrandStoryMedia] = useState({
+    url: tableImage,
+    mediaType: 'image',
+    alt: 'XAAJ handcrafted tableware arranged on a linen table',
+    enabled: true
+  })
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadBrandStoryMedia = async () => {
+      try {
+        const result = await apiRequest('/cms/brand-story')
+
+        const raw =
+          result?.data?.brandStory ||
+          result?.data?.story ||
+          result?.data?.item ||
+          result?.brandStory ||
+          result?.story ||
+          result?.item ||
+          result?.data ||
+          result ||
+          null
+
+        const item = Array.isArray(raw)
+          ? raw.find(entry => entry && typeof entry === 'object')
+          : raw && typeof raw === 'object'
+            ? raw
+            : null
+
+        const url =
+          item?.mediaUrl ||
+          item?.image ||
+          item?.imageUrl ||
+          item?.videoUrl ||
+          item?.url ||
+          ''
+
+        if (cancelled) return
+
+        const enabled =
+          item?.enabled !== undefined
+            ? Boolean(item.enabled)
+            : item?.isActive !== undefined
+              ? Boolean(item.isActive)
+              : true
+
+        // When Brand Story media is removed from Admin, keep the section
+        // visible and fall back to the original table image.
+        setBrandStoryMedia({
+          url:
+            url ||
+            tableImage,
+          mediaType: getBrandStoryMediaType(
+            url || tableImage,
+            item?.mediaType
+          ),
+          alt:
+            item?.alt ||
+            item?.title ||
+            'XAAJ handcrafted tableware arranged on a linen table',
+          enabled
+        })
+      } catch (error) {
+        if (!cancelled) {
+          console.error(
+            'Brand Story CMS load error:',
+            error
+          )
+        }
+      }
+    }
+
+    loadBrandStoryMedia()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Horeca collection media is CMS-controlled by stable slots.
+  // The original images remain the fallback when CMS data is unavailable
+  // or a slot has been cleared from Admin.
+  const [horecaMedia, setHorecaMedia] = useState(horecaDefaultMedia)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadHorecaMedia = async () => {
+      try {
+        const result = await apiRequest('/cms/horeca-collection')
+
+        const raw =
+          result?.data?.items ||
+          result?.data?.horeca ||
+          result?.data?.media ||
+          result?.items ||
+          result?.horeca ||
+          result?.media ||
+          result?.data ||
+          result ||
+          null
+
+        const list = Array.isArray(raw)
+          ? raw
+          : raw && typeof raw === 'object'
+            ? Object.entries(raw).map(([slot, item]) => ({
+                ...(item && typeof item === 'object' ? item : { mediaUrl: item }),
+                slot
+              }))
+            : []
+
+        const next = { ...horecaDefaultMedia }
+
+        list.forEach(item => {
+          if (!item || item.enabled === false) return
+
+          const slotValue =
+            item.slot ||
+            item.key ||
+            item.position ||
+            item.name ||
+            ''
+
+          const slot = String(slotValue)
+            .trim()
+            .toLowerCase()
+            .replace(/[\s_-]+/g, '')
+
+          const resolvedSlot =
+            slot === 'main' || slot === 'primary' || slot === 'left'
+              ? 'main'
+              : slot === 'sideone' || slot === 'side1' || slot === 'top' || slot === 'righttop'
+                ? 'sideOne'
+                : slot === 'sidetwo' || slot === 'side2' || slot === 'bottom' || slot === 'rightbottom'
+                  ? 'sideTwo'
+                  : null
+
+          if (!resolvedSlot) return
+
+          const url = String(
+            item.mediaUrl ||
+            item.image ||
+            item.imageUrl ||
+            item.url ||
+            ''
+          ).trim()
+
+          if (!url) return
+
+          next[resolvedSlot] = {
+            ...next[resolvedSlot],
+            url,
+            alt:
+              item.alt ||
+              item.title ||
+              next[resolvedSlot].alt
+          }
+        })
+
+        if (!cancelled) {
+          setHorecaMedia(next)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Horeca collection CMS load error:', error)
+        }
+      }
+    }
+
+    loadHorecaMedia()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const normalizeCategoryName = value =>
+    String(value || '')
+      .toLowerCase()
+      .replace(/&/g, 'and')
+      .replace(/[^a-z0-9]+/g, '')
+
+  // Section 04 intentionally uses product photography while the
+  // destination remains the matching category page.
+  const sectionFiveCategoryImages = {
+    'Plates': 'https://res.cloudinary.com/kswukbpp/image/upload/v1790268538/1.png',
+    'Bowls': 'https://res.cloudinary.com/kswukbpp/image/upload/v1790268543/2.png',
+    'Cups & Mugs': 'https://res.cloudinary.com/kswukbpp/image/upload/v1790269006/ChatGPT_Image_Sep_24_2026_10_26_10_PM.png',
+    'Serveware': 'https://res.cloudinary.com/kswukbpp/image/upload/v1790269104/ChatGPT_Image_Sep_24_2026_10_27_52_PM.png'
+  }
+
+  const categoryShowcaseItems = ['Plates', 'Bowls', 'Cups & Mugs', 'Serveware']
+    .map((target, index) => {
+      const targetKey = normalizeCategoryName(target)
+      const category = (Array.isArray(categories) ? categories : []).find(item => {
+        const key = normalizeCategoryName(item?.name)
+        return key === targetKey || key.includes(targetKey) || targetKey.includes(key)
+      })
+
+      if (!category) return null
+
+      const showcaseProduct = productList.find(item => {
+        const key = normalizeCategoryName(item?.category)
+        return key === targetKey || key.includes(targetKey) || targetKey.includes(key)
+      }) || productList[index] || null
+
+      return {
+        ...category,
+        showcaseProduct
+      }
+    })
+    .filter(Boolean)
+
+  // Homepage hero media is CMS-controlled.
+  // The Admin panel saves hero slides through /cms/hero.
+  // This homepage reads the first enabled slide in order.
+  // If CMS has no usable media, the existing local hero remains the fallback.
+  const [heroMedia, setHeroMedia] = useState({
+    image: heroA,
+    mediaType: 'image',
+    mobileImage: heroA,
+    alt: 'XAAJ handcrafted tableware'
+  })
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadHeroMedia = async () => {
       try {
         const result = await cmsService.getHero()
         const slides = Array.isArray(result?.data?.slides)
@@ -2358,1153 +2149,1816 @@ function Home() {
 
         const activeSlides = slides
           .filter(slide => slide?.enabled !== false && slide?.image)
-          .map(slide => ({
-            image: slide.image,
-            mediaType:
-              slide.mediaType === 'video'
-                ? 'video'
-                : 'image',
-            mobileImage: slide.mobileImage || slide.image,
-            alt: slide.alt || 'XAAJ Crockery'
-          }))
+          .sort((a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0))
 
-        if (!cancelled && activeSlides.length > 0) {
-          setHeroSlides(activeSlides)
-          setHeroIndex(0)
+        const first = activeSlides[0]
+        if (!cancelled && first?.image) {
+          setHeroMedia({
+            image: first.image,
+            mediaType: first.mediaType === 'video' ? 'video' : 'image',
+            mobileImage: first.mobileImage || first.image,
+            alt: first.alt || 'XAAJ handcrafted tableware'
+          })
         }
       } catch (error) {
         if (!cancelled) {
           console.error('Hero CMS load error:', error)
-          // Keep default hero slides if CMS API is unavailable.
         }
       }
     }
 
-    loadHeroSlides()
+    loadHeroMedia()
 
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [heroA])
 
-  // ==========================================================
-  // HERO AUTO SLIDER
-  // ==========================================================
+  const heroRef = useRef(null)
+  const heroMediaRef = useRef(null)
+  const heroContentRef = useRef(null)
+  const heroMetaRef = useRef(null)
+  const brandStoryRef = useRef(null)
+  const brandStoryInnerRef = useRef(null)
+  const brandStoryImageRef = useRef(null)
+  const brandStoryProgressRef = useRef(null)
+  const brandStoryNumberRef = useRef(null)
+  const [heroReady, setHeroReady] = useState(false)
 
-  useEffect(() => {
-    if (heroPaused || heroSlides.length < 2) return undefined
+  useLayoutEffect(() => {
+    const root = heroRef.current
+    if (!root) return undefined
 
-    const timer = window.setInterval(() => {
-      setHeroIndex(current =>
-        (current + 1) % heroSlides.length
-      )
-    }, 2000)
+    // The homepage hero is now a static editorial category layout.
+    // Keep the existing GSAP timelines for the sections below, but do not
+    // pin/animate the hero itself.
+    const ctx = gsap.context(() => {
+      // The new hero is a lightweight editorial card layout.
+      // No pinning or hero animation is used above the fold.
 
-    return () => window.clearInterval(timer)
-  }, [heroPaused, heroSlides.length])
+      const revealSections = root.parentElement?.querySelectorAll('[data-xaaj-cinema-reveal]:not(.xaaj-brand-story)') || []
+      revealSections.forEach((el, index) => {
+        gsap.fromTo(el,
+          { y: 42, opacity: 0.35 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: .85,
+            ease: 'power3.out',
+            immediateRender: false,
+            scrollTrigger: {
+              trigger: el,
+              start: 'top 88%',
+              end: 'top 55%',
+              toggleActions: 'play none none reverse',
+              invalidateOnRefresh: true
+            },
+            delay: Math.min(index * .04, .16)
+          }
+        )
+      })
 
-  // Pause the hero slider as soon as the user starts scrolling.
-  // It will remain paused for the rest of this page view.
-  useEffect(() => {
-    const handleScroll = () => {
-      setHeroPaused(true)
-    }
+      const story = brandStoryRef.current
+      if (story) {
+        const storyInner = brandStoryInnerRef.current
+        const storyImage = brandStoryImageRef.current
+        const storyBlocks = Array.from(story.querySelectorAll('.xaaj-brand-story-block'))
+        const storyProgress = brandStoryProgressRef.current
+        const storyNumber = brandStoryNumberRef.current
 
-    window.addEventListener('scroll', handleScroll, { passive: true })
+        const desktop = window.matchMedia('(min-width: 851px)').matches
 
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-    }
-  }, [])
+        if (storyInner && storyImage && storyBlocks.length && desktop) {
+          // One dedicated scroll timeline controls the entire story.
+          // Do not let an onUpdate handler overwrite the tweens, otherwise
+          // reverse scrolling can feel like a snap.
+          gsap.set(storyInner, { clearProps: 'transform', force3D: true })
+          gsap.set(storyBlocks, { autoAlpha: 0, y: 34, force3D: true })
+          gsap.set(storyBlocks[0], { autoAlpha: 1, y: 0 })
 
-  const goToHero = index => {
-    const total = heroSlides.length
+          gsap.set(storyImage, {
+            scale: 1.06,
+            yPercent: 0,
+            transformOrigin: 'center center',
+            force3D: true
+          })
 
-    if (!total) return
+          if (storyProgress) {
+            gsap.set(storyProgress, {
+              scaleY: 0,
+              transformOrigin: 'top center'
+            })
+          }
 
-    setHeroIndex(
-      ((index % total) + total) % total
-    )
-  }
+          if (storyNumber) storyNumber.textContent = '03 / 06 · 01'
 
-  // ==========================================================
-  // PREMIUM SCROLL REVEAL
-  // ==========================================================
+          const storyTl = gsap.timeline({
+            defaults: { ease: 'power2.out' },
+            scrollTrigger: {
+              trigger: story,
+              start: 'top top',
+              end: 'bottom top',
+              pin: storyInner,
+              pinSpacing: false,
+              anticipatePin: 1,
+              scrub: 1.15,
+              invalidateOnRefresh: true,
+              fastScrollEnd: true,
+              onUpdate: self => {
+                if (storyProgress) {
+                  storyProgress.style.transform = `scaleY(${self.progress})`
+                }
+                if (storyNumber) {
+                  const chapter = self.progress < 0.34 ? 1 : self.progress < 0.68 ? 2 : 3
+                  storyNumber.textContent = `03 / 06 · 0${chapter}`
+                }
+              }
+            }
+          })
 
-  useEffect(() => {
-    const elements = document.querySelectorAll(
-      '[data-xaaj-reveal]'
-    )
+          // Slow cinematic movement across the entire pinned sequence.
+          storyTl.to(storyImage, {
+            scale: 1,
+            yPercent: -1,
+            duration: 3,
+            ease: 'none'
+          }, 0)
 
-    if (!elements.length) return undefined
+          // 01 exits completely before 02 enters.
+          storyTl.to(storyBlocks[0], {
+            autoAlpha: 0,
+            y: -24,
+            duration: 0.22,
+            ease: 'power2.in'
+          }, 0.78)
 
-    const observer = new IntersectionObserver(
-      entries => {
-        entries.forEach(entry => {
-          if (!entry.isIntersecting) return
+          storyTl.fromTo(storyBlocks[1],
+            { autoAlpha: 0, y: 34 },
+            { autoAlpha: 1, y: 0, duration: 0.26, ease: 'power3.out' },
+            1.04
+          )
 
-          entry.target.classList.add('xaaj-revealed')
-          observer.unobserve(entry.target)
-        })
-      },
-      {
-        threshold: 0.12,
-        rootMargin: '0px 0px -8% 0px'
+          // 02 exits completely before 03 enters.
+          storyTl.to(storyBlocks[1], {
+            autoAlpha: 0,
+            y: -24,
+            duration: 0.22,
+            ease: 'power2.in'
+          }, 1.86)
+
+          storyTl.fromTo(storyBlocks[2],
+            { autoAlpha: 0, y: 34 },
+            { autoAlpha: 1, y: 0, duration: 0.26, ease: 'power3.out' },
+            2.12
+          )
+
+          // Give the last chapter a little breathing room before release.
+          storyTl.to(storyBlocks[2], {
+            autoAlpha: 1,
+            y: -3,
+            duration: 0.88,
+            ease: 'none'
+          }, 2.30)
+
+          if (storyProgress) {
+            storyTl.to(storyProgress, {
+              scaleY: 1,
+              duration: 3,
+              ease: 'none'
+            }, 0)
+          }
+
+          const refreshStory = () => requestAnimationFrame(() => ScrollTrigger.refresh())
+
+          if (storyImage.complete) refreshStory()
+          else storyImage.addEventListener('load', refreshStory, { once: true })
+
+          document.fonts?.ready?.then(refreshStory).catch(() => {})
+                } else if (storyImage) {
+          // Mobile intentionally does not pin. It becomes a natural editorial
+          // stack with a lighter image movement for touch performance.
+          gsap.fromTo(storyImage,
+            { scale: 1.045 },
+            {
+              scale: 1,
+              ease: 'none',
+              scrollTrigger: {
+                trigger: story,
+                start: 'top bottom',
+                end: 'bottom top',
+                scrub: 0.7,
+                invalidateOnRefresh: true
+              }
+            }
+          )
+        }
       }
-    )
 
-    elements.forEach(element => {
-      observer.observe(element)
-    })
+      // Section 08 — collection story uses a normal, continuous
+      // right-to-left carousel. It is intentionally independent of scroll.
+      // The duplicated pair makes the loop seamless with no jump.
+      // Section 04: product-led category gallery.
+      // The entrance is scrubbed rather than toggle-based, so reverse
+      // scrolling stays smooth and never pops back into place.
+      const gallery = root.parentElement?.querySelector('.xaaj-category-gallery')
+      if (gallery) {
+        const galleryCards = Array.from(
+          gallery.querySelectorAll('.xaaj-category-gallery-card')
+        )
+        const galleryImages = Array.from(
+          gallery.querySelectorAll('.xaaj-category-gallery-card img')
+        )
+        const desktop = window.matchMedia('(min-width: 851px)').matches
 
-    return () => observer.disconnect()
+        if (galleryCards.length) {
+          gsap.set(galleryCards, {
+            autoAlpha: 1,
+            y: desktop ? 34 : 18,
+            clipPath: 'inset(4% 0% 0% 0%)',
+            force3D: true
+          })
+
+          gsap.to(galleryCards, {
+            autoAlpha: 1,
+            y: 0,
+            clipPath: 'inset(0% 0% 0% 0%)',
+            ease: 'none',
+            stagger: desktop ? 0.055 : 0.03,
+            scrollTrigger: {
+              trigger: gallery,
+              start: 'top 98%',
+              end: 'top 62%',
+              scrub: 1.25,
+              invalidateOnRefresh: true
+            }
+          })
+        }
+
+        if (galleryImages.length) {
+          gsap.set(galleryImages, {
+            scale: 1.045,
+            force3D: true
+          })
+
+          gsap.to(galleryImages, {
+            scale: 1,
+            ease: 'none',
+            stagger: 0.035,
+            scrollTrigger: {
+              trigger: gallery,
+              start: 'top 98%',
+              end: 'top 54%',
+              scrub: 1.35,
+              invalidateOnRefresh: true
+            }
+          })
+        }
+      }
+
+        // Section 06 uses a single static image. No carousel or scroll animation.
+      requestAnimationFrame(() => ScrollTrigger.refresh())
+      window.setTimeout(() => ScrollTrigger.refresh(), 300)
+    }, root)
+
+    setHeroReady(true)
+    return () => ctx.revert()
+  }, [heroMedia.mediaType, heroMedia.image])
+
+  useEffect(() => {
+    document.body.classList.add('xaaj-cinematic-home')
+    return () => document.body.classList.remove('xaaj-cinematic-home')
   }, [])
 
   return (
     <>
-
-      {/* Hero sizing fix: the hero itself owns the full viewport height.
-          The media is absolutely pinned to all four edges so no white strip
-          can appear below the image/video. */}
-      <style>{`
-        .hero.hero-slider {
-          position: relative !important;
-          width: 100% !important;
-          height: 100dvh !important;
-          min-height: 100svh !important;
-          max-height: none !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          overflow: hidden !important;
-          aspect-ratio: auto !important;
-        }
-
-        .hero.hero-slider .hero-slides {
-          position: absolute !important;
-          inset: 0 !important;
-          width: 100% !important;
-          height: 100% !important;
-          min-height: 100% !important;
-          overflow: hidden !important;
-        }
-
-        .hero.hero-slider .hero-slide {
-          position: absolute !important;
-          inset: 0 !important;
-          width: 100% !important;
-          height: 100% !important;
-          min-width: 100% !important;
-          min-height: 100% !important;
-          max-width: none !important;
-          max-height: none !important;
-          display: block !important;
-          object-fit: cover !important;
-          object-position: center center !important;
-          margin: 0 !important;
-        }
-
-        .hero.hero-slider .hero-slide img,
-        .hero.hero-slider .hero-slide video {
-          display: block !important;
-        }
-
-        /* =====================================================
-           HERO -> NEXT SECTION SCROLL OVERLAP
-           The hero stays behind. The next section remains in
-           normal document flow and physically slides over it.
-           No change is made to the hero media itself.
-        ===================================================== */
-        .xaaj-hero-overlap-stage {
-          position: relative;
-          overflow: visible !important;
-          isolation: isolate;
-        }
-
-        .xaaj-hero-overlap-stage > .hero.hero-slider {
-          position: relative !important;
-          z-index: 1 !important;
-        }
-
-        .xaaj-hero-overlap-stage > .intro {
-          position: relative !important;
-          z-index: 2 !important;
-          margin-top: 0 !important;
-          background: var(--ivory) !important;
-          opacity: 1 !important;
-          transform: none !important;
-          box-shadow: none;
-        }
-
-        .xaaj-hero-overlap-stage > .intro[data-xaaj-reveal] {
-          opacity: 1 !important;
-          transform: none !important;
-        }
-      `}</style>
-
-      {/* Header */}
       <Header />
+      <main className="xaaj-cinema-home">
+        <style>{`
+          body.xaaj-cinematic-home{padding-top:0!important;background:#ffffff}
+          .xaaj-cinema-home{background:#ffffff;color:#292722;overflow-x:clip}
+          .xaaj-cinema-home *{box-sizing:border-box}
 
+          /* Temporarily hide the sections shown in the supplied reference screenshots.
+             JSX, data, product mapping and all existing logic are intentionally preserved. */
+          .xaaj-cinema-home .xaaj-everyday-carousel,
+          .xaaj-cinema-home .xaaj-cinema-products,
+          .xaaj-cinema-home .xaaj-collection-story-carousel,
+          .xaaj-cinema-home .xaaj-cinema-quote{
+            display:none !important;
+          }
 
-      <main>
+          .xaaj-cinema-hero{position:relative;height:100svh;min-height:680px;overflow:hidden;background:#171712;color:#fff}
+          .xaaj-cinema-hero-media{position:absolute;inset:0;overflow:hidden;background:#171712}
+          .xaaj-cinema-hero-media img,.xaaj-cinema-hero-media video{width:100%;height:100%;object-fit:cover;object-position:center;display:block;will-change:transform;filter:saturate(.82) contrast(.96)}
+          .xaaj-cinema-hero-media video{pointer-events:none}
+          .xaaj-cinema-wash{position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,7,5,.62) 0%,rgba(7,7,5,.28) 34%,rgba(7,7,5,.06) 66%,rgba(7,7,5,.22) 100%),linear-gradient(0deg,rgba(0,0,0,.26),transparent 34%,rgba(0,0,0,.16));opacity:1;pointer-events:none}
+          .xaaj-cinema-grain{position:absolute;inset:0;opacity:.06;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E")}
+          .xaaj-cinema-content{position:absolute;z-index:3;left:7vw;top:50%;transform:translateY(-50%);max-width:560px;will-change:transform,opacity}
+          .xaaj-cinema-eyebrow{display:block;margin-bottom:18px;font-size:9px;letter-spacing:3.5px;text-transform:uppercase;color:rgba(255,255,255,.72)}
+          .xaaj-cinema-title{margin:0;overflow:hidden;font:400 clamp(52px,7.2vw,112px)/.86 'Gotham Book','Gotham',Arial,sans-serif;letter-spacing:-.055em}
+          .xaaj-cinema-title-line{display:block;overflow:hidden}
+          .xaaj-cinema-copy{max-width:370px;margin:25px 0 27px;color:rgba(255,255,255,.78);font-size:13px;line-height:1.7}
+          .xaaj-cinema-cta{display:inline-flex;align-items:center;gap:10px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.72);padding:13px 18px;font-size:9px;letter-spacing:1.8px;text-transform:uppercase;transition:background .3s ease,color .3s ease}
+          .xaaj-cinema-cta:hover{background:#fff;color:#222}
+          .xaaj-cinema-meta{position:absolute;z-index:3;right:5.5vw;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:flex-end;gap:15px;will-change:transform,opacity}
+          .xaaj-cinema-meta-label{writing-mode:vertical-rl;transform:rotate(180deg);font-size:8px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.7)}
+          .xaaj-cinema-meta-line{width:1px;height:72px;background:rgba(255,255,255,.55)}
+          .xaaj-cinema-next-hint{position:absolute;z-index:3;bottom:30px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:9px;color:rgba(255,255,255,.76);font-size:8px;letter-spacing:2.5px;text-transform:uppercase;white-space:nowrap}
+          .xaaj-cinema-next-hint span:last-child{width:1px;height:34px;background:rgba(255,255,255,.7)}
+          .xaaj-cinema-index{position:absolute;z-index:3;left:7vw;bottom:30px;display:flex;gap:16px;font-size:8px;letter-spacing:1.5px;color:rgba(255,255,255,.72)}
+          .xaaj-cinema-index strong{font-weight:400;color:#fff}
 
+          .xaaj-cinema-intro{display:grid;grid-template-columns:.75fr 1.25fr;min-height:650px;background:#f7f5ef}
+          .xaaj-cinema-intro-copy{display:flex;align-items:center;padding:80px clamp(30px,7vw,110px);background:#f7f5ef}
+          .xaaj-cinema-intro-copy>div{max-width:430px}
+          .xaaj-cinema-eyebrow-dark,.xaaj-cinema-section-eyebrow{display:block;font-size:8px;letter-spacing:2.8px;text-transform:uppercase;color:#918b81}
+          .xaaj-cinema-intro h2{margin:13px 0 20px;font:400 clamp(42px,5vw,76px)/.91 'Gotham Book','Gotham',Arial,sans-serif;letter-spacing:-.05em}
+          .xaaj-cinema-intro p{max-width:390px;margin:0 0 25px;color:#746e65;font-size:12px;line-height:1.85}
+          .xaaj-cinema-text-link{display:inline-flex;align-items:center;gap:8px;color:#302d28;text-decoration:none;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid #9d978d;padding-bottom:6px}
+          .xaaj-cinema-intro-media{position:relative;min-height:650px;overflow:hidden}
+          .xaaj-cinema-intro-media img{width:100%;height:100%;object-fit:cover;display:block;transition:transform 1s cubic-bezier(.22,1,.36,1)}
+          .xaaj-cinema-intro-media:hover img{transform:scale(1.025)}
+          .xaaj-cinema-intro-side{position:absolute;right:0;bottom:0;width:min(28%,330px);padding:28px;background:rgba(37,35,30,.82);color:#fff;backdrop-filter:blur(8px)}
+          .xaaj-cinema-intro-side h3{margin:10px 0 0;font:400 30px/1 'Gotham Book','Gotham',Arial,sans-serif}
 
-        {/* ====================================================
-            HERO SECTION
-        ==================================================== */}
+          /* XAAJ brand story: editorial split-screen with a pinned cinematic image */
+          .xaaj-brand-story{position:relative;height:300svh;min-height:300svh;background:#171712;color:#f4f1e9;isolation:isolate;overflow:clip}
+          .xaaj-brand-story-inner{position:relative;width:100%;height:100svh;min-height:680px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);overflow:hidden;will-change:transform;z-index:20}
+          .xaaj-brand-story-image{position:relative;height:100%;min-width:0;overflow:hidden;background:#24231f}
+          .xaaj-brand-story-image::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.18) 70%,rgba(0,0,0,.42));pointer-events:none}
+          .xaaj-brand-story-image img,.xaaj-brand-story-image video{width:100%;height:100%;object-fit:cover;object-position:center center;display:block;will-change:transform;filter:saturate(.88) contrast(1.02)}
+          .xaaj-brand-story-image video{pointer-events:none}
+          .xaaj-brand-story-image-label{position:absolute;z-index:2;left:clamp(24px,4vw,64px);bottom:clamp(28px,5vw,62px);font-size:8px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.78)}
+          .xaaj-brand-story-content{position:relative;display:flex;align-items:center;min-width:0;padding:0 clamp(36px,7vw,110px);background:#171712;overflow:hidden}
+          .xaaj-brand-story-content::before{content:'XAAJ';position:absolute;right:-.03em;top:50%;transform:translateY(-50%);font:400 clamp(130px,20vw,320px)/.8 'Gotham Book','Gotham',Arial,sans-serif;color:rgba(255,255,255,.025);pointer-events:none;letter-spacing:-.08em}
+          .xaaj-brand-story-kicker{position:absolute;z-index:3;left:clamp(36px,7vw,110px);top:clamp(30px,5vw,58px);display:flex;align-items:center;gap:12px;margin:0;color:rgba(255,255,255,.82);font-size:9px;letter-spacing:3.2px;text-transform:uppercase}
+          .xaaj-brand-story-kicker i{display:block;width:32px;height:1px;background:rgba(255,255,255,.55)}
+          .xaaj-brand-story-kicker span{font-weight:600}
+          .xaaj-brand-story-kicker b{font-size:7px;font-weight:500;letter-spacing:2px;color:rgba(255,255,255,.38);margin-left:4px}
+          .xaaj-brand-story-block{position:absolute;z-index:2;left:clamp(36px,7vw,110px);right:clamp(52px,7vw,110px);top:50%;transform:translateY(-50%);max-width:590px;margin:0;visibility:visible;opacity:0;will-change:transform,opacity;pointer-events:none}
+          .xaaj-brand-story-block:first-of-type{opacity:1}
+          .xaaj-brand-story-block.is-active{pointer-events:auto}
+          .xaaj-brand-story-block:last-of-type{margin-bottom:0}
+          .xaaj-brand-story-block h2{margin:0 0 26px;font:400 clamp(42px,5.2vw,78px)/.9 'Gotham Book','Gotham',Arial,sans-serif;letter-spacing:-.055em;color:#f6f2e9}
+          .xaaj-brand-story-block h3{margin:0 0 24px;font:400 clamp(28px,3.1vw,48px)/1 'Gotham Book','Gotham',Arial,sans-serif;letter-spacing:-.035em;color:#f6f2e9}
+          .xaaj-brand-story-block p{max-width:500px;margin:0;color:rgba(246,242,233,.66);font-size:13px;line-height:1.95}
+          .xaaj-brand-story-lines{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:26px;color:rgba(246,242,233,.88);font-size:11px;letter-spacing:.4px}
+          .xaaj-brand-story-lines span{position:relative}
+          .xaaj-brand-story-lines span:not(:last-child)::after{content:'·';position:absolute;right:-13px;color:rgba(255,255,255,.35)}
+          .xaaj-brand-story-discover{display:inline-flex;align-items:center;gap:10px;margin-top:30px;color:#f6f2e9;text-decoration:none;font-size:9px;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,.4);padding-bottom:8px;width:max-content}
+          .xaaj-brand-story-progress{position:absolute;z-index:5;top:50%;right:clamp(18px,3vw,42px);width:1px;height:96px;background:rgba(255,255,255,.14);transform:translateY(-50%)}
+          .xaaj-brand-story-progress span{display:block;width:1px;height:100%;background:rgba(255,255,255,.85);transform:scaleY(0);transform-origin:top}
+          .xaaj-brand-story-number{position:absolute;z-index:4;left:clamp(24px,4vw,64px);top:clamp(24px,4vw,50px);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.7)}
 
-        <div ref={heroOverlapStageRef} className="xaaj-hero-overlap-stage">
+          /* NEW SECTION 03 — two premium editorial tiles */
+          .xaaj-brand-story-split{
+            width:100%;
+            padding:32px 0 76px;
+            background:#ffffff;
+          }
+          .xaaj-brand-story-split-inner{
+            /* Match the hero grid width exactly, so both sections share the same left/right edges. */
+            width:min(1140px,calc(100% - 48px));
+            margin:0 auto;
+            display:grid;
+            grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+            gap:14px;
+            align-items:stretch;
+          }
+          .xaaj-brand-story-split-media,
+          .xaaj-brand-story-split-copy{
+            min-width:0;
+            min-height:540px;
+            border:1px solid rgba(48,45,40,.14);
+            border-radius:7px;
+            overflow:hidden;
+          }
+          .xaaj-brand-story-split-media{
+            display:block;
+            position:relative;
+            background:#eee9df;
+          }
+          .xaaj-brand-story-split-media img,
+          .xaaj-brand-story-split-media video{
+            width:100%;
+            height:100%;
+            display:block;
+            object-fit:cover;
+            object-position:center;
+            transition:transform .9s cubic-bezier(.22,1,.36,1);
+          }
+          .xaaj-brand-story-split-media:hover img,
+          .xaaj-brand-story-split-media:hover video{
+            transform:scale(1.018);
+          }
+          .xaaj-brand-story-split-copy{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:64px clamp(34px,5.4vw,82px);
+            background:#fffdf9;
+          }
+          .xaaj-brand-story-split-copy-inner{
+            width:min(100%,500px);
+          }
+          .xaaj-brand-story-split-eyebrow{
+            display:block;
+            margin-bottom:18px;
+            color:#8b847b;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
+            font-size:8px;
+            line-height:1;
+            font-weight:500;
+            letter-spacing:2.8px;
+            text-transform:uppercase;
+          }
+          .xaaj-brand-story-split-copy h2{
+            margin:0 0 25px;
+            color:#302d28;
+            font:400 clamp(38px,4.2vw,66px)/.96 'Gotham Book','Gotham',Arial,sans-serif;
+            letter-spacing:-.045em;
+          }
+          .xaaj-brand-story-split-copy p{
+            max-width:470px;
+            margin:0;
+            color:#6d675f;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
+            font-size:12px;
+            line-height:1.9;
+          }
+          .xaaj-brand-story-split-button{
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            gap:12px;
+            margin-top:30px;
+            min-width:138px;
+            min-height:44px;
+            padding:0 19px;
+            border:1px solid rgba(48,45,40,.72);
+            border-radius:3px;
+            color:#302d28;
+            text-decoration:none;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
+            font-size:9px;
+            letter-spacing:1.8px;
+            text-transform:uppercase;
+            transition:background .28s ease,color .28s ease,border-color .28s ease;
+          }
+          .xaaj-brand-story-split-button:hover{
+            background:#302d28;
+            color:#fffdf9;
+            border-color:#302d28;
+          }
+          @media(max-width:850px){
+            .xaaj-brand-story-split{
+              padding:26px 18px 58px;
+            }
+            .xaaj-brand-story-split-inner{
+              grid-template-columns:1fr;
+              gap:12px;
+            }
+            .xaaj-brand-story-split-media,
+            .xaaj-brand-story-split-copy{
+              min-height:0;
+            }
+            .xaaj-brand-story-split-media{
+              aspect-ratio:1/1.02;
+            }
+            .xaaj-brand-story-split-copy{
+              padding:54px 30px 58px;
+              min-height:420px;
+            }
+            .xaaj-brand-story-split-copy h2{
+              font-size:clamp(36px,9vw,52px);
+            }
+          }
+          @media(max-width:520px){
+            .xaaj-brand-story-split{
+              padding:22px 12px 44px;
+            }
+            .xaaj-brand-story-split-copy{
+              padding:45px 24px 48px;
+              min-height:390px;
+            }
+            .xaaj-brand-story-split-copy p{
+              font-size:11px;
+              line-height:1.82;
+            }
+          }
 
-        <section
-          className="hero hero-slider"
-          onTouchStart={event => {
-            heroTouchStart.current = event.touches[0]?.clientX ?? null
-          }}
-          onTouchEnd={event => {
-            const startX = heroTouchStart.current
-            const endX = event.changedTouches[0]?.clientX ?? null
+          .xaaj-cinema-category{display:none!important;padding:58px 0 62px;background:#f7f5ef;border-top:1px solid rgba(42,39,34,.07);border-bottom:1px solid rgba(42,39,34,.07)}
+          .xaaj-cinema-wrap{width:min(100% - 56px,1700px);margin:auto}
+          .xaaj-cinema-category-inner{display:grid;grid-template-columns:250px minmax(0,1fr);align-items:center;gap:34px}
+          .xaaj-cinema-category-intro{padding:8px 0 0}
+          .xaaj-cinema-category-intro .xaaj-cinema-section-eyebrow{font-size:8px;letter-spacing:2.5px;color:#292722;font-weight:600}
+          .xaaj-cinema-category-intro p{max-width:185px;margin:18px 0 30px;color:#777168;font-size:11px;line-height:1.7}
+          .xaaj-cinema-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:32px}
+          .xaaj-cinema-section-title{margin:10px 0 0;font:400 clamp(40px,5vw,70px)/.92 'Gotham Book','Gotham',Arial,sans-serif;letter-spacing:-.05em}
+          .xaaj-cinema-category-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}
+          .xaaj-cinema-category-card{position:relative;min-width:0;aspect-ratio:.9/1;overflow:hidden;color:#fff;text-decoration:none;background:#302d27}
+          .xaaj-cinema-category-card img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .9s cubic-bezier(.22,1,.36,1);filter:saturate(.78)}
+          .xaaj-cinema-category-card:after{content:'';position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.7),transparent 58%)}
+          .xaaj-cinema-category-card:hover img{transform:scale(1.045)}
+          .xaaj-cinema-category-card span{position:absolute;z-index:2;left:20px;right:14px;bottom:19px;font:400 17px 'Gotham Book','Gotham',Arial,sans-serif;white-space:nowrap;letter-spacing:-.01em}.xaaj-cinema-category-card:before{content:"";position:absolute;z-index:2;left:20px;bottom:52px;width:28px;height:1px;background:rgba(255,255,255,.58)}
 
-            if (startX === null || endX === null) return
+          /* HORECA COLLECTION — same Craft-style geometry as the reference */
+          .xaaj-horeca-bundled{
+            background:#fff;
+            color:#302d28;
+            padding:56px 24px 24px;
+            overflow:hidden;
+          }
+          .xaaj-horeca-bundled-inner{
+            width:min(1140px,100%);
+            margin:0 auto;
+          }
+          .xaaj-horeca-bundled h2{
+            margin:0 0 34px;
+            color:#302d28;
+            font:400 32px/1.1 'Gotham Book','Gotham',Arial,sans-serif;
+            letter-spacing:-.035em;
+          }
+          .xaaj-horeca-bundled-grid{
+            display:grid;
+            grid-template-columns:minmax(0,2.1fr) minmax(270px,.9fr);
+            gap:18px;
+            align-items:stretch;
+          }
+          .xaaj-horeca-bundled-main{
+            display:block;
+            min-width:0;
+            color:inherit;
+            text-decoration:none;
+            background:#fff;
+            border:1px solid rgba(48,45,40,.12);
+            border-radius:5px;
+            overflow:hidden;
+          }
+          .xaaj-horeca-bundled-media{
+            width:100%;
+            aspect-ratio:1.62/1;
+            overflow:hidden;
+            background:#e9e5dd;
+          }
+          .xaaj-horeca-bundled-media img,
+          .xaaj-horeca-bundled-small img{
+            width:100%;
+            height:100%;
+            display:block;
+            object-fit:cover;
+            transition:transform .7s cubic-bezier(.22,1,.36,1);
+          }
+          .xaaj-horeca-bundled-main:hover .xaaj-horeca-bundled-media img,
+          .xaaj-horeca-bundled-small:hover img{
+            transform:scale(1.018);
+          }
+          .xaaj-horeca-bundled-label{
+            min-height:78px;
+            padding:0 22px;
+            display:flex;
+            align-items:center;
+            justify-content:flex-start;
+            gap:7px;
+            color:#302d28;
+            font:400 21px/1 'Gotham Book','Gotham',Arial,sans-serif;
+            border-top:1px solid rgba(48,45,40,.1);
+          }
+          .xaaj-horeca-bundled-label svg{
+            transition:transform .25s ease;
+          }
+          .xaaj-horeca-bundled-main:hover .xaaj-horeca-bundled-label svg{
+            transform:translateX(3px);
+          }
+          .xaaj-horeca-bundled-side{
+            display:grid;
+            grid-template-rows:1fr 1fr;
+            gap:18px;
+            min-width:0;
+          }
+          .xaaj-horeca-bundled-small{
+            display:block;
+            min-width:0;
+            min-height:0;
+            overflow:hidden;
+            border-radius:5px;
+            background:#e9e5dd;
+            border:1px solid rgba(48,45,40,.12);
+          }
+          .xaaj-horeca-bundled-small img{
+            aspect-ratio:1.46/1;
+          }
+          @media(max-width:850px){
+            .xaaj-horeca-bundled{
+              padding:48px 18px 22px;
+            }
+            .xaaj-horeca-bundled h2{
+              margin-bottom:24px;
+              font-size:30px;
+            }
+            .xaaj-horeca-bundled-grid{
+              grid-template-columns:1fr;
+              gap:12px;
+            }
+            .xaaj-horeca-bundled-side{
+              grid-template-columns:1fr 1fr;
+              grid-template-rows:none;
+              gap:12px;
+            }
+            .xaaj-horeca-bundled-small img{
+              aspect-ratio:1/1;
+            }
+          }
+          @media(max-width:520px){
+            .xaaj-horeca-bundled{
+              padding:42px 12px 20px;
+            }
+            .xaaj-horeca-bundled h2{
+              font-size:31px;
+            }
+            .xaaj-horeca-bundled-label{
+              min-height:62px;
+              padding:0 17px;
+              font-size:18px;
+            }
+          }
 
-            const distance = startX - endX
+          /* Section 04: category spotlight gallery inspired by the supplied reference. */
+          .xaaj-category-gallery{background:#eee8d8;color:#2d3428;padding:78px clamp(28px,4.2vw,72px) 92px;position:relative;overflow:hidden;border-top:1px solid rgba(55,61,48,.08);border-bottom:1px solid rgba(55,61,48,.08);z-index:10;backface-visibility:hidden}
+          .xaaj-category-gallery::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 12% 8%,rgba(255,255,255,.45),transparent 30%),radial-gradient(circle at 92% 90%,rgba(132,113,79,.08),transparent 32%)}
+          .xaaj-category-gallery-head{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;margin-bottom:34px;padding:0 2px;color:#69715d;font-size:9px;letter-spacing:2.8px;text-transform:uppercase}
+          .xaaj-category-gallery-head a{display:inline-flex;align-items:center;gap:8px;color:#4f5a46;text-decoration:none;letter-spacing:1.5px;font-size:8px;border-bottom:1px solid rgba(79,90,70,.32);padding-bottom:5px;transition:opacity .3s ease}
+          .xaaj-category-gallery-head a:hover{opacity:.65}
+          .xaaj-category-gallery-grid{position:relative;z-index:2;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(18px,2vw,34px);width:100%}
+          .xaaj-category-gallery-card{display:block;min-width:0;color:#4f5a46;text-decoration:none;will-change:transform,opacity,clip-path;transform:translateZ(0)}
+          .xaaj-category-gallery-image{overflow:hidden;background:#e5dfd1;aspect-ratio:.84/1;position:relative}
+          .xaaj-category-gallery-image::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.01),rgba(0,0,0,.07))}
+          .xaaj-category-gallery-image img{width:100%;height:100%;display:block;object-fit:cover;object-position:center;transform-origin:center center;will-change:transform;filter:saturate(.82) contrast(.99);transition:transform 1.15s cubic-bezier(.22,1,.36,1)}
+          .xaaj-category-gallery-card:hover .xaaj-category-gallery-image img{transform:scale(1.035)}
+          .xaaj-category-gallery-label{display:flex;align-items:center;justify-content:center;min-height:54px;padding:15px 4px 0;color:#59664e;font-size:16px;letter-spacing:.05px;font-family:'Gotham Book','Gotham',Arial,sans-serif;text-align:center}
+          .xaaj-brand-story + .xaaj-category-gallery{box-shadow:0 -18px 48px rgba(24,23,18,.07)}
 
-            if (Math.abs(distance) > 45) {
-              if (distance > 0) {
-                goToHero(heroIndex + 1)
-              } else {
-                goToHero(heroIndex - 1)
-              }
+          /* SECTION 06 — THE EVERYDAY TABLE / single image */
+          .xaaj-everyday-carousel{position:relative;height:88svh;min-height:620px;background:#161611;color:#fff;overflow:hidden;isolation:isolate}
+          .xaaj-everyday-carousel-track{position:relative;width:100%;height:100%;min-height:620px;overflow:hidden;background:#161611}
+          .xaaj-everyday-slide{position:absolute;inset:0;margin:0;overflow:hidden;z-index:1}
+          .xaaj-everyday-slide img{width:100%;height:100%;object-fit:cover;object-position:center;display:block;filter:saturate(.82) contrast(.97);transform:scale(1.02)}
+          .xaaj-everyday-overlay{position:absolute;z-index:3;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(10,9,7,.68) 0%,rgba(10,9,7,.28) 34%,rgba(10,9,7,.05) 70%,rgba(10,9,7,.16) 100%),linear-gradient(0deg,rgba(0,0,0,.28),transparent 45%,rgba(0,0,0,.08))}
+          .xaaj-everyday-copy{position:absolute;z-index:5;left:7vw;top:50%;transform:translateY(-50%);width:min(510px,44vw)}
+          .xaaj-everyday-copy h2{margin:12px 0 20px;font:400 clamp(48px,6.5vw,98px)/.86 'Gotham Book','Gotham',Arial,sans-serif;letter-spacing:-.055em}
+          .xaaj-everyday-subtitle{font:400 clamp(18px,2vw,29px)/1.15 'Gotham Book','Gotham',Arial,sans-serif!important;color:rgba(255,255,255,.92)!important;max-width:560px!important;margin:-5px 0 18px!important;line-height:1.25!important}
+          .xaaj-everyday-copy p{max-width:370px;color:rgba(255,255,255,.78);font-size:12px;line-height:1.8;margin-bottom:25px}
+          .xaaj-everyday-progress,.xaaj-everyday-scroll-hint{display:none}
+
+          .xaaj-cinema-quote{padding:110px 24px;text-align:center;background:#f7f5ef}
+          .xaaj-cinema-quote p{max-width:900px;margin:0 auto;font:400 clamp(35px,5vw,72px)/.98 'Gotham Book','Gotham',Arial,sans-serif;letter-spacing:-.05em}
+          .xaaj-cinema-quote span{display:block;margin-top:25px;color:#928b81;font-size:8px;letter-spacing:2.5px;text-transform:uppercase}
+
+          .xaaj-cinema-products{padding:105px 0;background:#f7f5ef}
+          .xaaj-cinema-product-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:17px}
+          .xaaj-cinema-product-grid .xaaj-editorial-card-media{aspect-ratio:4/5}
+          .xaaj-cinema-product-grid .xaaj-editorial-card-copy h3{font-size:16px}
+
+          /* SECTION 08 — COLLECTION STORY / NORMAL RIGHT-TO-LEFT CAROUSEL */
+          .xaaj-collection-story-carousel{
+            position:relative;
+            height:100svh;
+            min-height:680px;
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            background:#e8e3d9;
+            overflow:hidden;
+            isolation:isolate;
+          }
+          .xaaj-collection-story-media{
+            position:relative;
+            height:100%;
+            min-height:680px;
+            overflow:hidden;
+            background:#d8d1c5;
+          }
+          .xaaj-collection-story-track{
+            display:flex;
+            width:400%;
+            height:100%;
+            will-change:transform;
+            animation:xaajCollectionStoryRTL 14s linear infinite;
+          }
+          .xaaj-collection-story-slide{
+            position:relative;
+            flex:0 0 25%;
+            width:25%;
+            height:100%;
+            margin:0;
+            overflow:hidden;
+          }
+          .xaaj-collection-story-slide img{
+            width:100%;
+            height:100%;
+            object-fit:cover;
+            object-position:center;
+            display:block;
+            transform:scale(1.025);
+            transition:transform .8s ease;
+          }
+          .xaaj-collection-story-carousel:hover .xaaj-collection-story-track{
+            animation-play-state:paused;
+          }
+          @keyframes xaajCollectionStoryRTL{
+            from{transform:translate3d(0,0,0)}
+            to{transform:translate3d(-50%,0,0)}
+          }
+          .xaaj-collection-story-copy{
+            position:relative;
+            z-index:5;
+            display:flex;
+            align-items:center;
+            padding:80px clamp(35px,7vw,105px);
+            background:#e8e3d9;
+          }
+          .xaaj-collection-story-copy>div{max-width:490px}
+          .xaaj-collection-story-copy h2{
+            margin:12px 0 20px;
+            font:400 clamp(45px,5.5vw,82px)/.9 'Gotham Book','Gotham',Arial,sans-serif;
+            letter-spacing:-.05em;
+          }
+          .xaaj-collection-story-copy p{
+            color:#716b61;
+            font-size:12px;
+            line-height:1.85;
+            max-width:390px;
+            margin-bottom:25px;
+          }
+
+          .xaaj-cinema-new{position:relative;min-height:72svh;overflow:hidden;color:#fff;background:#292720}
+          .xaaj-cinema-new img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;filter:saturate(.72)}
+          .xaaj-cinema-new:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(20,18,14,.62),rgba(20,18,14,.08) 70%)}
+          .xaaj-cinema-new-copy{position:relative;z-index:2;min-height:72svh;display:flex;align-items:center;padding:80px 7vw}
+          .xaaj-cinema-new h2{margin:12px 0 23px;font:400 clamp(45px,6vw,88px)/.88 'Gotham Book','Gotham',Arial,sans-serif;letter-spacing:-.05em;max-width:600px}
+
+          .xaaj-cinema-reveal{opacity:1;transform:none;will-change:transform,opacity}
+
+          @media(max-width:850px){
+            .xaaj-cinema-hero{min-height:100svh;height:100svh}
+            .xaaj-cinema-content{left:22px;right:22px;top:auto;bottom:105px;transform:none;max-width:520px}
+            .xaaj-cinema-title{font-size:clamp(48px,14vw,78px)}
+            .xaaj-cinema-copy{font-size:11px;max-width:320px}
+            .xaaj-cinema-meta{right:18px;top:auto;bottom:125px}
+            .xaaj-cinema-index{left:22px;bottom:31px}
+            .xaaj-cinema-next-hint{bottom:28px}
+            .xaaj-cinema-intro{grid-template-columns:1fr;min-height:0}
+            .xaaj-cinema-intro-copy{min-height:470px;padding:60px 22px}
+            .xaaj-cinema-intro-media{height:80svh;min-height:460px}
+            .xaaj-cinema-intro-side{width:45%;padding:20px}
+            .xaaj-cinema-intro-side h3{font-size:22px}
+            .xaaj-brand-story{height:auto;min-height:auto}
+            .xaaj-brand-story-inner{position:relative;height:auto;min-height:0;display:block;overflow:visible}
+            .xaaj-brand-story-image{height:72svh;min-height:460px;position:relative}
+            .xaaj-brand-story-content{display:block;min-height:0;padding:78px 22px 90px;overflow:hidden}
+            .xaaj-brand-story-kicker{position:relative;left:auto;top:auto;margin:0 0 48px}
+            .xaaj-brand-story-block{position:relative;left:auto;right:auto;top:auto;transform:none;margin-bottom:92px;max-width:none;visibility:visible;opacity:1;pointer-events:auto}
+            .xaaj-brand-story-block:last-of-type{margin-bottom:0}
+            .xaaj-brand-story-block h2{font-size:48px}
+            .xaaj-brand-story-block h3{font-size:34px}
+            .xaaj-brand-story-block p{font-size:12px;line-height:1.85}
+            .xaaj-brand-story-progress{display:none}
+            .xaaj-cinema-wrap{width:calc(100% - 28px)}
+            .xaaj-cinema-category{padding:28px 0 30px}
+            .xaaj-cinema-category-inner{grid-template-columns:1fr;gap:24px}
+            .xaaj-cinema-category-intro p{max-width:360px;margin:12px 0 18px}
+            .xaaj-cinema-category-grid{grid-template-columns:repeat(2,1fr);gap:11px}
+            .xaaj-cinema-category-card{aspect-ratio:.92/1}
+            .xaaj-cinema-category-card span{font-size:16px;left:15px;bottom:15px}.xaaj-cinema-category-card:before{left:15px;bottom:44px}
+            .xaaj-category-gallery{padding:54px 18px 64px}
+            .xaaj-category-gallery-head{margin-bottom:23px;font-size:8px}
+            .xaaj-category-gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px}
+            .xaaj-category-gallery-image{aspect-ratio:.84/1}
+            .xaaj-category-gallery-label{min-height:48px;padding-top:11px;font-size:13px}
+            .xaaj-brand-story-kicker{left:22px;top:25px;gap:9px;font-size:8px;letter-spacing:2.5px}.xaaj-brand-story-kicker i{width:24px}.xaaj-brand-story-kicker b{font-size:6px}
+            .xaaj-everyday-carousel{height:78svh;min-height:520px}
+            .xaaj-everyday-carousel-track{height:100%;min-height:520px}
+            .xaaj-everyday-copy{left:22px;right:22px;top:auto;bottom:82px;transform:none;width:auto}
+            .xaaj-everyday-copy h2{font-size:clamp(43px,12vw,70px)}
+            .xaaj-everyday-copy p{font-size:11px;max-width:330px}
+            .xaaj-everyday-progress,.xaaj-everyday-scroll-hint{display:none}
+            .xaaj-cinema-product-grid{grid-template-columns:repeat(2,1fr);gap:12px}
+            .xaaj-cinema-products{padding:70px 0}
+            .xaaj-collection-story-carousel{
+              height:auto;
+              min-height:0;
+              display:grid;
+              grid-template-columns:1fr;
+              overflow:hidden;
+            }
+            .xaaj-collection-story-media{
+              height:78svh;
+              min-height:460px;
+            }
+            .xaaj-collection-story-track{
+              height:100%;
+              animation-duration:11s;
+            }
+            .xaaj-collection-story-slide{
+              flex:0 0 25%;
+              width:25%;
+              height:100%;
+              min-height:460px;
+            }
+            .xaaj-collection-story-slide img{
+              transform:none;
+            }
+            .xaaj-collection-story-copy{
+              min-height:460px;
+              padding:60px 22px;
+            }
+            .xaaj-collection-story-counter,
+            .xaaj-collection-story-progress{
+              display:none;
+            }
+            .xaaj-cinema-new,.xaaj-cinema-new-copy{min-height:72svh}
+            .xaaj-cinema-new-copy{padding:60px 22px}
+            .xaaj-cinema-quote{padding:75px 20px}
+          }
+          @media(max-width:520px){
+            .xaaj-cinema-hero-media img{object-position:58% center}
+            .xaaj-cinema-eyebrow{font-size:8px;letter-spacing:2.5px}
+            .xaaj-cinema-copy{margin:18px 0 22px}
+            .xaaj-cinema-meta{display:none}
+            .xaaj-cinema-intro-side{width:52%;padding:15px}
+            .xaaj-cinema-intro-side h3{font-size:18px}
+            .xaaj-cinema-section-head{align-items:flex-start;flex-direction:column}
+            .xaaj-cinema-section-title{font-size:43px}
+            .xaaj-cinema-category-intro p{font-size:10px}
+            .xaaj-cinema-category-card span{font-size:16px}
+          }
+          @media(prefers-reduced-motion:reduce){
+            .xaaj-cinema-home *{scroll-behavior:auto!important}
+            .xaaj-cinema-reveal{opacity:1;transform:none}
+            .xaaj-category-gallery-card{opacity:1!important;transform:none!important;clip-path:none!important}
+          }
+
+          @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&display=swap');
+          body.xaaj-cinematic-home{background:#f8f6f1!important}
+          body.xaaj-cinematic-home,body.xaaj-cinematic-home *{font-family:'Gotham Book','Gotham',Arial,sans-serif}
+          .xaaj-reference-hero{
+            position:relative;
+            z-index:1;
+            background:#ffffff;
+            color:#292722;
+            padding:64px 3.45vw 40px;
+            overflow:hidden;
+          }
+
+          .xaaj-reference-hero-heading{
+            text-align:center;
+            padding:0 15px 62px;
+          }
+
+          .xaaj-reference-hero-heading h1{
+            margin:0 auto;
+            max-width:1000px;
+            font-family:'Cormorant Garamond',Georgia,"Times New Roman",serif !important;
+            font-size:clamp(48px,4.25vw,66px);
+            font-weight:400 !important;
+            line-height:.98;
+            letter-spacing:-.035em;
+            color:#292722;
+          }
+
+          .xaaj-reference-hero-grid{
+            width:min(1140px,100%);
+            margin:0 auto;
+            display:grid;
+            grid-template-columns:365px minmax(0,1fr);
+            gap:22px;
+            align-items:stretch;
+          }
+
+          .xaaj-reference-hero-card{
+            position:relative;
+            display:flex;
+            flex-direction:column;
+            min-width:0;
+            overflow:hidden;
+            background:rgb(239,236,236);
+            color:#292722;
+            text-decoration:none;
+            border:1px solid rgba(37,37,37,.20);
+            border-radius:6px;
+            box-shadow:none;
+            transition:border-color .35s ease,transform .35s ease;
+          }
+
+          .xaaj-reference-hero-card-top{
+            height:659px;
+          }
+
+          .xaaj-reference-hero-card img,
+          .xaaj-reference-hero-card video{
+            width:100%;
+            height:auto;
+            flex:1 1 auto;
+            min-height:0;
+            display:block;
+            object-fit:cover;
+            transition:transform 1.1s cubic-bezier(.22,1,.36,1);
+          }
+
+          .xaaj-reference-hero-card:hover{
+            border-color:rgba(48,45,40,.34);
+          }
+
+          .xaaj-reference-hero-card:hover img,
+          .xaaj-reference-hero-card:hover video{
+            transform:scale(1.025);
+          }
+
+          .xaaj-reference-hero-bottom{
+            grid-column:1 / -1;
+            display:grid;
+            grid-template-columns:repeat(3,minmax(0,1fr));
+            gap:22px;
+            margin-top:2px;
+          }
+
+          .xaaj-reference-hero-bottom-card{
+            position:relative;
+            display:flex;
+            flex-direction:column;
+            min-width:0;
+            overflow:hidden;
+            background:rgb(239,236,236);
+            color:#292722;
+            text-decoration:none;
+            border:1px solid rgba(37,37,37,.20);
+            border-radius:6px;
+            transition:border-color .35s ease,transform .35s ease;
+          }
+
+          .xaaj-reference-hero-bottom-card:hover{
+            border-color:rgba(48,45,40,.34);
+          }
+
+          .xaaj-reference-hero-bottom-card img,
+          .xaaj-reference-hero-bottom-card video{
+            width:100%;
+            height:380px;
+            display:block;
+            object-fit:cover;
+            transition:transform 1.1s cubic-bezier(.22,1,.36,1);
+          }
+
+          .xaaj-reference-hero-bottom-card:hover img,
+          .xaaj-reference-hero-bottom-card:hover video{
+            transform:scale(1.025);
+          }
+
+          .xaaj-reference-hero-label{
+            position:relative;
+            left:auto;
+            bottom:auto;
+            height:82px;
+            min-height:82px;
+            flex:0 0 82px;
+            box-sizing:border-box;
+            display:flex;
+            align-items:center;
+            justify-content:flex-start;
+            gap:13px;
+            padding:19px 22px 18px;
+            background:#ffffff;
+            color:#302d28;
+            font-family:'Cormorant Garamond',Georgia,"Times New Roman",serif !important;
+            font-size:28px !important;
+            font-weight:500 !important;
+            line-height:.95 !important;
+            letter-spacing:-.008em !important;
+            text-shadow:none;
+          }
+
+          .xaaj-reference-hero-label > span{
+            font-family:'Cormorant Garamond',Georgia,"Times New Roman",serif !important;
+            font-size:inherit !important;
+            font-weight:inherit !important;
+            line-height:inherit !important;
+            letter-spacing:inherit !important;
+            color:inherit !important;
+          }
+
+          .xaaj-reference-hero-label svg{
+            flex:0 0 auto;
+            transition:transform .35s ease;
+          }
+
+          .xaaj-reference-hero-card:hover .xaaj-reference-hero-label svg,
+          .xaaj-reference-hero-bottom-card:hover .xaaj-reference-hero-label svg{
+            transform:translateX(4px);
+          }
+
+          .xaaj-reference-hero-overlay{
+            display:none!important;
+          }          /* Product showcase directly below hero — clean 4-up editorial grid */
+          .xaaj-hero-product-showcase{
+            position:relative;
+            background:#f7f5ef;
+            color:#292722;
+            padding:30px 3.45vw 74px;
+            border-bottom:1px solid rgba(42,39,34,.07);
+            overflow:hidden;
+          }
+
+          .xaaj-hero-product-showcase-inner{
+            width:min(1390px,100%);
+            margin:0 auto;
+          }
+
+          .xaaj-hero-product-showcase-head{
+            display:flex;
+            align-items:flex-end;
+            justify-content:space-between;
+            gap:20px;
+            margin-bottom:24px;
+          }
+
+          .xaaj-hero-product-showcase-kicker{
+            display:block;
+            margin-bottom:8px;
+            color:#8f887f;
+            font-size:8px;
+            line-height:1;
+            letter-spacing:2.4px;
+            text-transform:uppercase;
+          }
+
+          .xaaj-hero-product-showcase-head h2{
+            margin:0;
+            color:#292722;
+            font:400 25px/1.08 'Gotham Book','Gotham',Arial,sans-serif;
+            letter-spacing:-.02em;
+          }
+
+          .xaaj-hero-product-showcase-head a{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            color:#5f5a53;
+            text-decoration:none;
+            font-size:8px;
+            letter-spacing:1.6px;
+            text-transform:uppercase;
+            border-bottom:1px solid rgba(95,90,83,.34);
+            padding-bottom:5px;
+          }
+
+          .xaaj-hero-product-showcase-grid{
+            display:grid;
+            grid-template-columns:repeat(4,minmax(0,1fr));
+            gap:14px;
+          }
+
+          .xaaj-hero-product-card{
+            min-width:0;
+            color:#292722;
+            text-decoration:none;
+            display:block;
+          }
+
+          .xaaj-hero-product-media{
+            position:relative;
+            overflow:hidden;
+            background:#ece8df;
+            aspect-ratio:.84/1;
+          }
+
+          .xaaj-hero-product-media img{
+            width:100%;
+            height:100%;
+            display:block;
+            object-fit:cover;
+            transition:transform .8s cubic-bezier(.22,1,.36,1);
+            will-change:transform;
+          }
+
+          .xaaj-hero-product-card:hover .xaaj-hero-product-media img{
+            transform:scale(1.025);
+          }
+
+          .xaaj-hero-product-copy{
+            padding:12px 2px 0;
+          }
+
+          .xaaj-hero-product-copy span{
+            display:block;
+            margin-bottom:5px;
+            color:#918a80;
+            font-size:7px;
+            line-height:1;
+            letter-spacing:1.5px;
+            text-transform:uppercase;
+          }
+
+          .xaaj-hero-product-copy h3{
+            margin:0 0 6px;
+            color:#302d28;
+            font:400 17px/1.18 'Gotham Book','Gotham',Arial,sans-serif;
+            letter-spacing:-.01em;
+          }
+
+          .xaaj-hero-product-price{
+            color:#4f4a43;
+            font-size:11px;
+            line-height:1.2;
+            letter-spacing:.15px;
+          }
+
+          @media(max-width:850px){
+            .xaaj-hero-product-showcase{
+              padding:26px 18px 54px;
             }
 
-            heroTouchStart.current = null
-          }}
-          aria-label="XAAJ featured collection"
+            .xaaj-hero-product-showcase-grid{
+              grid-template-columns:repeat(2,minmax(0,1fr));
+              gap:18px 14px;
+            }
+
+            .xaaj-hero-product-showcase-head h2{
+              font-size:22px;
+            }
+
+            .xaaj-hero-product-copy h3{
+              font-size:15px;
+            }
+          }
+
+          @media(max-width:520px){
+            .xaaj-hero-product-showcase{
+              padding:22px 12px 42px;
+            }
+
+            .xaaj-hero-product-showcase-head{
+              margin-bottom:18px;
+            }
+
+            .xaaj-hero-product-showcase-head h2{
+              font-size:19px;
+            }
+
+            .xaaj-hero-product-showcase-head a{
+              font-size:7px;
+            }
+
+            .xaaj-hero-product-showcase-grid{
+              gap:18px 10px;
+            }
+
+            .xaaj-hero-product-copy{
+              padding-top:9px;
+            }
+
+            .xaaj-hero-product-copy h3{
+              font-size:14px;
+              line-height:1.15;
+            }
+
+            .xaaj-hero-product-copy span{
+              font-size:6.5px;
+            }
+
+            .xaaj-hero-product-price{
+              font-size:10px;
+            }
+          }
+
+          @media(max-width:850px){
+            .xaaj-reference-hero{
+              padding:48px 18px 30px;
+            }
+
+            .xaaj-reference-hero-heading{
+              padding-bottom:35px;
+            }
+
+            .xaaj-reference-hero-heading h1{
+              font-size:clamp(40px,7vw,54px);
+              line-height:1.04;
+            }
+
+            .xaaj-reference-hero-grid{
+              grid-template-columns:1fr 1fr;
+              gap:14px;
+            }
+
+            .xaaj-reference-hero-card-top{
+              height:430px;
+            }
+
+            .xaaj-reference-hero-bottom{
+              grid-column:1 / -1;
+              grid-template-columns:repeat(2,1fr);
+              gap:14px;
+            }
+
+            .xaaj-reference-hero-bottom-card img,
+            .xaaj-reference-hero-bottom-card video{
+              height:330px;
+            }
+
+            .xaaj-reference-hero-label{
+              min-height:76px;
+              padding:18px 19px;
+              gap:11px;
+              font-size:24px !important;
+            }
+          }
+
+          @media(max-width:560px){
+            .xaaj-reference-hero{
+              padding:32px 12px 42px;
+            }
+
+            .xaaj-reference-hero-heading{
+              padding:0 8px 30px;
+            }
+
+            .xaaj-reference-hero-heading h1{
+              font-size:37px;
+              line-height:1.04;
+            }
+
+            .xaaj-reference-hero-grid{
+              grid-template-columns:1fr;
+              gap:13px;
+            }
+
+            .xaaj-reference-hero-card-top{
+              height:430px;
+            }
+
+            .xaaj-reference-hero-bottom{
+              grid-template-columns:1fr 1fr;
+              gap:13px;
+              margin-top:0;
+            }
+
+            .xaaj-reference-hero-bottom-card img,
+            .xaaj-reference-hero-bottom-card video{
+              height:250px;
+            }
+
+            .xaaj-reference-hero-label{
+              min-height:64px;
+              padding:15px 16px;
+              gap:9px;
+              font-size:20px !important;
+            }
+
+            .xaaj-reference-hero-label svg{
+              width:16px;
+              height:16px;
+            }
+          }
+        `}</style>
+
+        <section
+          ref={heroRef}
+          className={`xaaj-reference-hero ${heroReady ? 'is-ready' : ''}`}
+          aria-labelledby="xaaj-reference-hero-title"
         >
+          <div className="xaaj-reference-hero-heading">
+            <h1 id="xaaj-reference-hero-title">
+              Sustainably crafted goods to elevate
+              <br />
+              your everyday.
+            </h1>
+          </div>
 
-          {/* ====================================================
-              HERO IMAGES
-          ==================================================== */}
+          <div className="xaaj-reference-hero-grid">
 
-          <div className="hero-slides" aria-live="polite">
+            {categoryHeroItems.slice(0, 2).map((category, index) => {
+              const mediaUrl = category.url || category.fallback
+              const mediaAlt = category.alt || `XAAJ ${category.name} collection`
 
-            {heroSlides.map((slide, index) => {
-              const isVideo = slide.mediaType === 'video'
+              return (
+                <Link
+                  key={category.slug}
+                  className="xaaj-reference-hero-card xaaj-reference-hero-card-top"
+                  to={`/shop?category=${encodeURIComponent(category.name)}`}
+                  aria-label={`Shop ${category.name}`}
+                >
+                  {category.mediaType === 'video' ? (
+                    <video
+                      src={mediaUrl}
+                      muted
+                      autoPlay
+                      loop
+                      playsInline
+                      preload="metadata"
+                      aria-label={mediaAlt}
+                    />
+                  ) : (
+                    <img
+                      src={mediaUrl}
+                      alt={mediaAlt}
+                      loading={index === 0 ? 'eager' : 'lazy'}
+                      fetchPriority={index === 0 ? 'high' : undefined}
+                    />
+                  )}
 
-              return isVideo ? (
-                <video
-                  key={`${slide.image}-${index}`}
-                  className={`hero-slide ${
-                    index === heroIndex
-                      ? 'hero-slide-active'
-                      : ''
-                  }`}
-                  src={slide.image}
-                  muted
-                  autoPlay
-                  loop
-                  playsInline
-                  preload={index === 0 ? 'auto' : 'metadata'}
-                  aria-label={slide.alt || 'XAAJ Crockery'}
-                />
-              ) : (
-                <img
-                  key={`${slide.image}-${index}`}
-                  className={`hero-slide ${
-                    index === heroIndex
-                      ? 'hero-slide-active'
-                      : ''
-                  }`}
-                  src={slide.image}
-                  alt={slide.alt}
-                  draggable="false"
-                  loading={index === 0 ? 'eager' : 'lazy'}
-                />
+                  <span className="xaaj-reference-hero-label">
+                    <span>{category.name}</span>
+                    <ArrowRight size={20} strokeWidth={1.25} />
+                  </span>
+                </Link>
               )
             })}
 
-          </div>
+            {/* Bottom three categories */}
+            <div className="xaaj-reference-hero-bottom">
+              {categoryHeroItems.slice(2).map(category => {
+                const mediaUrl = category.url || category.fallback
+                const mediaAlt = category.alt || `XAAJ ${category.name} collection`
 
-
-          {/* ====================================================
-              HERO CONTENT
-              Existing text and button intentionally unchanged.
-          ==================================================== */}
-
-          <div className="hero-overlay">
-
-            <span className="eyebrow">
-              Quiet objects for everyday rituals
-            </span>
-
-            <h1>
-              Made for the
-              <br />
-              <em>
-                way you live.
-              </em>
-            </h1>
-
-            <p>
-              Timeless tableware, shaped slowly
-              and thoughtfully in India.
-            </p>
-
-            <Button to="/shop">
-              Explore the collection
-            </Button>
-
-          </div>
-
-
-          {/* ====================================================
-              HERO CONTROLS
-          ==================================================== */}
-
-          {heroSlides.length > 1 && (
-            <div className="hero-controls">
-
-              <button
-                type="button"
-                className="hero-arrow hero-arrow-prev"
-                onClick={() => goToHero(heroIndex - 1)}
-                aria-label="Previous hero slide"
-              >
-                ←
-              </button>
-
-              <div
-                className="hero-dots"
-                aria-label="Hero slide navigation"
-              >
-                {heroSlides.map((slide, index) => (
-                  <button
-                    type="button"
-                    key={`hero-dot-${index}`}
-                    className={`hero-dot ${
-                      index === heroIndex
-                        ? 'active'
-                        : ''
-                    }`}
-                    onClick={() => goToHero(index)}
-                    aria-label={`Go to hero slide ${index + 1}`}
-                    aria-current={
-                      index === heroIndex
-                        ? 'true'
-                        : undefined
-                    }
-                  />
-                ))}
-              </div>
-
-              <span className="hero-counter">
-                {String(heroIndex + 1).padStart(2, '0')}
-                {' / '}
-                {String(heroSlides.length).padStart(2, '0')}
-              </span>
-
-              <button
-                type="button"
-                className="hero-arrow hero-arrow-next"
-                onClick={() => goToHero(heroIndex + 1)}
-                aria-label="Next hero slide"
-              >
-                →
-              </button>
-
-            </div>
-          )}
-
-        </section>
-
-
-        {/* ====================================================
-            INTRO SECTION
-            Stays in normal flow so scrolling naturally moves it
-            upward over the sticky hero.
-        ==================================================== */}
-
-        <section className="intro" data-xaaj-reveal="up">
-
-          <span className="eyebrow">
-            The everyday, elevated
-          </span>
-
-          <h2>
-            Objects with a sense
-            <br />
-            of <em>place.</em>
-          </h2>
-
-          <p>
-            We make useful, beautiful things
-            that carry the marks of the hands
-            that made them. Designed to be
-            lived with, not put away.
-          </p>
-
-        </section>
-
-
-        </div>
-
-
-        {/* ====================================================
-            CATEGORIES SECTION
-        ==================================================== */}
-
-        <section
-          ref={categorySceneRef}
-          className="xaaj-category-cinematic"
-          aria-label="Shop by form"
-        >
-          {/* Mobile-only category layout: restored to the original
-              compact circular collection row for natural phone scrolling. */}
-          <div className="xaaj-mobile-category-collections">
-            <div className="xaaj-mobile-category-heading">
-              <span>SHOP BY CATEGORY</span>
-              <h2>Explore Our Collections</h2>
-              <p>Find the perfect pieces for every occasion.</p>
-            </div>
-
-            <div className="xaaj-mobile-category-scroll" aria-label="Shop by category">
-              {categories.map(category => (
-                <Link
-                  key={`mobile-category-${category.name}`}
-                  to={`/shop?category=${encodeURIComponent(category.name)}`}
-                  className="xaaj-mobile-category-item"
-                >
-                  <div className="xaaj-mobile-category-image">
-                    <img
-                      src={category.image}
-                      alt={category.name}
-                      loading="lazy"
-                    />
-                  </div>
-                  <strong>{category.name}</strong>
-                  <span>Shop Now <ArrowRight size={9} /></span>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <div className="xaaj-category-cinematic-inner">
-
-            <div className="xaaj-category-copy">
-              <span className="eyebrow">Shop by form</span>
-
-              <h2>
-                Find your
-                <br />
-                <em>everyday.</em>
-              </h2>
-
-              <p>
-                Thoughtfully shaped pieces for the rituals,
-                gatherings and quiet moments around your table.
-              </p>
-
-              <div className="xaaj-category-progress" aria-hidden="true">
-                {categories.map((category, index) => (
-                  <span
-                    key={`progress-${category.name}-${index}`}
-                    data-xaaj-category-progress
-                    title={category.name}
-                  />
-                ))}
-              </div>
-
-              <span className="xaaj-category-scroll-hint">
-                Scroll to explore
-                <ArrowRight size={14} />
-              </span>
-            </div>
-
-            <div className="xaaj-category-stage">
-              <div className="xaaj-category-stage-glow" aria-hidden="true" />
-
-              {categories.map((category, index) => (
-                <div
-                  className="xaaj-category-card"
-                  data-xaaj-category-card
-                  key={category.name}
-                >
+                return (
                   <Link
+                    key={category.slug}
+                    className="xaaj-reference-hero-bottom-card"
                     to={`/shop?category=${encodeURIComponent(category.name)}`}
-                    className="xaaj-category-card-link"
+                    aria-label={`Shop ${category.name}`}
                   >
-                    <div className="xaaj-category-image-wrap">
-                      <img
-                        src={category.image}
-                        alt={category.name}
-                        loading={index === 0 ? 'eager' : 'lazy'}
+                    {category.mediaType === 'video' ? (
+                      <video
+                        src={mediaUrl}
+                        muted
+                        autoPlay
+                        loop
+                        playsInline
+                        preload="metadata"
+                        aria-label={mediaAlt}
                       />
-                    </div>
+                    ) : (
+                      <img
+                        src={mediaUrl}
+                        alt={mediaAlt}
+                        loading="lazy"
+                      />
+                    )}
 
+                    <span className="xaaj-reference-hero-label">
+                      <span>{category.name}</span>
+                      <ArrowRight size={20} strokeWidth={1.25} />
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================================
+            HERO FOLLOW-UP — PRODUCT SHOWCASE
+            Uses live XAAJ products; no dummy catalogue data.
+           ============================================================ */}
+        {(() => {
+          // Always try to fill all 4 cards with unique live products.
+          // Priority: bestsellers → new arrivals → remaining live products.
+          const heroProductPool = [
+            ...(Array.isArray(bestsellers) ? bestsellers : []),
+            ...(Array.isArray(arrivals) ? arrivals : []),
+            ...(Array.isArray(productList) ? productList : [])
+          ]
+
+          const heroProducts = heroProductPool
+            .filter((product, index, list) => {
+              const productKey =
+                product?.id ||
+                product?._id ||
+                product?.slug ||
+                `${product?.name || 'product'}-${index}`
+
+              return list.findIndex(item => (
+                (item?.id || item?._id || item?.slug ||
+                  `${item?.name || 'product'}-${list.indexOf(item)}`) === productKey
+              )) === index
+            })
+            .slice(0, 4)
+
+          if (!heroProducts.length) return null
+
+          return (
+            <section
+              className="xaaj-hero-product-showcase xaaj-cinema-reveal"
+              data-xaaj-cinema-reveal
+              aria-label="Featured XAAJ products"
+              style={{ display: 'none' }}
+            >
+              <div className="xaaj-hero-product-showcase-inner">
+                <div className="xaaj-hero-product-showcase-head">
+                  <div>
+                    <span className="xaaj-hero-product-showcase-kicker">Selected pieces</span>
+                    <h2>Made for the everyday table.</h2>
+                  </div>
+
+                  <Link to="/shop">
+                    View all pieces
+                    <ArrowRight size={12} strokeWidth={1.35} />
                   </Link>
                 </div>
-              ))}
 
-            </div>
+                <div className="xaaj-hero-product-showcase-grid">
+                  {heroProducts.map(product => (
+                    <Link
+                      key={product.id || product._id || product.slug}
+                      to={`/product/${product.slug}`}
+                      className="xaaj-hero-product-card"
+                      aria-label={`View ${product.name}`}
+                    >
+                      <div className="xaaj-hero-product-media">
+                        <img
+                          src={product.image || product.images?.[0] || ''}
+                          alt={product.name}
+                          loading="lazy"
+                        />
+                      </div>
 
-          </div>
-
-          <style>{`
-            .xaaj-mobile-category-collections {
-              display: none;
-            }
-
-            .xaaj-category-cinematic {
-              position: relative;
-              min-height: 100vh;
-              height: 100vh;
-              overflow: hidden;
-              background:
-                radial-gradient(circle at 74% 42%, rgba(255,255,255,.72), transparent 34%),
-                linear-gradient(135deg, #f6f1e9 0%, #eee8dd 100%);
-              color: #292824;
-              isolation: isolate;
-            }
-
-            .xaaj-category-cinematic-inner {
-              width: min(1480px, calc(100% - 96px));
-              height: 100%;
-              margin: 0 auto;
-              display: grid;
-              grid-template-columns: minmax(300px, .72fr) minmax(0, 1.6fr);
-              gap: clamp(42px, 6vw, 96px);
-              align-items: center;
-              padding: 62px 0;
-            }
-
-            .xaaj-category-copy {
-              position: relative;
-              z-index: 3;
-              max-width: 420px;
-              padding-left: clamp(0px, 1.5vw, 22px);
-            }
-
-
-            .xaaj-category-copy h2 {
-              margin: 12px 0 25px;
-              font-family: Georgia, 'Times New Roman', serif;
-              font-size: clamp(54px, 6.2vw, 94px);
-              line-height: .91;
-              letter-spacing: -.055em;
-              font-weight: 400;
-            }
-
-            .xaaj-category-copy h2 em {
-              color: #bd5137;
-              font-style: italic;
-              font-weight: 400;
-            }
-
-            .xaaj-category-copy p {
-              max-width: 350px;
-              margin: 0;
-              color: #706b63;
-              font-size: 14px;
-              line-height: 1.8;
-            }
-
-            .xaaj-category-progress {
-              display: flex;
-              width: min(300px, 100%);
-              gap: 7px;
-              margin-top: 42px;
-            }
-
-            .xaaj-category-progress span {
-              display: block;
-              flex: 1;
-              height: 2px;
-              background: #2f7048;
-              border-radius: 99px;
-            }
-
-            .xaaj-category-scroll-hint {
-              display: inline-flex;
-              align-items: center;
-              gap: 8px;
-              margin-top: 22px;
-              color: #8a837a;
-              font-size: 10px;
-              letter-spacing: 1.8px;
-              text-transform: uppercase;
-            }
-
-            .xaaj-category-stage {
-              position: relative;
-              width: 100%;
-              height: min(80vh, 760px);
-              min-height: 540px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              transform: translateX(clamp(0px, 1.5vw, 24px));
-            }
-
-            .xaaj-category-stage-glow {
-              position: absolute;
-              width: min(42vw, 600px);
-              height: min(42vw, 600px);
-              border-radius: 50%;
-              background: rgba(255,255,255,.55);
-              filter: blur(2px);
-            }
-
-            .xaaj-category-card {
-              position: absolute;
-              inset: 0;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              visibility: hidden;
-              will-change: transform, opacity;
-            }
-
-            .xaaj-category-card-link {
-              position: relative;
-              display: block;
-              width: min(680px, 88%);
-              color: inherit;
-              text-decoration: none;
-              outline: none;
-            }
-
-            .xaaj-category-image-wrap {
-              position: relative;
-              width: min(570px, 100%);
-              aspect-ratio: 1 / 1;
-              margin: 0 auto;
-              overflow: hidden;
-              border-radius: 50%;
-              background: #e6dfd4;
-              box-shadow:
-                0 30px 80px rgba(55,48,40,.12),
-                0 0 0 1px rgba(41,40,36,.06);
-            }
-
-            .xaaj-category-image-wrap::after {
-              content: '';
-              position: absolute;
-              inset: 0;
-              background: linear-gradient(
-                145deg,
-                rgba(255,255,255,.15),
-                transparent 45%,
-                rgba(40,35,28,.08)
-              );
-              pointer-events: none;
-            }
-
-            .xaaj-category-image-wrap img {
-              width: 100%;
-              height: 100%;
-              display: block;
-              object-fit: cover;
-              transition: transform 1.2s cubic-bezier(.22,1,.36,1);
-            }
-
-            .xaaj-category-card-link:hover .xaaj-category-image-wrap img {
-              transform: scale(1.035);
-            }
-
-            @media (max-width: 850px) {
-              /* Mobile only: compact horizontal collections strip.
-                 Keep the section in normal document flow so the page
-                 can be scrolled naturally without any empty 100vh area. */
-
-              .xaaj-category-cinematic {
-                height: auto !important;
-                min-height: 0 !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                overflow: visible !important;
-                background: #f8f5ef !important;
-              }
-
-              .xaaj-mobile-category-collections {
-                display: block !important;
-                width: 100%;
-                height: auto !important;
-                min-height: 0 !important;
-                padding: 14px 0 18px;
-                background: #f8f5ef;
-                overflow: hidden;
-              }
-
-              .xaaj-mobile-category-heading {
-                width: 100%;
-                text-align: center;
-                padding: 0 16px 13px;
-              }
-
-              .xaaj-mobile-category-heading > span {
-                display: block;
-                margin: 0 0 4px;
-                color: #817a71;
-                font-size: 7px;
-                line-height: 1.2;
-                font-weight: 700;
-                letter-spacing: 2px;
-              }
-
-              .xaaj-mobile-category-heading h2 {
-                margin: 0;
-                color: #292824;
-                font-family: Georgia, 'Times New Roman', serif;
-                font-size: clamp(29px, 8vw, 36px);
-                line-height: 1.03;
-                font-weight: 400;
-                letter-spacing: -.035em;
-              }
-
-              .xaaj-mobile-category-heading p {
-                margin: 5px 0 0;
-                color: #817a71;
-                font-size: 10px;
-                line-height: 1.35;
-              }
-
-              .xaaj-mobile-category-scroll {
-                display: flex !important;
-                align-items: flex-start;
-                gap: 12px;
-                width: 100%;
-                height: auto !important;
-                padding: 0 14px 2px;
-                overflow-x: auto !important;
-                overflow-y: hidden !important;
-                -webkit-overflow-scrolling: touch;
-                overscroll-behavior-x: contain;
-                scroll-snap-type: x proximity;
-                scrollbar-width: none;
-                touch-action: auto;
-              }
-
-              .xaaj-mobile-category-scroll::-webkit-scrollbar {
-                display: none;
-              }
-
-              .xaaj-mobile-category-item {
-                flex: 0 0 86px;
-                width: 86px;
-                min-width: 86px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                color: #292824;
-                text-decoration: none;
-                text-align: center;
-                scroll-snap-align: start;
-                -webkit-tap-highlight-color: transparent;
-              }
-
-              .xaaj-mobile-category-image {
-                width: 82px;
-                height: 82px;
-                flex: 0 0 82px;
-                border-radius: 50%;
-                overflow: hidden;
-                background: #e8e1d7;
-                box-shadow: 0 2px 10px rgba(41,40,36,.08);
-                border: 1px solid rgba(41,40,36,.06);
-              }
-
-              .xaaj-mobile-category-image img {
-                width: 100%;
-                height: 100%;
-                display: block;
-                object-fit: cover;
-              }
-
-              .xaaj-mobile-category-item strong {
-                width: 100%;
-                margin-top: 7px;
-                color: #292824;
-                font-size: 9px;
-                line-height: 1.2;
-                font-weight: 500;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-              }
-
-              .xaaj-mobile-category-item > span {
-                display: inline-flex;
-                align-items: center;
-                gap: 2px;
-                margin-top: 3px;
-                color: #625d56;
-                font-size: 7px;
-                line-height: 1.2;
-                white-space: nowrap;
-              }
-
-              /* Hide the desktop cinematic category scene on phones. */
-              .xaaj-category-cinematic-inner {
-                display: none !important;
-              }
-
-              /* Safety: no desktop height/pin styles can create a blank
-                 viewport-sized block on mobile. */
-              .xaaj-category-cinematic,
-              .xaaj-category-cinematic-inner,
-              .xaaj-category-stage,
-              .xaaj-category-card {
-                max-height: none !important;
-              }
-            }
-
-            @media (prefers-reduced-motion: reduce) {
-              .xaaj-category-card,
-              .xaaj-category-image-wrap img {
-                transition: none !important;
-              }
-            }
-          `}</style>
-        </section>
-
-
-        {/* ====================================================
-            BEST-SELLING PRODUCTS
-        ==================================================== */}
-
-        <section
-          className="favorites"
-          data-xaaj-reveal="up"
-        >
-
-          <div className="wrap">
-
-            <SectionHeading
-              eyebrow="Loved by our customers"
-              title="Best-selling products"
-              action={{
-                label: 'View all',
-                to: '/shop'
-              }}
-            />
-
-            <div className="product-grid">
-
-              {bestSellingProducts.length > 0 ? (
-                bestSellingProducts.map(product => (
-                  <ProductCard
-                    product={product}
-                    key={product.id}
-                  />
-                ))
-              ) : (
-                <div
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '30px 0',
-                    color: '#706d67',
-                    fontSize: '14px'
-                  }}
-                >
-                  Customer favourites will appear here as reviews come in.
+                      <div className="xaaj-hero-product-copy">
+                        <span>{product.category || 'XAAJ Collection'}</span>
+                        <h3>{product.name}</h3>
+                        <div className="xaaj-hero-product-price">
+                          {money(product.price)}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
-              )}
+              </div>
+            </section>
+          )
+        })()}
 
+        <section className="xaaj-cinema-category xaaj-cinema-reveal" data-xaaj-cinema-reveal>
+          <div className="xaaj-cinema-wrap">
+            <div className="xaaj-cinema-category-inner">
+              <div className="xaaj-cinema-category-intro">
+                <span className="xaaj-cinema-section-eyebrow">Shop by category</span>
+                <p>Every piece tells a story. Discover crockery crafted to be part of your everyday moments.</p>
+                <Link className="xaaj-cinema-text-link" to="/shop">View all <ArrowRight size={13} /></Link>
+              </div>
+              <div className="xaaj-cinema-category-grid">
+                {categoryItems.map(category => (
+                  <Link className="xaaj-cinema-category-card" key={category.name} to={`/shop?category=${encodeURIComponent(category.name)}`}>
+                    <img src={category.image} alt={category.name} loading="lazy" />
+                    <span>{category.name}</span>
+                  </Link>
+                ))}
+              </div>
             </div>
-
           </div>
-
         </section>
 
-
-        {/* ====================================================
-            NEW ARRIVALS
-        ==================================================== */}
-
-        <section
-          id="customer-favorites"
-          className="favorites"
-          data-xaaj-reveal="up"
-          style={{ scrollMarginTop: '120px' }}
-        >
-
-          <div className="wrap">
-
-            <SectionHeading
-              eyebrow="Just added to XAAJ"
-              title="New Arrivals"
-              action={{
-                label: 'View all',
-                to: '/shop'
-              }}
-            />
-
-            <div className="product-grid">
-
-              {newArrivals.map(product => (
-                <ProductCard
-                  product={product}
-                  key={product.id}
+        {/* ============================================================
+            SECTION 03 — BRAND STORY / TWO EDITORIAL TILES
+            The section uses the same max-width as the hero follow-up so
+            the left and right edges line up across the homepage.
+           ============================================================ */}
+        <section className="xaaj-brand-story-split xaaj-cinema-reveal" data-xaaj-cinema-reveal aria-label="XAAJ brand story">
+          <div className="xaaj-brand-story-split-inner">
+            <Link className="xaaj-brand-story-split-media" to="/story" aria-label="Read the full XAAJ story">
+              {brandStoryMedia.mediaType === 'video' ? (
+                <video
+                  src={brandStoryMedia.url}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                  aria-label={brandStoryMedia.alt}
                 />
-              ))}
+              ) : (
+                <img
+                  src={brandStoryMedia.url}
+                  alt={brandStoryMedia.alt}
+                  loading="lazy"
+                />
+              )}
+            </Link>
 
-            </div>
-
-          </div>
-
-        </section>
-
-
-        {/* ====================================================
-            FEATURE SECTION
-        ==================================================== */}
-
-        <section className="feature" data-xaaj-reveal="up">
-
-          <div className="feature-copy">
-
-            <span className="eyebrow">
-              The XAAJ way
-            </span>
-
-            <h2>
-              India, Made for the Table.
-            </h2>
-
-            <div className="feature-story-copy xaaj-brand-story-premium">
-
-              <div className="xaaj-story-intro">
-                <p className="xaaj-story-lead">
-                  A little clay.
+            <div className="xaaj-brand-story-split-copy">
+              <div className="xaaj-brand-story-split-copy-inner">
+                <span className="xaaj-brand-story-split-eyebrow">Our story</span>
+                <h2>India, Made for the Table.</h2>
+                <p>
+                  A little clay. A lot of character. And a story in every piece.
                   <br />
-                  A lot of character.
-                  <br />
-                  And a story in every piece.
-                </p>
-
-                <p className="xaaj-story-body">
                   XAAJ is contemporary crockery rooted in the colours, crafts and everyday beauty of India.
                   <br />
                   Made by hand. Designed for now.
                   <br />
                   Meant to be used, loved and lived with.
                 </p>
+                <Link className="xaaj-brand-story-split-button" to="/story">
+                  <span>Read more</span>
+                  <ArrowRight size={15} strokeWidth={1.35} />
+                </Link>
               </div>
-
-              <div className="xaaj-story-rule" aria-hidden="true" />
-
-              <div className="xaaj-story-block">
-                <span className="xaaj-story-kicker">01 — ROOTED IN INDIA</span>
-                <p>
-                  The beauty of India, served differently.
-                  <br />
-                  We find inspiration in the things that surround us—old crafts, familiar colours, everyday rituals, places and people.
-                  <br />
-                  Then we give them a new form.
-                  <br />
-                  Pieces with a sense of where they come from,
-                  <br />
-                  and a place in how you live today.
-                </p>
-              </div>
-
-              <div className="xaaj-story-rule" aria-hidden="true" />
-
-              <div className="xaaj-story-block xaaj-story-living">
-                <span className="xaaj-story-kicker">02 — MADE FOR LIVING</span>
-                <p className="xaaj-story-pull">Made to gather stories.</p>
-                <p>
-                  Morning chai.
-                  <br />
-                  Long lunches.
-                  <br />
-                  Festive dinners.
-                  <br />
-                  Midnight conversations.
-                  <br />
-                  Because a table is never just a table.
-                  <br />
-                  It is where life happens.
-                </p>
-              </div>
-
             </div>
-
-            <Button
-              to="/story"
-              light
-            >
-              Our story
-            </Button>
-
           </div>
+        </section>
 
+        {/* ============================================================
+            HORECA COLLECTION — CRAFT-STYLE BUNDLED LAYOUT
+           ============================================================ */}
+        <section
+          className="xaaj-horeca-bundled xaaj-cinema-reveal"
+          data-xaaj-cinema-reveal
+          aria-label="Horeca collection"
+        >
+          <div className="xaaj-horeca-bundled-inner">
+            <h2>Discover our Horeca collections</h2>
 
-          <video
-  src="https://res.cloudinary.com/kswukbpp/video/upload/v1789806424/19605262-hd_1080_1920_60fps.mp4"
-  autoPlay
-  muted
-  loop
-  playsInline
-  preload="metadata"
-  aria-label="XAAJ handmade crockery"
-  style={{
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    display: 'block'
-  }}
-/>
+            <div className="xaaj-horeca-bundled-grid">
+              <Link
+                to="/shop?category=Horeca"
+                className="xaaj-horeca-bundled-main"
+                aria-label="Shop Horeca"
+              >
+                <div className="xaaj-horeca-bundled-media">
+                  <img
+                    src={horecaMedia.main.url}
+                    alt={horecaMedia.main.alt}
+                    loading="lazy"
+                  />
+                </div>
+
+                <div className="xaaj-horeca-bundled-label">
+                  Horeca <ArrowRight size={18} strokeWidth={1.25} />
+                </div>
+              </Link>
+
+              <div className="xaaj-horeca-bundled-side">
+                <Link
+                  to="/shop?category=Horeca"
+                  className="xaaj-horeca-bundled-small"
+                  aria-label="Shop Horeca"
+                >
+                  <img
+                    src={horecaMedia.sideOne.url}
+                    alt={horecaMedia.sideOne.alt}
+                    loading="lazy"
+                  />
+                </Link>
+
+                <Link
+                  to="/shop?category=Horeca"
+                  className="xaaj-horeca-bundled-small"
+                  aria-label="Shop Horeca"
+                >
+                  <img
+                    src={horecaMedia.sideTwo.url}
+                    alt={horecaMedia.sideTwo.alt}
+                    loading="lazy"
+                  />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================================
+            BRAND VALUES — FOUR PILLARS
+            Added directly after the Horeca collections section.
+           ============================================================ */}
+        <section
+          className="xaaj-values-strip xaaj-cinema-reveal"
+          data-xaaj-cinema-reveal
+          aria-label="XAAJ values"
+        >
+          <div className="xaaj-values-grid">
+            <article className="xaaj-value-card">
+              <div className="xaaj-value-icon" aria-hidden="true">
+                <Gem size={42} strokeWidth={1.15} />
+              </div>
+              <h3>Responsible Design</h3>
+              <p>Designed with integrity and<br />durably crafted for everyday<br />use.</p>
+            </article>
+
+            <article className="xaaj-value-card">
+              <div className="xaaj-value-icon" aria-hidden="true">
+                <Package size={42} strokeWidth={1.15} />
+              </div>
+              <h3>Transparent Pricing</h3>
+              <p>We believe in accessible<br />pricing and full transparency.<br />Our pricing model is an open<br />book.</p>
+            </article>
+
+            <article className="xaaj-value-card">
+              <div className="xaaj-value-icon" aria-hidden="true">
+                <ShieldCheck size={42} strokeWidth={1.15} />
+              </div>
+              <h3>Sustainable Sourcing</h3>
+              <p>We only partner with people<br />who put the earth, and its<br />people, first.</p>
+            </article>
+
+            <article className="xaaj-value-card">
+              <div className="xaaj-value-icon" aria-hidden="true">
+                <Truck size={42} strokeWidth={1.15} />
+              </div>
+              <h3>Giving Back</h3>
+              <p>Thanks to Mealshare, every<br />purchase directly donates a<br />meal to a youth in need.</p>
+            </article>
+          </div>
+        </section>
 
         <style>{`
-          .xaaj-brand-story-premium { display:flex; flex-direction:column; max-width:560px; }
-          .xaaj-story-intro { display:grid; gap:24px; }
-          .xaaj-story-lead { margin:0; max-width:470px; font-family:Georgia,'Times New Roman',serif; font-size:clamp(19px,1.55vw,25px); line-height:1.42; letter-spacing:-.018em; color:rgba(247,244,236,.94); }
-          .xaaj-story-body { margin:0; max-width:500px; color:rgba(235,232,222,.68); font-size:13px; line-height:1.9; }
-          .xaaj-story-rule { width:42px; height:1px; margin:28px 0 25px; background:rgba(242,238,227,.42); }
-          .xaaj-story-block { max-width:500px; }
-          .xaaj-story-kicker { display:block; margin-bottom:12px; color:rgba(221,216,203,.48); font-size:9px; line-height:1.2; font-weight:600; letter-spacing:2.1px; text-transform:uppercase; }
-          .xaaj-story-block p:not(.xaaj-story-pull) { margin:0; color:rgba(235,232,222,.68); font-size:13px; line-height:1.85; }
-          .xaaj-story-pull { margin:0 0 12px; color:rgba(247,244,236,.9); font-family:Georgia,'Times New Roman',serif; font-size:clamp(18px,1.45vw,23px); line-height:1.25; letter-spacing:-.015em; }
-          @media(max-width:850px){ .xaaj-story-body,.xaaj-story-block p:not(.xaaj-story-pull){font-size:12.5px;line-height:1.75}.xaaj-story-rule{margin:23px 0 21px} }
+          .xaaj-values-strip{
+            width:100%;
+            background:#fff;
+            padding:36px 5.2vw 34px;
+            box-sizing:border-box;
+          }
+          .xaaj-values-grid{
+            width:min(1180px,100%);
+            margin:0 auto;
+            display:grid;
+            grid-template-columns:repeat(4,minmax(0,1fr));
+            gap:54px;
+            align-items:start;
+          }
+          .xaaj-value-card{
+            text-align:center;
+            color:#393633;
+          }
+          .xaaj-value-icon{
+            width:58px;
+            height:58px;
+            margin:0 auto 25px;
+            display:grid;
+            place-items:center;
+            color:#aaa8a5;
+          }
+          .xaaj-value-icon svg{
+            width:42px;
+            height:42px;
+            stroke-width:1.05;
+          }
+          .xaaj-value-card h3{
+            margin:0 0 13px;
+            font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+            font-size:23px;
+            font-weight:400;
+            line-height:1.2;
+            letter-spacing:.01em;
+            color:#393633;
+          }
+          .xaaj-value-card p{
+            margin:0;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
+            font-size:14px;
+            font-weight:400;
+            line-height:2.05;
+            letter-spacing:.01em;
+            color:#66625e;
+          }
+          @media(max-width:900px){
+            .xaaj-values-grid{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:62px;gap:46px}
+          }
+          @media(max-width:520px){
+            .xaaj-values-strip{padding:34px 20px 42px}
+            .xaaj-values-grid{grid-template-columns:1fr;gap:50px}
+            .xaaj-value-card h3{font-size:21px}
+            .xaaj-value-card p{font-size:13px;line-height:1.85}
+          }
         `}</style>
 
-        </section>
-
-
-        {/* ====================================================
-            TRUST / SERVICE SECTION
-            Premium Quality
-            Fast & Reliable Shipping
-            Easy Returns
-            Secure Payments
-        ==================================================== */}
-
-        <section className="trust-bar" data-xaaj-reveal="up">
-
-
-          {/* Premium Quality */}
-          <div className="trust-item">
-
-            <Gem
-              className="trust-icon"
-              size={25}
-              strokeWidth={1.4}
-            />
-
-            <div className="trust-content">
-
-              <h4>
-                Premium Quality
-              </h4>
-
-              <p>
-                Crafted to last
-              </p>
-
-            </div>
-
-          </div>
-
-
-          {/* Fast & Reliable Shipping */}
-          <div className="trust-item">
-
-            <Truck
-              className="trust-icon"
-              size={25}
-              strokeWidth={1.4}
-            />
-
-            <div className="trust-content">
-
-              <h4>
-                Fast &amp; Reliable Shipping
-              </h4>
-
-              <p>
-                At your doorstep
-              </p>
-
-            </div>
-
-          </div>
-
-
-          {/* Easy Returns */}
-          <div className="trust-item">
-
-            <Package
-              className="trust-icon"
-              size={25}
-              strokeWidth={1.4}
-            />
-
-            <div className="trust-content">
-
-              <h4>
-                Easy Returns
-              </h4>
-
-              <p>
-                Hassle-free process
-              </p>
-
-            </div>
-
-          </div>
-
-
-          {/* Secure Payments */}
-          <div className="trust-item">
-
-            <ShieldCheck
-              className="trust-icon"
-              size={25}
-              strokeWidth={1.4}
-            />
-
-            <div className="trust-content">
-
-              <h4>
-                Secure Payments
-              </h4>
-
-              <p>
-                Shop with confidence
-              </p>
-
-            </div>
-
-          </div>
-
-        </section>
-
-
-        {/* ====================================================
-            BLOG / JOURNAL SECTION
-        ==================================================== */}
-
+        {/* ============================================================
+            BLOG / FROM THE MAGAZINE
+            Home-page editorial cards. Blog data, API loading and
+            article routing remain unchanged.
+           ============================================================ */}
         <BlogSection />
 
+        {/* ============================================================
+            SECTION 04 — CATEGORY SPOTLIGHT
+            Explore XAAJ categories.
+           ============================================================ */}
+        {false && (
+          <section className="xaaj-category-gallery" aria-label="Explore XAAJ categories">
+            <div className="xaaj-category-gallery-head">
+              <span>Explore by form</span>
+              <Link to="/shop">View all pieces <ArrowRight size={13} /></Link>
+            </div>
 
-        {/* Newsletter */}
-        <Newsletter />
+            <div className="xaaj-category-gallery-grid">
+              {categoryShowcaseItems.map((category, index) => {
+                const showcaseProduct = category.showcaseProduct
+                const showcaseImage =
+                  showcaseProduct?.image ||
+                  showcaseProduct?.images?.[0] ||
+                  ''
 
+                return (
+                  <Link
+                    key={`gallery-${category.name}`}
+                    to={`/shop?category=${encodeURIComponent(category.name)}`}
+                    className="xaaj-category-gallery-card"
+                    aria-label={`Shop ${category.name}`}
+                  >
+                    <div className="xaaj-category-gallery-image">
+                      {(sectionFiveCategoryImages[category.name] || showcaseImage) && (
+                        <img
+                          src={sectionFiveCategoryImages[category.name] || showcaseImage}
+                          alt={showcaseProduct?.name || category.name}
+                          loading={index === 0 ? 'eager' : 'lazy'}
+                        />
+                      )}
+                    </div>
+                    <div className="xaaj-category-gallery-label">
+                      <span>{category.name}</span>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        <section className="xaaj-everyday-carousel xaaj-cinema-reveal" data-xaaj-cinema-reveal aria-label="The Everyday Table">
+          <div className="xaaj-everyday-carousel-track">
+            <article className="xaaj-everyday-slide">
+              <img
+                src="https://res.cloudinary.com/kswukbpp/image/upload/v1790269104/ChatGPT_Image_Sep_24_2026_10_27_52_PM.png"
+                alt="XAAJ handcrafted serveware collection"
+                loading="eager"
+                fetchPriority="high"
+              />
+            </article>
+
+            <div className="xaaj-everyday-overlay" aria-hidden="true" />
+
+            <div className="xaaj-everyday-copy">
+              <span className="xaaj-cinema-section-eyebrow">The Everyday Table</span>
+              <h2>The Everyday Table</h2>
+              <p className="xaaj-everyday-subtitle">Thoughtfully designed for everyday living.</p>
+              <p>Morning chai. Long lunches. Quiet dinners.<br />Pieces designed for the moments that make a home feel like yours.</p>
+              <Link className="xaaj-cinema-cta" to="/shop">Shop the collection <ArrowRight size={14} /></Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="xaaj-cinema-products xaaj-cinema-reveal" data-xaaj-cinema-reveal>
+          <div className="xaaj-cinema-wrap">
+            <div className="xaaj-cinema-section-head"><div><span className="xaaj-cinema-section-eyebrow">Considered · Intentional · Handcrafted</span><h2 className="xaaj-cinema-section-title">Best sellers</h2></div><Link className="xaaj-cinema-text-link" to="/shop?filter=best-selling">View all products <ArrowRight size={13} /></Link></div>
+            <div className="xaaj-cinema-product-grid">{bestsellers.slice(0,4).map(product => <ProductCard product={product} key={product.id || product._id} />)}</div>
+          </div>
+        </section>
+
+        <section className="xaaj-collection-story-carousel xaaj-cinema-reveal" data-xaaj-collection-story aria-label="The collection story">
+          <div className="xaaj-collection-story-media">
+            <div className="xaaj-collection-story-track">
+              <article className="xaaj-collection-story-slide">
+                <img src="https://res.cloudinary.com/kswukbpp/image/upload/v1789491522/Blue_Meadow_Bowls2.png" alt="XAAJ Willow Blue serving set" loading="lazy" />
+              </article>
+              <article className="xaaj-collection-story-slide">
+                <img src="https://res.cloudinary.com/kswukbpp/image/upload/v1789492078/Coastal_Clay_Cup_Saucer_Set1.png" alt="XAAJ Coastal Clay cup and saucer set" loading="lazy" />
+              </article>
+              <article className="xaaj-collection-story-slide" aria-hidden="true">
+                <img src="https://res.cloudinary.com/kswukbpp/image/upload/v1789491522/Blue_Meadow_Bowls2.png" alt="" loading="lazy" />
+              </article>
+              <article className="xaaj-collection-story-slide" aria-hidden="true">
+                <img src="https://res.cloudinary.com/kswukbpp/image/upload/v1789492078/Coastal_Clay_Cup_Saucer_Set1.png" alt="" loading="lazy" />
+              </article>
+            </div>
+          </div>
+
+          <div className="xaaj-collection-story-copy">
+            <div>
+              <span className="xaaj-cinema-section-eyebrow">The collection story</span>
+              <h2>Made slowly. Meant to live with you.</h2>
+              <p>We look to everyday rituals, natural materials and the quiet beauty around us, then shape useful objects with a calmer point of view.</p>
+              <Link className="xaaj-cinema-text-link" to="/about">Our story <ArrowRight size={13} /></Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="xaaj-cinema-products xaaj-cinema-reveal" data-xaaj-cinema-reveal>
+          <div className="xaaj-cinema-wrap">
+            <div className="xaaj-cinema-section-head"><div><span className="xaaj-cinema-section-eyebrow">Just arrived</span><h2 className="xaaj-cinema-section-title">New arrivals</h2></div><Link className="xaaj-cinema-text-link" to="/shop?filter=new">Shop new <ArrowRight size={13} /></Link></div>
+            <div className="xaaj-cinema-product-grid">{arrivals.slice(0,4).map(product => <ProductCard product={product} key={product.id || product._id} />)}</div>
+          </div>
+        </section>
+
+        <section className="xaaj-cinema-quote"><p>“A table is never just a table. It is where life happens.”</p><span>XAAJ · Stories Crafted in Earth</span></section>
+        {/* Legacy standalone Newsletter preserved below; reference subscribe is now inside Footer. */}
       </main>
-
-
-      {/* Footer */}
       <Footer />
-
     </>
   )
 }
-
 
 // ============================================================
 // NEWSLETTER
 // ============================================================
 
-function Newsletter() {
+// LEGACY NEWSLETTER — preserved intentionally for later use.
+function LegacyNewsletter() {
 
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
@@ -4061,7 +4515,9 @@ function ContactForm() {
 // FOOTER
 // ============================================================
 
-function Footer() {
+// LEGACY FOOTER — preserved intentionally for later use.
+// Currently not rendered. Use <LegacyFooter /> when needed.
+function LegacyFooter() {
 
   const [locationOpen, setLocationOpen] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState('India — Online')
@@ -4191,7 +4647,7 @@ function Footer() {
           border: 1px solid rgba(41, 40, 36, .72);
           border-radius: 50%;
           color: #252a27;
-          font-family: Georgia, 'Times New Roman', serif;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif;
           font-size: 13px;
           line-height: 1;
           font-weight: 500;
@@ -4817,241 +5273,1089 @@ function Footer() {
   )
 }
 
+// ============================================================
+// REFERENCE SUBSCRIBE + FOOTER
+// ============================================================
+
+function Footer() {
+  return (
+    <footer className="xaaj-reference-footer">
+      <style>{`
+        .xaaj-reference-footer{
+          width:100%;
+          overflow:hidden;
+          background:#272d29;
+          color:#f5f2ea;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif;
+        }
+
+        .xaaj-reference-footer *,
+        .xaaj-reference-footer *::before,
+        .xaaj-reference-footer *::after{
+          box-sizing:border-box;
+        }
+
+        /* Newsletter */
+        .xaaj-reference-newsletter{
+          padding:58px 24px 56px;
+          display:flex;
+          flex-direction:column;
+          align-items:center;
+          text-align:center;
+          border-bottom:1px solid rgba(255,255,255,.09);
+        }
+
+        .xaaj-reference-newsletter h2{
+          margin:0;
+          color:#f7f4ec;
+          font-family:Georgia,'Times New Roman',serif!important;
+          font-size:32px!important;
+          line-height:1.12!important;
+          font-weight:400!important;
+          letter-spacing:-.2px!important;
+        }
+
+        .xaaj-reference-newsletter p{
+          margin:12px 0 0;
+          max-width:560px;
+          color:rgba(247,244,236,.62);
+          font-size:13px!important;
+          line-height:1.55!important;
+          letter-spacing:.2px!important;
+        }
+
+        .xaaj-reference-newsletter-form{
+          width:min(460px,100%);
+          margin:22px auto 0;
+        }
+
+        .xaaj-reference-newsletter-field{
+          width:100%;
+          height:48px;
+          border:1px solid rgba(247,244,236,.34);
+          border-radius:0;
+          background:rgba(255,255,255,.025);
+          display:flex;
+          align-items:center;
+          overflow:hidden;
+          transition:border-color .2s ease,background .2s ease;
+        }
+
+        .xaaj-reference-newsletter-field:focus-within{
+          border-color:rgba(247,244,236,.68);
+          background:rgba(255,255,255,.045);
+        }
+
+        .xaaj-reference-newsletter-field input{
+          flex:1;
+          min-width:0;
+          height:100%;
+          border:0;
+          outline:0;
+          background:transparent;
+          color:#f7f4ec;
+          padding:0 15px;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+          font-size:13px!important;
+          line-height:1!important;
+          letter-spacing:.2px!important;
+        }
+
+        .xaaj-reference-newsletter-field input::placeholder{
+          color:rgba(247,244,236,.56);
+          opacity:1;
+        }
+
+        .xaaj-reference-newsletter-field button{
+          width:48px;
+          height:100%;
+          flex:0 0 48px;
+          border:0;
+          background:transparent;
+          color:#f7f4ec;
+          display:grid;
+          place-items:center;
+          padding:0;
+          cursor:pointer;
+          transition:transform .2s ease,opacity .2s ease;
+        }
+
+        .xaaj-reference-newsletter-field button:hover{
+          transform:translateX(2px);
+          opacity:.75;
+        }
+
+        .xaaj-reference-newsletter-message{
+          min-height:14px;
+          margin-top:7px;
+          color:rgba(247,244,236,.55);
+          font-size:10px!important;
+          line-height:1.4!important;
+          letter-spacing:.1px;
+        }
+
+        /* Main footer */
+        .xaaj-reference-footer-main{
+          width:min(1320px,100%);
+          margin:0 auto;
+          display:grid;
+          grid-template-columns:minmax(260px,1.55fr) minmax(120px,.75fr) minmax(120px,.75fr) minmax(240px,1.2fr);
+          gap:64px;
+          padding:64px 48px 58px;
+        }
+
+        .xaaj-reference-footer-brand h3{
+          margin:0;
+          color:#f7f4ec;
+          font-family:Georgia,'Times New Roman',serif!important;
+          font-size:64px!important;
+          font-weight:400!important;
+          line-height:.82!important;
+          letter-spacing:2px!important;
+        }
+
+        .xaaj-reference-footer-brand-rule{
+          width:48px;
+          height:1px;
+          margin:25px 0 19px;
+          background:rgba(247,244,236,.58);
+        }
+
+        .xaaj-reference-footer-brand p{
+          max-width:310px;
+          margin:0;
+          color:rgba(247,244,236,.70);
+          font-family:Georgia,'Times New Roman',serif!important;
+          font-size:15px!important;
+          line-height:1.55!important;
+          letter-spacing:.05px;
+        }
+
+        .xaaj-reference-footer-column h4,
+        .xaaj-reference-footer-contact h4{
+          margin:1px 0 21px;
+          color:#f7f4ec;
+          font-family:Georgia,'Times New Roman',serif!important;
+          font-size:21px!important;
+          font-weight:400!important;
+          line-height:1.1!important;
+        }
+
+        .xaaj-reference-footer-column nav{
+          display:flex;
+          flex-direction:column;
+          align-items:flex-start;
+          gap:12px;
+        }
+
+        .xaaj-reference-footer-column a{
+          color:rgba(247,244,236,.65);
+          text-decoration:none;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+          font-size:12px!important;
+          line-height:1.35!important;
+          letter-spacing:.15px!important;
+          transition:color .2s ease,transform .2s ease;
+        }
+
+        .xaaj-reference-footer-column a:hover{
+          color:#fff;
+          transform:translateX(2px);
+        }
+
+        .xaaj-reference-footer-contact-list{
+          display:flex;
+          flex-direction:column;
+          gap:14px;
+        }
+
+        .xaaj-reference-footer-contact-item{
+          display:grid;
+          grid-template-columns:40px minmax(0,1fr);
+          gap:12px;
+          align-items:center;
+          min-width:0;
+          color:inherit;
+          text-decoration:none;
+          transition:opacity .2s ease,transform .2s ease;
+        }
+
+        .xaaj-reference-footer-contact-item:hover{
+          opacity:.88;
+          transform:translateX(2px);
+        }
+
+        .xaaj-reference-footer-contact-icon{
+          width:40px;
+          height:40px;
+          border-radius:50%;
+          display:grid;
+          place-items:center;
+          color:#f7f4ec;
+          background:rgba(255,255,255,.065);
+          border:1px solid rgba(255,255,255,.10);
+        }
+
+        .xaaj-reference-footer-contact-copy{
+          min-width:0;
+        }
+
+        .xaaj-reference-footer-contact-copy strong{
+          display:block;
+          color:#f7f4ec;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+          font-size:13px!important;
+          font-weight:600!important;
+          line-height:1.3!important;
+        }
+
+        .xaaj-reference-footer-contact-copy span{
+          display:block;
+          margin-top:3px;
+          max-width:100%;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          white-space:nowrap;
+          color:rgba(247,244,236,.55);
+          font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+          font-size:11px!important;
+          line-height:1.35!important;
+        }
+
+        /* Bottom bar */
+        .xaaj-reference-footer-bottom{
+          min-height:64px;
+          border-top:1px solid rgba(255,255,255,.09);
+          padding:17px max(48px,calc((100% - 1320px)/2 + 48px));
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:28px;
+        }
+
+        .xaaj-reference-footer-copy{
+          flex:0 0 auto;
+          color:rgba(247,244,236,.48);
+          font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+          font-size:10px!important;
+          line-height:1.5!important;
+          letter-spacing:.15px;
+        }
+
+        .xaaj-reference-footer-policies{
+          display:flex;
+          align-items:center;
+          justify-content:flex-end;
+          flex-wrap:wrap;
+          gap:0;
+          min-width:0;
+        }
+
+        .xaaj-reference-footer-policies a{
+          color:rgba(247,244,236,.52);
+          text-decoration:none;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+          font-size:10px!important;
+          line-height:1.5!important;
+          letter-spacing:.1px;
+          white-space:nowrap;
+          transition:color .2s ease;
+        }
+
+        .xaaj-reference-footer-policies a:hover{
+          color:#fff;
+        }
+
+        .xaaj-reference-footer-policies a + a::before{
+          content:'';
+          display:inline-block;
+          width:1px;
+          height:11px;
+          margin:0 14px;
+          vertical-align:-2px;
+          background:rgba(247,244,236,.22);
+        }
+
+        /* Tablet */
+        @media(max-width:1050px){
+          .xaaj-reference-footer-main{
+            grid-template-columns:1.3fr .8fr .8fr 1.1fr;
+            gap:36px;
+            padding:54px 34px 48px;
+          }
+
+          .xaaj-reference-footer-bottom{
+            padding:16px 34px;
+          }
+
+          .xaaj-reference-footer-policies a + a::before{
+            margin:0 10px;
+          }
+        }
+
+        /* Small tablet / large phone */
+        @media(max-width:760px){
+          .xaaj-reference-newsletter{
+            padding:46px 22px 44px;
+          }
+
+          .xaaj-reference-newsletter h2{
+            font-size:28px!important;
+          }
+
+          .xaaj-reference-footer-main{
+            grid-template-columns:1fr 1fr;
+            gap:38px 28px;
+            padding:48px 26px 44px;
+          }
+
+          .xaaj-reference-footer-brand{
+            grid-column:1 / -1;
+          }
+
+          .xaaj-reference-footer-brand p{
+            max-width:430px;
+          }
+
+          .xaaj-reference-footer-contact{
+            grid-column:1 / -1;
+          }
+
+          .xaaj-reference-footer-contact-list{
+            display:grid;
+            grid-template-columns:repeat(3,minmax(0,1fr));
+            gap:18px;
+          }
+
+          .xaaj-reference-footer-bottom{
+            padding:20px 26px 22px;
+            align-items:flex-start;
+            flex-direction:column;
+            gap:14px;
+          }
+
+          .xaaj-reference-footer-policies{
+            justify-content:flex-start;
+          }
+        }
+
+        /* Phone */
+        @media(max-width:520px){
+          .xaaj-reference-newsletter{
+            padding:38px 18px 36px;
+          }
+
+          .xaaj-reference-newsletter h2{
+            font-size:25px!important;
+            letter-spacing:-.1px!important;
+          }
+
+          .xaaj-reference-newsletter p{
+            margin-top:10px;
+            max-width:330px;
+            font-size:11.5px!important;
+            line-height:1.55!important;
+          }
+
+          .xaaj-reference-newsletter-form{
+            margin-top:18px;
+          }
+
+          .xaaj-reference-newsletter-field{
+            height:46px;
+          }
+
+          .xaaj-reference-footer-main{
+            grid-template-columns:1fr 1fr;
+            gap:31px 20px;
+            padding:39px 20px 34px;
+          }
+
+          .xaaj-reference-footer-brand h3{
+            font-size:49px!important;
+            letter-spacing:1.5px!important;
+          }
+
+          .xaaj-reference-footer-brand-rule{
+            margin:18px 0 14px;
+          }
+
+          .xaaj-reference-footer-brand p{
+            max-width:320px;
+            font-size:14px!important;
+            line-height:1.5!important;
+          }
+
+          .xaaj-reference-footer-column h4,
+          .xaaj-reference-footer-contact h4{
+            margin-bottom:15px;
+            font-size:19px!important;
+          }
+
+          .xaaj-reference-footer-column nav{
+            gap:10px;
+          }
+
+          .xaaj-reference-footer-column a{
+            font-size:11px!important;
+          }
+
+          .xaaj-reference-footer-contact-list{
+            grid-template-columns:1fr;
+            gap:12px;
+          }
+
+          .xaaj-reference-footer-contact-item{
+            grid-template-columns:38px minmax(0,1fr);
+            gap:11px;
+          }
+
+          .xaaj-reference-footer-contact-icon{
+            width:38px;
+            height:38px;
+          }
+
+          .xaaj-reference-footer-contact-copy strong{
+            font-size:12px!important;
+          }
+
+          .xaaj-reference-footer-contact-copy span{
+            font-size:10px!important;
+          }
+
+          .xaaj-reference-footer-bottom{
+            padding:18px 20px 21px;
+            gap:16px;
+          }
+
+          .xaaj-reference-footer-copy{
+            font-size:9.5px!important;
+          }
+
+          .xaaj-reference-footer-policies{
+            width:100%;
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:9px 16px;
+          }
+
+          .xaaj-reference-footer-policies a{
+            font-size:9.5px!important;
+            white-space:normal;
+          }
+
+          .xaaj-reference-footer-policies a + a::before{
+            display:none;
+          }
+        }
+
+        @media(max-width:360px){
+          .xaaj-reference-footer-main{
+            padding-left:17px;
+            padding-right:17px;
+            gap:28px 16px;
+          }
+
+          .xaaj-reference-footer-bottom{
+            padding-left:17px;
+            padding-right:17px;
+          }
+
+          .xaaj-reference-footer-brand h3{
+            font-size:45px!important;
+          }
+
+          .xaaj-reference-footer-brand p{
+            font-size:13px!important;
+          }
+
+          .xaaj-reference-footer-column h4,
+          .xaaj-reference-footer-contact h4{
+            font-size:18px!important;
+          }
+        }
+      `}</style>
+
+      <section className="xaaj-reference-newsletter" aria-labelledby="xaaj-reference-subscribe-title">
+        <h2 id="xaaj-reference-subscribe-title">Subscribe to our emails</h2>
+        <p>Subscribe to our mailing list for insider news, product launches, and more.</p>
+        <ReferenceNewsletterForm />
+      </section>
+
+      <div className="xaaj-reference-footer-main">
+        <div className="xaaj-reference-footer-brand">
+          <h3>XAAJ</h3>
+          <div className="xaaj-reference-footer-brand-rule" aria-hidden="true" />
+          <p>Contemporary crockery rooted in the colours, crafts and everyday beauty of India.</p>
+        </div>
+
+        <div className="xaaj-reference-footer-column">
+          <h4>Shop</h4>
+          <nav aria-label="Shop">
+            <Link to="/shop?category=Dinnerware">Dinnerware</Link>
+            <Link to="/shop?category=Glassware">Glassware</Link>
+            <Link to="/shop?category=Serveware">Serveware</Link>
+            <Link to="/shop?category=Gifting">Gifting</Link>
+            <Link to="/shop?category=Horeca">Horeca</Link>
+          </nav>
+        </div>
+
+        <div className="xaaj-reference-footer-column">
+          <h4>About</h4>
+          <nav aria-label="About XAAJ">
+            <Link to="/about">Our Story</Link>
+            <Link to="/faq">FAQs</Link>
+            <Link to="/contact">Contact Us</Link>
+          </nav>
+        </div>
+
+        <div className="xaaj-reference-footer-contact">
+          <h4>Get in Touch</h4>
+          <div className="xaaj-reference-footer-contact-list">
+            <a
+              className="xaaj-reference-footer-contact-item"
+              href="https://wa.me/919899446117"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Chat with XAAJ on WhatsApp"
+            >
+              <div className="xaaj-reference-footer-contact-icon" aria-hidden="true">
+                <FaWhatsapp size={20} />
+              </div>
+              <div className="xaaj-reference-footer-contact-copy">
+                <strong>WhatsApp</strong>
+                <span>9899446117</span>
+              </div>
+            </a>
+
+            <a
+              className="xaaj-reference-footer-contact-item"
+              href="mailto:customercare@xaaj.in"
+              aria-label="Email XAAJ customer care"
+            >
+              <div className="xaaj-reference-footer-contact-icon" aria-hidden="true">
+                <Mail size={19} strokeWidth={1.5} />
+              </div>
+              <div className="xaaj-reference-footer-contact-copy">
+                <strong>Email</strong>
+                <span>customercare@xaaj.in</span>
+              </div>
+            </a>
+
+            <a
+              className="xaaj-reference-footer-contact-item"
+              href="https://www.instagram.com/xaajstories?stkn=MWxkMzRscjAzaXVjZQ%3D%3D&utm_source=qr"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="XAAJ on Instagram"
+            >
+              <div className="xaaj-reference-footer-contact-icon" aria-hidden="true">
+                <FaInstagram size={19} />
+              </div>
+              <div className="xaaj-reference-footer-contact-copy">
+                <strong>Instagram</strong>
+                <span>xaajstories</span>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div className="xaaj-reference-footer-bottom">
+        <div className="xaaj-reference-footer-copy">
+          <span>© 2026, XAAJ. Made for everyday.</span>
+        </div>
+
+        <nav className="xaaj-reference-footer-policies" aria-label="Legal policies">
+          <Link to="/shipping">Shipping Policy</Link>
+          <Link to="/returns">Return &amp; Refund Policy</Link>
+          <Link to="/cancellation">Cancellation Policy</Link>
+          <Link to="/terms">Terms &amp; Conditions</Link>
+          <Link to="/privacy">Privacy Policy</Link>
+        </nav>
+      </div>
+    </footer>
+  )
+}
+
+function ReferenceNewsletterForm() {
+  const [email, setEmail] = useState('')
+  const [message, setMessage] = useState('')
+
+  const handleSubmit = async event => {
+    event.preventDefault()
+    const value = email.trim().toLowerCase()
+
+    if (!value) {
+      setMessage('Please enter your email address.')
+      return
+    }
+
+    setMessage('Subscribing...')
+
+    try {
+      const result = await newsletterService.subscribe(value)
+      setEmail('')
+      setMessage(result?.message || 'You’re now part of the XAAJ family.')
+    } catch (error) {
+      if (error?.data?.code === 'ALREADY_SUBSCRIBED' || error?.status === 409) {
+        setMessage('This email is already subscribed.')
+      } else {
+        setMessage(
+          error?.data?.message ||
+          error?.message ||
+          'We could not complete your subscription right now.'
+        )
+      }
+    }
+  }
+
+  return (
+    <form className="xaaj-reference-newsletter-form" onSubmit={handleSubmit}>
+      <div className="xaaj-reference-newsletter-field">
+        <input
+          type="email"
+          value={email}
+          onChange={event => setEmail(event.target.value)}
+          placeholder="Email"
+          aria-label="Email address"
+          autoComplete="email"
+          required
+        />
+        <button type="submit" aria-label="Subscribe">
+          <ArrowRight size={29} strokeWidth={1.2} />
+        </button>
+      </div>
+
+      <div className="xaaj-reference-newsletter-message" aria-live="polite">
+        {message || '\u00A0'}
+      </div>
+    </form>
+  )
+}
+
 
 // ============================================================
-// SHOP PAGE
+// SHOP PAGE — CLEAN 3-COLUMN CATALOG
 // ============================================================
 
 function Shop() {
+  const { products: liveProducts } = useStore()
+  const location = useLocation()
+  const query = new URLSearchParams(location.search)
+  const category = query.get('category')
+  const search = query.get('search')
+  const filter = query.get('filter')
 
-  const {
-    products: liveProducts,
-    bestSellingProducts,
-    newArrivals
-  } = useStore()
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [sortOpen, setSortOpen] = useState(false)
+  const [sort, setSort] = useState('featured')
+  const [availability, setAvailability] = useState('all')
+  const [priceMin, setPriceMin] = useState('')
+  const [priceMax, setPriceMax] = useState('')
+  const [productTypes, setProductTypes] = useState([])
+  const filterPanelRef = useRef(null)
+  const sortPanelRef = useRef(null)
 
-  // Read URL query parameters
-  const query =
-    new URLSearchParams(
-      useLocation().search
-    )
+  let list = Array.isArray(liveProducts) ? [...liveProducts] : []
 
-  // Sorting state
-  const [sort, setSort] =
-    useState('featured')
+  if (category) {
+    const normalizedCategory = category.toLowerCase()
 
-  // Category filter
-  const category =
-    query.get('category')
-
-  // Search query
-  const search =
-    query.get('search')
-
-
-  // Filter products
-  let list =
-    liveProducts.filter(product => (
-
-      (
-        !category ||
-
-        product.name
-          .toLowerCase()
-          .includes(
-            category.toLowerCase()
-          ) ||
-
-        product.category
-          .toLowerCase()
-          .includes(
-            category.toLowerCase()
-          )
+    if (normalizedCategory === 'dinnerware') {
+      const dinnerwareCategories = ['dinner sets', 'plates', 'bowls', 'cups & mugs']
+      list = list.filter(product =>
+        dinnerwareCategories.includes(String(product.category || '').toLowerCase())
       )
-
-      &&
-
-      (
-        !search ||
-
-        product.name
+    } else {
+      list = list.filter(product =>
+        `${product.name || ''} ${product.category || ''}`
           .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          )
+          .includes(normalizedCategory)
       )
+    }
+  }
 
-    ))
+  if (search) {
+    const term = search.toLowerCase()
+    list = list.filter(product => String(product.name || '').toLowerCase().includes(term))
+  }
 
+  if (filter === 'new') {
+    list = list.filter(product => String(product.tag || '').toLowerCase().includes('new'))
+  }
 
-  // Sort: Low to High
+  if (filter === 'best-selling') {
+    list = list.slice().sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0))
+  }
+
+  const availableProductTypes = [...new Set(
+    list
+      .map(product => String(product.category || '').trim())
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b))
+
+  if (availability === 'in') {
+    list = list.filter(product => Number(product.stock ?? 0) > 0)
+  } else if (availability === 'out') {
+    list = list.filter(product => Number(product.stock ?? 0) <= 0)
+  }
+
+  if (priceMin !== '') {
+    const min = Number(priceMin)
+    if (Number.isFinite(min)) {
+      list = list.filter(product => Number(product.price || 0) >= min)
+    }
+  }
+
+  if (priceMax !== '') {
+    const max = Number(priceMax)
+    if (Number.isFinite(max)) {
+      list = list.filter(product => Number(product.price || 0) <= max)
+    }
+  }
+
+  if (productTypes.length > 0) {
+    const selectedTypes = new Set(productTypes.map(value => value.toLowerCase()))
+    list = list.filter(product => selectedTypes.has(String(product.category || '').toLowerCase()))
+  }
+
   if (sort === 'low') {
-
-    list = [...list].sort(
-      (a, b) =>
-        a.price - b.price
-    )
-
+    list.sort((a, b) => Number(a.price || 0) - Number(b.price || 0))
+  } else if (sort === 'high') {
+    list.sort((a, b) => Number(b.price || 0) - Number(a.price || 0))
+  } else if (sort === 'alpha-asc') {
+    list.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
+  } else if (sort === 'alpha-desc') {
+    list.sort((a, b) => String(b.name || '').localeCompare(String(a.name || '')))
+  } else if (sort === 'best-selling') {
+    list.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0))
+  } else if (sort === 'old-new') {
+    list.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+  } else if (sort === 'new-old') {
+    list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
   }
 
-
-  // Sort: High to Low
-  if (sort === 'high') {
-
-    list = [...list].sort(
-      (a, b) =>
-        b.price - a.price
-    )
-
+  const sortLabels = {
+    featured: 'Featured',
+    'best-selling': 'Best selling',
+    'alpha-asc': 'Alphabetically, A–Z',
+    'alpha-desc': 'Alphabetically, Z–A',
+    low: 'Price, low to high',
+    high: 'Price, high to low',
+    'old-new': 'Date, old to new',
+    'new-old': 'Date, new to old'
   }
 
+  const toggleProductType = value => {
+    setProductTypes(current =>
+      current.includes(value)
+        ? current.filter(item => item !== value)
+        : [...current, value]
+    )
+  }
+
+  const clearFilters = () => {
+    setAvailability('all')
+    setPriceMin('')
+    setPriceMax('')
+    setProductTypes([])
+  }
+
+  const activeFilterCount =
+    (availability !== 'all' ? 1 : 0) +
+    (priceMin !== '' || priceMax !== '' ? 1 : 0) +
+    productTypes.length
+
+  useEffect(() => {
+    const handlePointerDown = event => {
+      if (
+        filterPanelRef.current &&
+        !filterPanelRef.current.contains(event.target)
+      ) {
+        setFilterOpen(false)
+      }
+      if (
+        sortPanelRef.current &&
+        !sortPanelRef.current.contains(event.target)
+      ) {
+        setSortOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => document.removeEventListener('mousedown', handlePointerDown)
+  }, [])
 
   return (
     <>
-
       <Header />
+      <main className="xaaj-shop-ref">
+        <style>{`
 
+          /* XAAJ pure-white surfaces: shop toolbar, filter/sort panels and nav dropdown */
+          .xaaj-shop-ref,
+          .xaaj-shop-ref-tools,
+          .xaaj-shop-ref-popover,
+          .xaaj-shop-ref-sort-menu,
+          .xaaj-shop-ref-price-field input,
+          .xaaj-ref-nav-menu,
+          .xaaj-ref-nav-menu::before{
+            background:#ffffff!important;
+          }
 
-      <main className="page">
+          .xaaj-shop-ref{
+            --shop-bg:#ffffff;
+            --shop-ink:#2d2a26;
+            --shop-muted:#7a746b;
+            --shop-line:rgba(45,42,38,.14);
+            background:var(--shop-bg);
+            color:var(--shop-ink);
+            min-height:70vh;
+            width:100%;
+          }
+          .xaaj-shop-ref-inner{width:min(1160px,calc(100% - 96px));margin:0 auto;}
+          .xaaj-shop-ref-head{padding:74px 0 54px;text-align:left;}
+          .xaaj-shop-ref-head .xaaj-ref-eyebrow{display:block;margin-bottom:13px;color:#918a80;font:400 10px/1.2 'Gotham Book','Gotham',Arial,sans-serif;letter-spacing:2.4px;text-transform:uppercase;}
+          .xaaj-shop-ref-head h1{margin:0;color:var(--shop-ink);font:400 clamp(48px,6.2vw,78px)/.98 'Playfair Display',serif;letter-spacing:-.045em;}
+          .xaaj-shop-ref-head p{margin:25px 0 0;max-width:710px;color:var(--shop-muted);font:400 15px/1.65 'Gotham Book','Gotham',Arial,sans-serif;}
+          .xaaj-shop-ref-toolbar-wrap{position:relative;z-index:70;}
+          .xaaj-shop-ref-tools{height:62px;background:#ffffff!important;border-top:1px solid var(--shop-line);border-bottom:1px solid var(--shop-line);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;position:relative;background:var(--shop-bg);}
+          .xaaj-shop-ref-tools-left{display:flex;align-items:center;gap:28px;justify-self:start;}
+          .xaaj-shop-ref-toolbar-button,.xaaj-shop-ref-sort-button{appearance:none;border:0;background:transparent;color:#5e5850;display:inline-flex;align-items:center;gap:7px;padding:0;font:400 12px/1 'Gotham Book','Gotham',Arial,sans-serif;letter-spacing:.01em;cursor:pointer;}
+          .xaaj-shop-ref-toolbar-button:hover,.xaaj-shop-ref-sort-button:hover{color:var(--shop-ink);}
+          .xaaj-shop-ref-count{text-align:center;color:#8a8379;font:400 10px/1 'Gotham Book','Gotham',Arial,sans-serif;letter-spacing:.03em;}
+          .xaaj-shop-ref-sort-wrap{position:relative;justify-self:end;}
+          .xaaj-shop-ref-sort-label{color:#888178;font-size:10px;margin-right:7px;}
+          .xaaj-shop-ref-sort-button svg,.xaaj-shop-ref-toolbar-button svg{transition:transform .22s ease;}
+          .xaaj-shop-ref-sort-wrap.is-open .xaaj-shop-ref-sort-button svg,.xaaj-shop-ref-filter-wrap.is-open .xaaj-shop-ref-toolbar-button svg{transform:rotate(180deg);}
+          .xaaj-shop-ref-popover{position:absolute;top:calc(100% + 14px);left:0;right:0;background:#ffffff!important;border:1px solid rgba(45,42,38,.14);box-shadow:0 24px 65px rgba(35,30,25,.11);z-index:120;backdrop-filter:blur(14px);}
+          .xaaj-shop-ref-filter-popover{display:grid;grid-template-columns:1fr 1fr 1.45fr;gap:0;}
+          .xaaj-shop-ref-filter-group{padding:26px 30px 28px;border-right:1px solid rgba(45,42,38,.10);}
+          .xaaj-shop-ref-filter-group:last-child{border-right:0;}
+          .xaaj-shop-ref-filter-group h3{margin:0 0 20px;color:#8b847b;font:500 9px/1 'Gotham Book','Gotham',Arial,sans-serif;letter-spacing:1.7px;text-transform:uppercase;}
+          .xaaj-shop-ref-filter-options{display:flex;flex-direction:column;gap:13px;}
+          .xaaj-shop-ref-filter-option{appearance:none;border:0;background:transparent;padding:0;color:#625d56;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;font:400 12px/1.3 'Gotham Book','Gotham',Arial,sans-serif;cursor:pointer;}
+          .xaaj-shop-ref-filter-option:hover{color:var(--shop-ink);}
+          .xaaj-shop-ref-filter-option.is-active{color:var(--shop-ink);font-weight:500;}
+          .xaaj-shop-ref-check{width:14px;height:14px;border:1px solid #bdb5ab;display:grid;place-items:center;flex:0 0 14px;}
+          .xaaj-shop-ref-filter-option.is-active .xaaj-shop-ref-check{background:var(--shop-ink);border-color:var(--shop-ink);}
+          .xaaj-shop-ref-check::after{content:'';width:6px;height:3px;border-left:1px solid #fff;border-bottom:1px solid #fff;transform:rotate(-45deg) translateY(-1px);opacity:0;}
+          .xaaj-shop-ref-filter-option.is-active .xaaj-shop-ref-check::after{opacity:1;}
+          .xaaj-shop-ref-price-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+          .xaaj-shop-ref-price-field{position:relative;}
+          .xaaj-shop-ref-price-field span{position:absolute;left:12px;top:50%;transform:translateY(-50%);font:400 12px 'Gotham Book','Gotham',Arial,sans-serif;color:#8d867d;pointer-events:none;}
+          .xaaj-shop-ref-price-field input{width:100%;height:40px;border:1px solid rgba(45,42,38,.18);background:#ffffff!important;color:var(--shop-ink);padding:0 11px 0 24px;outline:none;font:400 12px 'Gotham Book','Gotham',Arial,sans-serif;}
+          .xaaj-shop-ref-price-field input:focus{border-color:rgba(45,42,38,.42);}
+          .xaaj-shop-ref-filter-footer{grid-column:1/-1;border-top:1px solid rgba(45,42,38,.10);display:flex;align-items:center;justify-content:space-between;padding:15px 22px;}
+          .xaaj-shop-ref-active-note{color:#8b847b;font-size:10px;}
+          .xaaj-shop-ref-clear{border:0;background:transparent;color:#625d56;padding:6px 0;font:500 10px/1 'Gotham Book','Gotham',Arial,sans-serif;text-transform:uppercase;letter-spacing:1px;cursor:pointer;}
+          .xaaj-shop-ref-sort-menu{position:absolute;top:calc(100% + 14px);right:0;min-width:228px;padding:8px;background:#ffffff!important;border:1px solid rgba(45,42,38,.14);box-shadow:0 24px 65px rgba(35,30,25,.11);z-index:120;}
+          .xaaj-shop-ref-sort-option{width:100%;border:0;background:transparent;color:#625d56;display:flex;justify-content:space-between;align-items:center;padding:11px 12px;text-align:left;font:400 11px/1.2 'Gotham Book','Gotham',Arial,sans-serif;cursor:pointer;}
+          .xaaj-shop-ref-sort-option:hover{background:rgba(45,42,38,.045);color:var(--shop-ink);}
+          .xaaj-shop-ref-sort-option.is-active{color:var(--shop-ink);font-weight:500;}
+          .xaaj-shop-ref-sort-check{opacity:0;font-size:12px;}
+          .xaaj-shop-ref-sort-option.is-active .xaaj-shop-ref-sort-check{opacity:1;}
+          .xaaj-shop-ref-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px 18px;padding:34px 0 88px;}
+          .xaaj-shop-ref-empty{grid-column:1/-1;text-align:center;padding:110px 20px 130px;}
+          .xaaj-shop-ref-empty h2{margin:0 0 10px;font:400 34px/1.1 'Playfair Display',serif;}
+          .xaaj-shop-ref-empty p{margin:0;color:#8a8379;font:400 12px/1.6 'Gotham Book','Gotham',Arial,sans-serif;}
+          @media(max-width:900px){
+            .xaaj-shop-ref-inner{width:min(100% - 44px,760px);}
+            .xaaj-shop-ref-filter-popover{grid-template-columns:1fr 1fr;}
+            .xaaj-shop-ref-filter-group:nth-child(2){border-right:0;}
+            .xaaj-shop-ref-filter-group:nth-child(3){grid-column:1/-1;border-top:1px solid rgba(45,42,38,.10);border-right:0;}
+            .xaaj-shop-ref-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+          }
+          @media(max-width:700px){
+            .xaaj-shop-ref-inner{width:calc(100% - 32px);}
+            .xaaj-shop-ref-head{padding:50px 0 34px;}
+            .xaaj-shop-ref-head h1{font-size:44px;}
+            .xaaj-shop-ref-head p{font-size:13px;margin-top:17px;}
+            .xaaj-shop-ref-tools{height:54px;grid-template-columns:1fr auto;}
+            .xaaj-shop-ref-tools-left{gap:18px;}
+            .xaaj-shop-ref-count{display:none;}
+            .xaaj-shop-ref-sort-label{display:none;}
+            .xaaj-shop-ref-filter-popover{grid-template-columns:1fr;}
+            .xaaj-shop-ref-filter-group,.xaaj-shop-ref-filter-group:nth-child(2),.xaaj-shop-ref-filter-group:nth-child(3){border-right:0;border-top:0;border-bottom:1px solid rgba(45,42,38,.10);grid-column:auto;}
+            .xaaj-shop-ref-filter-footer{grid-column:auto;}
+            .xaaj-shop-ref-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 12px;padding-top:24px;}
+            .xaaj-shop-ref-sort-menu{right:0;min-width:210px;}
+          }
+        `}</style>
 
-        <div className="wrap">
+        <div className="xaaj-shop-ref-inner">
+          <section className="xaaj-shop-ref-head">
+            <span className="xaaj-ref-eyebrow">XAAJ collection</span>
+            <h1>{category || (search ? `Search: ${search}` : 'Everything for the everyday')}</h1>
+            <p>Considered crockery for tables, rituals and gatherings. Explore the collection by form.</p>
+          </section>
 
+          <div className="xaaj-shop-ref-toolbar-wrap">
+            <div className="xaaj-shop-ref-tools">
+              <div className="xaaj-shop-ref-tools-left">
+                <div className={`xaaj-shop-ref-filter-wrap ${filterOpen ? 'is-open' : ''}`} ref={filterPanelRef}>
+                  <button
+                    type="button"
+                    className="xaaj-shop-ref-toolbar-button"
+                    onClick={() => {
+                      setFilterOpen(value => !value)
+                      setSortOpen(false)
+                    }}
+                    aria-expanded={filterOpen}
+                  >
+                    Filter{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+                    <ChevronDown size={13} strokeWidth={1.4} />
+                  </button>
 
-          {/* Breadcrumbs */}
-          <div className="breadcrumbs">
+                  {filterOpen && (
+                    <div className="xaaj-shop-ref-popover xaaj-shop-ref-filter-popover">
+                      <div className="xaaj-shop-ref-filter-group">
+                        <h3>Availability</h3>
+                        <div className="xaaj-shop-ref-filter-options">
+                          <button
+                            type="button"
+                            className={`xaaj-shop-ref-filter-option ${availability === 'all' ? 'is-active' : ''}`}
+                            onClick={() => setAvailability('all')}
+                          >
+                            <span>All products</span>
+                            <span className="xaaj-shop-ref-check" />
+                          </button>
+                          <button
+                            type="button"
+                            className={`xaaj-shop-ref-filter-option ${availability === 'in' ? 'is-active' : ''}`}
+                            onClick={() => setAvailability('in')}
+                          >
+                            <span>In stock</span>
+                            <span className="xaaj-shop-ref-check" />
+                          </button>
+                          <button
+                            type="button"
+                            className={`xaaj-shop-ref-filter-option ${availability === 'out' ? 'is-active' : ''}`}
+                            onClick={() => setAvailability('out')}
+                          >
+                            <span>Out of stock</span>
+                            <span className="xaaj-shop-ref-check" />
+                          </button>
+                        </div>
+                      </div>
 
-            Home
+                      <div className="xaaj-shop-ref-filter-group">
+                        <h3>Price · INR</h3>
+                        <div className="xaaj-shop-ref-price-row">
+                          <label className="xaaj-shop-ref-price-field">
+                            <span>₹</span>
+                            <input
+                              type="number"
+                              min="0"
+                              inputMode="numeric"
+                              value={priceMin}
+                              onChange={event => setPriceMin(event.target.value)}
+                              placeholder="From"
+                              aria-label="Minimum price"
+                            />
+                          </label>
+                          <label className="xaaj-shop-ref-price-field">
+                            <span>₹</span>
+                            <input
+                              type="number"
+                              min="0"
+                              inputMode="numeric"
+                              value={priceMax}
+                              onChange={event => setPriceMax(event.target.value)}
+                              placeholder="To"
+                              aria-label="Maximum price"
+                            />
+                          </label>
+                        </div>
+                      </div>
 
-            <span>
-              /
-            </span>
+                      <div className="xaaj-shop-ref-filter-group">
+                        <h3>Product type</h3>
+                        <div className="xaaj-shop-ref-filter-options">
+                          {availableProductTypes.length > 0 ? availableProductTypes.map(type => (
+                            <button
+                              type="button"
+                              key={type}
+                              className={`xaaj-shop-ref-filter-option ${productTypes.includes(type) ? 'is-active' : ''}`}
+                              onClick={() => toggleProductType(type)}
+                            >
+                              <span>{type}</span>
+                              <span className="xaaj-shop-ref-check" />
+                            </button>
+                          )) : (
+                            <span className="xaaj-shop-ref-active-note">No product types available.</span>
+                          )}
+                        </div>
+                      </div>
 
-            Shop
+                      <div className="xaaj-shop-ref-filter-footer">
+                        <span className="xaaj-shop-ref-active-note">
+                          {activeFilterCount > 0 ? `${list.length} matching products` : 'All products shown'}
+                        </span>
+                        {activeFilterCount > 0 && (
+                          <button type="button" className="xaaj-shop-ref-clear" onClick={clearFilters}>
+                            Clear filters
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-          </div>
+              <div className="xaaj-shop-ref-count">{list.length} products</div>
 
+              <div className={`xaaj-shop-ref-sort-wrap ${sortOpen ? 'is-open' : ''}`} ref={sortPanelRef}>
+                <button
+                  type="button"
+                  className="xaaj-shop-ref-sort-button"
+                  onClick={() => {
+                    setSortOpen(value => !value)
+                    setFilterOpen(false)
+                  }}
+                  aria-expanded={sortOpen}
+                >
+                  <span className="xaaj-shop-ref-sort-label">Sort by:</span>
+                  {sortLabels[sort]}
+                  <ChevronDown size={13} strokeWidth={1.4} />
+                </button>
 
-          {/* Shop Title */}
-          <div className="shop-title">
-
-            <div>
-
-              <span className="eyebrow">
-                The collection
-              </span>
-
-              <h1>
-
-                {category ||
-
-                  (
-                    search
-                      ? `Search: ${search}`
-                      : 'Everything for the everyday'
-                  )
-
-                }
-
-              </h1>
-
-              <p>
-                Objects made to be used,
-                loved and lived with.
-              </p>
-
+                {sortOpen && (
+                  <div className="xaaj-shop-ref-sort-menu">
+                    {Object.entries(sortLabels).map(([value, label]) => (
+                      <button
+                        type="button"
+                        key={value}
+                        className={`xaaj-shop-ref-sort-option ${sort === value ? 'is-active' : ''}`}
+                        onClick={() => {
+                          setSort(value)
+                          setSortOpen(false)
+                        }}
+                      >
+                        <span>{label}</span>
+                        <span className="xaaj-shop-ref-sort-check">✓</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-
-
-            {/* Sorting */}
-            <select
-              value={sort}
-              onChange={e =>
-                setSort(
-                  e.target.value
-                )
-              }
-            >
-
-              <option value="featured">
-                Sort: Featured
-              </option>
-
-              <option value="low">
-                Price: low to high
-              </option>
-
-              <option value="high">
-                Price: high to low
-              </option>
-
-            </select>
-
           </div>
 
-
-          {/* Filters */}
-          <div className="filter-row">
-
-            {[
-              'All',
-              'Serveware',
-              'Plates',
-              'Bowls',
-              'Cups & Mugs',
-              'Glassware'
-            ].map(categoryName => (
-
-              <Link
-                className={
-                  !category &&
-                  categoryName === 'All'
-                    ? 'active'
-                    : ''
-                }
-                to={
-                  categoryName === 'All'
-                    ? '/shop'
-                    : `/shop?category=${categoryName}`
-                }
-                key={categoryName}
-              >
-
-                {categoryName}
-
-              </Link>
-
-            ))}
-
+          <div className="xaaj-shop-ref-grid">
+            {list.length > 0 ? list.map(product => (
+              <ProductCard product={product} key={product.id || product._id} />
+            )) : (
+              <div className="xaaj-shop-ref-empty">
+                <h2>No pieces found</h2>
+                <p>Try clearing a filter or exploring another collection.</p>
+              </div>
+            )}
           </div>
-
-
-          {/* Product Grid */}
-          <div
-            id="shop-products"
-            className="product-grid shop-grid"
-            style={{ scrollMarginTop: '120px' }}
-          >
-
-            {list.map(product => (
-
-              <ProductCard
-                product={product}
-                key={product.id}
-              />
-
-            ))}
-
-          </div>
-
         </div>
-
       </main>
-
-
-      <Newsletter />
-
       <Footer />
-
     </>
   )
 }
@@ -5159,7 +6463,7 @@ function Product() {
       <>
         <Header />
 
-        <main className="page">
+        <main className="page xaaj-product-page" style={{ background: "#fff" }}>
           <div className="wrap narrow">
             <span className="eyebrow">
               Product
@@ -5185,7 +6489,7 @@ function Product() {
       <>
         <Header />
 
-        <main className="page">
+        <main className="page xaaj-product-page" style={{ background: "#fff" }}>
           <div className="wrap narrow">
             <span className="eyebrow">
               Product
@@ -5214,7 +6518,19 @@ function Product() {
     <>
       <Header />
 
-      <main className="page">
+      <style>{`
+        .xaaj-product-page {
+          background: #fff !important;
+        }
+        .xaaj-product-page,
+        .xaaj-product-page > .wrap,
+        .xaaj-product-page .detail,
+        .xaaj-product-page .detail-copy {
+          background: #fff !important;
+        }
+      `}</style>
+
+      <main className="page xaaj-product-page" style={{ background: "#fff" }}>
         <div className="wrap">
 
           {/* Breadcrumbs */}
@@ -5376,11 +6692,34 @@ function Product() {
                     add(product)
                   }
 
-                  // Keep the add-to-cart interaction lightweight.
-                  // Do not clone the large product image into <body>: without a
-                  // guaranteed animation stylesheet it can render at full size
-                  // and cover the product page. The header cart bump provides
-                  // the visual confirmation instead.
+                  // Premium image-to-cart animation.
+                  const image = document.querySelector('.detail-image img')
+                  const cartTarget = document.querySelector(
+                    '[data-xaaj-cart-target="true"]'
+                  )
+                  const imageRect = image?.getBoundingClientRect()
+                  const cartRect = cartTarget?.getBoundingClientRect()
+
+                  if (imageRect && cartRect) {
+                    const flyingImage = image.cloneNode(true)
+                    const startX = imageRect.left + imageRect.width / 2 - 30
+                    const startY = imageRect.top + imageRect.height / 2 - 30
+                    const endX = cartRect.left + cartRect.width / 2 - 30
+                    const endY = cartRect.top + cartRect.height / 2 - 30
+
+                    flyingImage.className = 'xaaj-flying-cart-image'
+                    flyingImage.style.left = `${startX}px`
+                    flyingImage.style.top = `${startY}px`
+                    flyingImage.style.setProperty('--xaaj-x', `${endX - startX}px`)
+                    flyingImage.style.setProperty('--xaaj-y', `${endY - startY}px`)
+
+                    document.body.appendChild(flyingImage)
+                    flyingImage.addEventListener(
+                      'animationend',
+                      () => flyingImage.remove(),
+                      { once: true }
+                    )
+                  }
 
                   window.dispatchEvent(new CustomEvent('xaaj:cart-added'))
                   setDetailCartPulse(true)
@@ -5396,7 +6735,7 @@ function Product() {
               {/* Product Information Accordions — premium editorial style */}
               <div className="xaaj-product-accordions">
                 <style>{`
-                  @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+                  @import url('https://fonts.googleapis.com/css2?family=Gotham Book:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');
 
                   .xaaj-product-accordions {
                     margin-top: 30px;
@@ -5418,7 +6757,7 @@ function Product() {
                     padding: 21px 2px 20px;
                     cursor: pointer;
                     color: #2c2925;
-                    font-family: 'Cormorant Garamond', Georgia, serif;
+                    font-family:'Gotham Book','Gotham',Arial,sans-serif;
                     font-size: clamp(20px, 1.8vw, 25px);
                     font-weight: 500;
                     line-height: 1.1;
@@ -5439,7 +6778,7 @@ function Product() {
                     align-items: center;
                     justify-content: center;
                     color: #6f6a63;
-                    font-family: 'Assistant', Arial, sans-serif;
+                    font-family:'Gotham Book','Gotham',Arial,sans-serif;
                     font-size: 20px;
                     font-weight: 400;
                     line-height: 1;
@@ -5465,7 +6804,7 @@ function Product() {
                     margin: 0;
                     padding: 0 42px 23px 2px;
                     color: #716c65;
-                    font-family: 'Assistant', Arial, sans-serif;
+                    font-family:'Gotham Book','Gotham',Arial,sans-serif;
                     font-size: 13px;
                     font-weight: 400;
                     line-height: 1.9;
@@ -5499,17 +6838,7 @@ function Product() {
                     }
                   }
                 `}</style>
-
-                <details open>
-                  <summary>Description</summary>
-                  <p>
-                    {product.description ||
-                      product.desc ||
-                      'Beautifully crafted for everyday use.'}
-                  </p>
-                </details>
-
-                <details>
+<details>
                   <summary>Product Details &amp; Care</summary>
                   <p>
                     {product.productDetails ||
@@ -5620,6 +6949,11 @@ function Cart({
       <Header />
 
       <main className={`page xaaj-cart-page ${wishlist ? 'xaaj-wishlist-page' : ''}`}>
+        <style>{`
+          .xaaj-cart-page {
+            background: #ffffff !important;
+          }
+        `}</style>
         <div className="wrap">
           <div className="breadcrumbs">
             Home <span>/</span> {wishlist ? 'Wishlist' : 'Your cart'}
@@ -5848,7 +7182,7 @@ const policyAccordionStyles = `
   .policy-hero h1 {
     max-width: 760px;
     margin: 0 0 20px;
-    font-family: Georgia, 'Times New Roman', serif;
+    font-family:'Gotham Book','Gotham',Arial,sans-serif;
     font-size: clamp(48px, 7vw, 82px);
     line-height: .98;
     font-weight: 400;
@@ -5857,14 +7191,14 @@ const policyAccordionStyles = `
   .policy-hero .policy-intro {
     max-width: 720px;
     margin: 0;
-    font-family: Georgia, 'Times New Roman', serif;
+    font-family:'Gotham Book','Gotham',Arial,sans-serif;
     font-size: clamp(20px, 2.2vw, 27px);
     line-height: 1.45;
     color: #393632;
   }
   .policy-effective {
     margin-top: 18px;
-    font-family: Arial, sans-serif;
+    font-family:'Gotham Book','Gotham',Arial,sans-serif;
     font-size: 13px;
     color: #77716a;
   }
@@ -5883,7 +7217,7 @@ const policyAccordionStyles = `
     justify-content: space-between;
     gap: 24px;
     padding: 27px 0;
-    font-family: Georgia, 'Times New Roman', serif;
+    font-family:'Gotham Book','Gotham',Arial,sans-serif;
     font-size: clamp(22px, 2.2vw, 29px);
     line-height: 1.25;
     color: #292724;
@@ -5897,7 +7231,7 @@ const policyAccordionStyles = `
     height: 28px;
     display: grid;
     place-items: center;
-    font-family: Arial, sans-serif;
+    font-family:'Gotham Book','Gotham',Arial,sans-serif;
     font-size: 24px;
     font-weight: 300;
     line-height: 1;
@@ -5910,7 +7244,7 @@ const policyAccordionStyles = `
     max-width: 790px;
     padding: 0 46px 30px 0;
     color: #68635d;
-    font-family: Arial, sans-serif;
+    font-family:'Gotham Book','Gotham',Arial,sans-serif;
     font-size: 15px;
     line-height: 1.8;
     animation: policyReveal .35s ease both;
@@ -5965,7 +7299,7 @@ function SimplePage({
             {children}
           </div>
         </main>
-        <Newsletter />
+        {/* Legacy standalone Newsletter preserved below; reference subscribe is now inside Footer. */}
         <Footer />
       </>
     )
@@ -5984,8 +7318,11 @@ function SimplePage({
 
         <style>{`
           .xaaj-auth-page {
-            min-height: calc(100vh - 118px);
-            padding: 28px 24px 52px;
+            position: relative;
+            z-index: 1;
+            min-height: calc(100dvh - 80px);
+            padding: 56px 24px 80px;
+            box-sizing: border-box;
             background:
               radial-gradient(circle at 10% 5%, rgba(47,112,72,.055), transparent 28%),
               linear-gradient(180deg, #f7f5f0 0%, #f2efe8 100%);
@@ -5993,10 +7330,10 @@ function SimplePage({
 
           .xaaj-auth-shell {
             width: min(1120px, 100%);
-            min-height: 690px;
+            min-height: 0;
             margin: 0 auto;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
           }
 
@@ -6005,7 +7342,7 @@ function SimplePage({
             display: grid;
             grid-template-columns: minmax(0, 1fr) minmax(430px, .82fr);
             align-items: stretch;
-            overflow: hidden;
+            overflow: visible;
             border: 1px solid rgba(39,46,40,.10);
             border-radius: 24px;
             background: rgba(255,254,250,.88);
@@ -6018,6 +7355,7 @@ function SimplePage({
              It gives the authentication screen its own brand identity. */
           .xaaj-auth-editorial {
             position: relative;
+            border-radius: 23px 0 0 23px;
             min-height: 690px;
             padding: 56px;
             overflow: hidden;
@@ -6034,7 +7372,7 @@ function SimplePage({
             right: -45px;
             bottom: -125px;
             color: rgba(255,255,255,.035);
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: 410px;
             line-height: 1;
             font-weight: 400;
@@ -6096,7 +7434,7 @@ function SimplePage({
             max-width: 500px;
             margin: 0;
             color: #f8f5ed;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: clamp(52px, 5.6vw, 78px);
             line-height: .91;
             letter-spacing: -.055em;
@@ -6142,9 +7480,11 @@ function SimplePage({
 
           .xaaj-auth-form-panel {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
+            overflow: visible;
             padding: 42px clamp(34px, 4vw, 56px);
             background: rgba(255,254,250,.95);
+            min-width: 0;
           }
 
           .xaaj-auth-form-inner {
@@ -6153,6 +7493,8 @@ function SimplePage({
           }
 
           .xaaj-auth-nav {
+            position: relative;
+            z-index: 3;
             display: inline-flex;
             align-items: center;
             gap: 4px;
@@ -6202,7 +7544,7 @@ function SimplePage({
           .xaaj-auth-title {
             margin: 0;
             color: #292824;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: clamp(44px, 4vw, 58px);
             line-height: .98;
             font-weight: 400;
@@ -6444,7 +7786,8 @@ function SimplePage({
 
           @media (max-width: 900px) {
             .xaaj-auth-page {
-              padding: 25px 16px 55px;
+              min-height: calc(100dvh - 74px);
+              padding: 48px 16px 65px;
             }
 
             .xaaj-auth-layout {
@@ -6485,12 +7828,13 @@ function SimplePage({
 
           @media (max-width: 560px) {
             .xaaj-auth-page {
-              min-height: calc(100vh - 90px);
-              padding: 12px 10px 40px;
+              min-height: calc(100dvh - 74px);
+              padding: 36px 10px 52px;
             }
 
             .xaaj-auth-layout {
               border-radius: 18px;
+              overflow: visible;
             }
 
             .xaaj-auth-editorial {
@@ -6542,6 +7886,127 @@ function SimplePage({
             }
           }
 
+          @media (max-width: 560px) {
+            .xaaj-auth-page {
+              padding: 28px 10px 44px;
+              min-height: calc(100dvh - 140px);
+              overflow-x: hidden;
+            }
+
+            .xaaj-auth-shell {
+              width: 100%;
+            }
+
+            .xaaj-auth-layout {
+              width: 100%;
+              max-width: 100%;
+              border-radius: 16px;
+              overflow: hidden;
+            }
+
+            .xaaj-auth-editorial {
+              min-height: 235px;
+              padding: 24px 20px;
+              border-radius: 0;
+            }
+
+            .xaaj-auth-editorial h2 {
+              font-size: clamp(36px, 10.8vw, 44px);
+              line-height: .94;
+            }
+
+            .xaaj-auth-editorial-copy p {
+              max-width: 290px;
+              margin-top: 13px;
+              font-size: 10px;
+              line-height: 1.7;
+            }
+
+            .xaaj-auth-form-panel {
+              padding: 28px 18px 34px;
+            }
+
+            .xaaj-auth-form-inner {
+              width: 100%;
+              max-width: 100%;
+            }
+
+            .xaaj-auth-nav {
+              width: 100%;
+              box-sizing: border-box;
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 4px;
+              margin-bottom: 24px;
+            }
+
+            .xaaj-auth-nav a {
+              width: 100%;
+              min-width: 0;
+              height: 34px;
+              font-size: 9px;
+              letter-spacing: .25px;
+            }
+
+            .xaaj-auth-title {
+              font-size: clamp(38px, 11vw, 46px);
+              line-height: .98;
+            }
+
+            .xaaj-auth-lead {
+              margin: 12px 0 22px;
+              max-width: 100%;
+              font-size: 11px;
+              line-height: 1.7;
+            }
+
+            .xaaj-auth-fields {
+              grid-template-columns: 1fr;
+              gap: 14px;
+            }
+
+            .xaaj-auth-fields .full {
+              grid-column: auto;
+            }
+
+            .xaaj-auth-field input,
+            .xaaj-auth-field textarea,
+            .xaaj-auth-field select {
+              width: 100%;
+              max-width: 100%;
+              min-width: 0;
+              box-sizing: border-box;
+            }
+
+            .xaaj-auth-submit {
+              width: 100%;
+              min-height: 48px;
+            }
+          }
+
+          @media (max-width: 390px) {
+            .xaaj-auth-page {
+              padding: 22px 8px 36px;
+            }
+
+            .xaaj-auth-editorial {
+              min-height: 215px;
+              padding: 22px 17px;
+            }
+
+            .xaaj-auth-editorial h2 {
+              font-size: 34px;
+            }
+
+            .xaaj-auth-form-panel {
+              padding: 24px 15px 30px;
+            }
+
+            .xaaj-auth-nav a {
+              font-size: 8.5px;
+            }
+          }
+
           @media (prefers-reduced-motion: reduce) {
             .xaaj-auth-nav a,
             .xaaj-auth-field input,
@@ -6563,7 +8028,7 @@ function SimplePage({
           {children}
         </div>
       </main>
-      <Newsletter />
+      {/* Legacy standalone Newsletter preserved below; reference subscribe is now inside Footer. */}
       <Footer />
     </>
   )
@@ -6723,7 +8188,7 @@ function BlogDesignStyles() {
       .xaaj-blog-hero h1 {
         max-width: 780px;
         margin: 0;
-        font-family: var(--blog-serif);
+        font-family:'Gotham Book','Gotham',Arial,sans-serif;
         font-size: clamp(48px, 7vw, 88px);
         font-weight: 400;
         line-height: .96;
@@ -6789,7 +8254,7 @@ function BlogDesignStyles() {
 
       .xaaj-blog-feature-copy h2 {
         margin: 20px 0 18px;
-        font-family: var(--blog-serif);
+        font-family:'Gotham Book','Gotham',Arial,sans-serif;
         color: var(--blog-ink);
         font-size: clamp(31px, 4vw, 49px);
         font-weight: 400;
@@ -6864,7 +8329,7 @@ function BlogDesignStyles() {
 
       .xaaj-blog-content-head h2 {
         margin: 8px 0 0;
-        font-family: var(--blog-serif);
+        font-family:'Gotham Book','Gotham',Arial,sans-serif;
         font-size: clamp(30px, 4vw, 46px);
         font-weight: 400;
         line-height: 1;
@@ -6970,7 +8435,7 @@ function BlogDesignStyles() {
 
       .xaaj-blog-card-copy h3 {
         margin: 12px 0 12px;
-        font-family: var(--blog-serif);
+        font-family:'Gotham Book','Gotham',Arial,sans-serif;
         color: var(--blog-ink);
         font-size: 26px;
         font-weight: 400;
@@ -7032,7 +8497,7 @@ function BlogDesignStyles() {
 
       .xaaj-blog-empty h2 {
         margin: 0 0 10px;
-        font-family: var(--blog-serif);
+        font-family:'Gotham Book','Gotham',Arial,sans-serif;
         font-weight: 400;
         font-size: 34px;
       }
@@ -7067,7 +8532,7 @@ function BlogDesignStyles() {
 
       .xaaj-blog-article-header h1 {
         margin: 17px 0 20px;
-        font-family: var(--blog-serif);
+        font-family:'Gotham Book','Gotham',Arial,sans-serif;
         font-size: clamp(42px, 6vw, 76px);
         font-weight: 400;
         line-height: 1;
@@ -7105,7 +8570,7 @@ function BlogDesignStyles() {
 
       .xaaj-blog-article-excerpt {
         margin: 0 0 42px;
-        font-family: var(--blog-serif);
+        font-family:'Gotham Book','Gotham',Arial,sans-serif;
         font-size: 23px;
         line-height: 1.55;
         color: var(--blog-ink);
@@ -7120,7 +8585,7 @@ function BlogDesignStyles() {
 
       .xaaj-blog-article-content h2 {
         margin: 48px 0 18px;
-        font-family: var(--blog-serif);
+        font-family:'Gotham Book','Gotham',Arial,sans-serif;
         color: var(--blog-ink);
         font-size: 30px;
         font-weight: 400;
@@ -7155,11 +8620,158 @@ function BlogDesignStyles() {
         to { opacity: 1; transform: translateY(0); }
       }
 
+      /* ============================================================
+         HOME BLOG — "FROM THE MAGAZINE" REFERENCE STYLE
+         Scoped to the homepage so the full Blog page stays unchanged.
+         ============================================================ */
+      .xaaj-blog-home-shell{
+        background:#fff;
+        padding:34px 0 82px;
+        margin-top:0;
+      }
+
+      .xaaj-blog-home-content{
+        width:min(1148px,calc(100% - 48px));
+        margin:0 auto;
+      }
+
+      .xaaj-blog-home-heading{
+        margin:0 0 31px;
+      }
+
+      .xaaj-blog-home-heading h2{
+        margin:0;
+        color:#302e2b;
+        font-family:Georgia,'Times New Roman',serif;
+        font-size:31px;
+        font-weight:400;
+        line-height:1.15;
+        letter-spacing:-.012em;
+      }
+
+      .xaaj-blog-home-grid{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:20px;
+      }
+
+      .xaaj-blog-card-home{
+        background:#fff;
+        border:1px solid rgba(48,46,43,.20);
+        border-radius:5px;
+        box-shadow:none;
+        overflow:hidden;
+        transform:none;
+        transition:box-shadow .35s ease,transform .35s ease;
+      }
+
+      .xaaj-blog-card-home:hover{
+        transform:translateY(-3px);
+        box-shadow:0 10px 28px rgba(48,46,43,.08);
+      }
+
+      .xaaj-blog-card-home .xaaj-blog-card-image{
+        aspect-ratio:1.67 / 1;
+        border-bottom:1px solid rgba(48,46,43,.12);
+        background:#e9e5e1;
+      }
+
+      .xaaj-blog-card-home .xaaj-blog-card-copy{
+        min-height:306px;
+        background:#fff;
+        padding:27px 30px 29px;
+        box-sizing:border-box;
+      }
+
+      .xaaj-blog-card-home .xaaj-blog-card-copy h3{
+        margin:0 0 13px;
+        color:#34312e;
+        font-family:Georgia,'Times New Roman',serif;
+        font-size:28px;
+        font-weight:400;
+        line-height:1.16;
+        letter-spacing:-.012em;
+      }
+
+      .xaaj-blog-card-home .xaaj-blog-card-copy h3 a{
+        color:inherit;
+      }
+
+      .xaaj-blog-card-home-date{
+        display:block;
+        margin-bottom:15px;
+        color:#77736e;
+        font-family:'Gotham Book','Gotham',Arial,sans-serif;
+        font-size:10px;
+        font-weight:400;
+        line-height:1.2;
+        letter-spacing:.14em;
+        text-transform:uppercase;
+      }
+
+      .xaaj-blog-card-home .xaaj-blog-card-copy p{
+        margin:0;
+        color:#66625e;
+        font-family:'Gotham Book','Gotham',Arial,sans-serif;
+        font-size:14px;
+        line-height:1.72;
+        display:-webkit-box;
+        -webkit-line-clamp:4;
+        -webkit-box-orient:vertical;
+        overflow:hidden;
+      }
+
+      .xaaj-blog-home-shell .xaaj-blog-fade{
+        animation-duration:.65s;
+      }
+
       @media (max-width: 900px) {
         .xaaj-blog-hero { min-height: 460px; }
         .xaaj-blog-feature { grid-template-columns: 1fr; }
         .xaaj-blog-feature-image { min-height: 390px; }
         .xaaj-blog-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 24px; }
+      }
+
+      @media (max-width: 900px) {
+        .xaaj-blog-home-grid{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:18px;
+        }
+        .xaaj-blog-card-home .xaaj-blog-card-copy{
+          min-height:280px;
+          padding:24px 24px 26px;
+        }
+        .xaaj-blog-card-home .xaaj-blog-card-copy h3{
+          font-size:24px;
+        }
+      }
+
+      @media (max-width: 620px) {
+        .xaaj-blog-home-shell{
+          padding:38px 0 62px;
+        }
+        .xaaj-blog-home-content{
+          width:calc(100% - 30px);
+        }
+        .xaaj-blog-home-heading{
+          margin-bottom:24px;
+        }
+        .xaaj-blog-home-heading h2{
+          font-size:27px;
+        }
+        .xaaj-blog-home-grid{
+          grid-template-columns:1fr;
+          gap:18px;
+        }
+        .xaaj-blog-card-home .xaaj-blog-card-image{
+          aspect-ratio:1.58 / 1;
+        }
+        .xaaj-blog-card-home .xaaj-blog-card-copy{
+          min-height:0;
+          padding:23px 21px 25px;
+        }
+        .xaaj-blog-card-home .xaaj-blog-card-copy h3{
+          font-size:24px;
+        }
       }
 
       @media (max-width: 620px) {
@@ -7200,11 +8812,112 @@ function BlogDesignStyles() {
         .xaaj-blog-filter { transition: none; }
         .xaaj-blog-fade { animation: none; }
       }
+
+
+
+      /* ============================================================
+         HOME BLOG — FINAL WHITE SURFACE / NO SECTION BAND
+         ============================================================ */
+      .xaaj-cinema-home,
+      .xaaj-blog-shell,
+      .xaaj-blog-home-shell,
+      .xaaj-blog-home-content,
+      .xaaj-blog-card-home,
+      .xaaj-blog-card-home .xaaj-blog-card-copy {
+        background:#fff !important;
+      }
+
+      .xaaj-values-strip,
+      .xaaj-blog-home-shell {
+        margin-top:0 !important;
+        margin-bottom:0 !important;
+        border-top:0 !important;
+        border-bottom:0 !important;
+      }
+
+      .xaaj-blog-home-content {
+        margin-top:0 !important;
+      }
+
+      .xaaj-blog-card-home .xaaj-blog-card-copy {
+        background:#fff !important;
+      }
+
+      .xaaj-blog-card-home {
+        box-shadow:none !important;
+      }
+
+      /* ============================================================
+         BLOG VISIBILITY / ROUTE SAFETY
+         Keep the blog route visible even when global site styles or
+         previous animation rules are loaded on the same page.
+         ============================================================ */
+      .xaaj-blog-shell,
+      .xaaj-blog-article-shell,
+      .xaaj-blog-home-shell {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: 100%;
+        min-height: 1px;
+      }
+
+      .xaaj-blog-article-shell {
+        background: #fff !important;
+        color: #292825;
+        position: relative;
+        z-index: 1;
+      }
+
+      .xaaj-blog-article,
+      .xaaj-blog-article-header,
+      .xaaj-blog-article-cover,
+      .xaaj-blog-article-body,
+      .xaaj-blog-article-back {
+        visibility: visible !important;
+      }
+
+      .xaaj-blog-article-header.xaaj-blog-fade,
+      .xaaj-blog-article-cover.xaaj-blog-fade {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+      }
+
+      .xaaj-blog-card-home,
+      .xaaj-blog-card-home.xaaj-blog-fade {
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+
+      .xaaj-blog-home-shell {
+        background: #fff !important;
+      }
     `}</style>
   )
 }
 
-function BlogCard({ post, index = 0 }) {
+function BlogCard({ post, index = 0, homeVariant = false }) {
+  if (homeVariant) {
+    return (
+      <article className="xaaj-blog-card xaaj-blog-card-home xaaj-blog-fade" style={{ animationDelay: `${Math.min(index * 70, 350)}ms` }}>
+        <Link to={`/blog/${post.slug}`} className="xaaj-blog-card-image" aria-label={`Read ${post.title}`}>
+          {post.coverImage ? (
+            <img src={post.coverImage} alt={post.title} loading="lazy" />
+          ) : (
+            <div className="xaaj-blog-card-placeholder" />
+          )}
+        </Link>
+
+        <div className="xaaj-blog-card-copy">
+          <h3><Link to={`/blog/${post.slug}`}>{post.title}</Link></h3>
+          <span className="xaaj-blog-card-home-date">{formatBlogDate(post.publishDate)}</span>
+          {post.excerpt && <p>{post.excerpt}</p>}
+        </div>
+      </article>
+    )
+  }
+
   return (
     <article className="xaaj-blog-card xaaj-blog-fade" style={{ animationDelay: `${Math.min(index * 70, 350)}ms` }}>
       <Link to={`/blog/${post.slug}`} className="xaaj-blog-card-image" aria-label={`Read ${post.title}`}>
@@ -7270,27 +8983,22 @@ function BlogSection() {
   const visiblePosts = posts.filter(post => post?.isPublished !== false).slice(0, 3)
 
   return (
-    <section className="xaaj-blog-shell" data-xaaj-reveal="up">
+    <section className="xaaj-blog-shell xaaj-blog-home-shell" data-xaaj-reveal="up" style={{ background: '#fff', marginTop: 0, marginBottom: 0, border: 0 }}>
       <BlogDesignStyles />
 
       <div className="xaaj-blog-content xaaj-blog-home-content">
-        <div className="xaaj-blog-content-head">
-          <div>
-            <span className="xaaj-blog-kicker" style={{ color: '#77736b' }}>From our blog</span>
-            <h2>Stories for beautiful living</h2>
-            <p>Ideas, inspiration and thoughtful rituals for a more beautiful everyday.</p>
-          </div>
-          <Link to="/blog" className="xaaj-blog-read">View all stories <ArrowRight size={14} /></Link>
+        <div className="xaaj-blog-home-heading">
+          <h2>From the magazine</h2>
         </div>
 
         {loading ? (
-          <div className="xaaj-blog-grid">
+          <div className="xaaj-blog-grid xaaj-blog-home-grid">
             {[1, 2, 3].map(item => <div className="xaaj-blog-skeleton" key={item} />)}
           </div>
         ) : visiblePosts.length ? (
-          <div className="xaaj-blog-grid">
+          <div className="xaaj-blog-grid xaaj-blog-home-grid">
             {visiblePosts.map((post, index) => (
-              <BlogCard key={post.id || post.slug || index} post={post} index={index} />
+              <BlogCard key={post.id || post.slug || index} post={post} index={index} homeVariant />
             ))}
           </div>
         ) : (
@@ -7358,130 +9066,188 @@ function BlogPage() {
         </div>
       </main>
 
-      <Newsletter />
+      {/* Legacy standalone Newsletter preserved below; reference subscribe is now inside Footer. */}
       <Footer />
     </>
   )
 }
 
 function BlogArticle({ slug }) {
-  const [post, setPost] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const initialFallback = fallbackBlogPosts.find(item => item.slug === slug) || null
+  const [post, setPost] = useState(initialFallback)
+  const [loading, setLoading] = useState(!initialFallback)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     let cancelled = false
+    let timeoutId = null
 
     async function loadBlog() {
+      setLoadError('')
+
+      // A known local article is rendered immediately so the route never
+      // becomes a blank page while the backend request is in flight.
+      const localFallback = fallbackBlogPosts.find(item => item.slug === slug) || null
+      if (!cancelled && localFallback) {
+        setPost(localFallback)
+        setLoading(false)
+      }
+
       try {
-        const result = await apiRequest(`/blogs/${encodeURIComponent(slug)}`)
-        const rawPost = result?.data?.blog || result?.blog || result?.data || result
+        const request = apiRequest(`/blogs/${encodeURIComponent(slug)}`)
+        const timeout = new Promise((_, reject) => {
+          timeoutId = window.setTimeout(() => reject(new Error('Blog request timed out')), 8000)
+        })
+
+        const result = await Promise.race([request, timeout])
+        const rawData = result?.data
+        const rawPost =
+          rawData?.blog ||
+          rawData?.post ||
+          rawData?.article ||
+          (Array.isArray(rawData) ? rawData.find(item => item?.slug === slug || item?.id === slug) : null) ||
+          result?.blog ||
+          result?.post ||
+          result?.article ||
+          (Array.isArray(result) ? result.find(item => item?.slug === slug || item?.id === slug) : null) ||
+          rawData ||
+          result
+
         const livePost = normalizeBlogPost(rawPost)
 
         if (!cancelled && livePost?.title) {
           setPost(livePost)
-          return
+          setLoadError('')
+        } else if (!cancelled && !localFallback) {
+          setPost(null)
+          setLoadError('This blog story could not be found.')
         }
-
-        const fallback = fallbackBlogPosts.find(item => item.slug === slug)
-        if (!cancelled) setPost(fallback || null)
       } catch (error) {
+        console.error('Blog article load error:', error)
         if (!cancelled) {
-          console.error('Blog article load error:', error)
-          const fallback = fallbackBlogPosts.find(item => item.slug === slug)
-          setPost(fallback || null)
+          const localFallback = fallbackBlogPosts.find(item => item.slug === slug) || null
+          setPost(localFallback)
+          if (!localFallback) {
+            setLoadError('Unable to load this blog story. Please check the blog API and slug.')
+          }
         }
       } finally {
+        if (timeoutId) window.clearTimeout(timeoutId)
         if (!cancelled) setLoading(false)
       }
     }
 
     loadBlog()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      if (timeoutId) window.clearTimeout(timeoutId)
+    }
   }, [slug])
-
-  if (loading) {
-    return (
-      <>
-        <Header />
-        <BlogDesignStyles />
-        <main className="xaaj-blog-article-shell">
-          <div className="xaaj-blog-article"><span className="xaaj-blog-category">Blog</span><h1 style={{ fontFamily: 'Georgia, serif', fontWeight: 400 }}>Loading story...</h1></div>
-        </main>
-        <Footer />
-      </>
-    )
-  }
-
-  if (!post) {
-    return (
-      <>
-        <Header />
-        <BlogDesignStyles />
-        <main className="xaaj-blog-article-shell">
-          <div className="xaaj-blog-article">
-            <span className="xaaj-blog-category">Blog</span>
-            <h1 style={{ fontFamily: 'Georgia, serif', fontWeight: 400 }}>Story not found.</h1>
-            <p style={{ color: '#77736b', marginTop: 14 }}>This story may have been unpublished or the link may be incorrect.</p>
-            <Button to="/blog">Back to blog</Button>
-          </div>
-        </main>
-        <Footer />
-      </>
-    )
-  }
-
-  const contentParts = String(post.content || '').split(/\n{2,}/).map(part => part.trim()).filter(Boolean)
 
   return (
     <>
       <Header />
       <BlogDesignStyles />
 
-      <main className="xaaj-blog-article-shell">
-        <article className="xaaj-blog-article">
+      <main
+        className="xaaj-blog-article-shell"
+        data-xaaj-blog-route-root="article"
+        style={{ background: '#fff', display: 'block', minHeight: '70vh' }}
+      >
+        <article className="xaaj-blog-article" style={{ opacity: 1, visibility: 'visible', transform: 'none', display: 'block' }}>
           <div className="xaaj-blog-breadcrumbs">
-            <Link to="/">Home</Link><span>/</span><Link to="/blog">Blog</Link><span>/</span><span>{post.title}</span>
+            <Link to="/">Home</Link>
+            <span>/</span>
+            <Link to="/blog">Blog</Link>
+            <span>/</span>
+            <span>{post?.title || slug}</span>
           </div>
 
-          <header className="xaaj-blog-article-header xaaj-blog-fade">
-            <span className="xaaj-blog-category">{post.category}</span>
-            <h1>{post.title}</h1>
-            <div className="xaaj-blog-article-meta">
-              <span>By {post.author}</span><span>•</span><span>{formatBlogDate(post.publishDate)}</span>
-            </div>
-          </header>
-
-          {post.coverImage && (
-            <div className="xaaj-blog-article-cover xaaj-blog-fade xaaj-blog-fade-delay">
-              <img src={post.coverImage} alt={post.title} />
-            </div>
-          )}
-
-          <div className="xaaj-blog-article-body">
-            {post.excerpt && <p className="xaaj-blog-article-excerpt">{post.excerpt}</p>}
-            <div className="xaaj-blog-article-content">
-              {contentParts.map((paragraph, index) => (
-                <div key={index}>
-                  {paragraph.split('\n').map((line, lineIndex) => {
-                    const trimmed = line.trim()
-                    if (!trimmed) return null
-                    if (/^#{1,3}\s/.test(trimmed)) {
-                      return <h2 key={lineIndex}>{trimmed.replace(/^#{1,3}\s/, '')}</h2>
-                    }
-                    return <p key={lineIndex}>{trimmed}</p>
-                  })}
+          {loading && !post ? (
+            <section style={{ padding: '70px 0 120px', textAlign: 'center' }}>
+              <span className="xaaj-blog-category">Blog</span>
+              <h1 style={{
+                margin: '18px auto 0',
+                maxWidth: '860px',
+                fontFamily: "'Cormorant Garamond', Georgia, 'Times New Roman', serif",
+                fontSize: 'clamp(42px, 6vw, 76px)',
+                fontWeight: 400,
+                lineHeight: 1,
+                color: '#292825'
+              }}>
+                Loading story...
+              </h1>
+            </section>
+          ) : post ? (
+            <>
+              <header className="xaaj-blog-article-header" style={{ opacity: 1, visibility: 'visible' }}>
+                <span className="xaaj-blog-category">{post.category}</span>
+                <h1>{post.title}</h1>
+                <div className="xaaj-blog-article-meta">
+                  <span>By {post.author}</span>
+                  <span>•</span>
+                  <span>{formatBlogDate(post.publishDate)}</span>
                 </div>
-              ))}
-            </div>
-          </div>
+              </header>
 
-          <div className="xaaj-blog-article-back">
-            <Link to="/blog"><ArrowRight size={14} style={{ transform: 'rotate(180deg)' }} /> Back to all stories</Link>
-          </div>
+              {post.coverImage && (
+                <div className="xaaj-blog-article-cover" style={{ opacity: 1, visibility: 'visible' }}>
+                  <img src={post.coverImage} alt={post.title} />
+                </div>
+              )}
+
+              <div className="xaaj-blog-article-body">
+                {post.excerpt && <p className="xaaj-blog-article-excerpt">{post.excerpt}</p>}
+                <div className="xaaj-blog-article-content">
+                  {String(post.content || '')
+                    .split(/\n{2,}/)
+                    .map(part => part.trim())
+                    .filter(Boolean)
+                    .map((paragraph, index) => (
+                      <div key={index}>
+                        {paragraph.split('\n').map((line, lineIndex) => {
+                          const trimmed = line.trim()
+                          if (!trimmed) return null
+                          if (/^#{1,3}\s/.test(trimmed)) {
+                            return <h2 key={lineIndex}>{trimmed.replace(/^#{1,3}\s/, '')}</h2>
+                          }
+                          return <p key={lineIndex}>{trimmed}</p>
+                        })}
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              <div className="xaaj-blog-article-back">
+                <Link to="/blog">
+                  <ArrowRight size={14} style={{ transform: 'rotate(180deg)' }} />
+                  Back to all stories
+                </Link>
+              </div>
+            </>
+          ) : (
+            <section style={{ padding: '70px 0 120px', textAlign: 'center' }}>
+              <span className="xaaj-blog-category">Blog</span>
+              <h1 style={{
+                margin: '18px auto 0',
+                maxWidth: '860px',
+                fontFamily: "'Cormorant Garamond', Georgia, 'Times New Roman', serif",
+                fontSize: 'clamp(42px, 6vw, 76px)',
+                fontWeight: 400,
+                lineHeight: 1,
+                color: '#292825'
+              }}>
+                Story not found.
+              </h1>
+              <p style={{ color: '#77736b', marginTop: 18 }}>
+                {loadError || 'This story may have been unpublished or the link may be incorrect.'}
+              </p>
+              <Button to="/blog">Back to blog</Button>
+            </section>
+          )}
         </article>
       </main>
 
-      <Newsletter />
       <Footer />
     </>
   )
@@ -7490,6 +9256,493 @@ function BlogArticle({ slug }) {
 // ============================================================
 // MAIN APP ROUTING
 // ============================================================
+
+
+// ==========================================================
+// XAAJ BRAND STORY — FULL STORY PAGE
+// ==========================================================
+
+function BrandStoryPage() {
+  const [brandStoryMedia, setBrandStoryMedia] = useState({
+    url: tableImage,
+    mediaType: 'image',
+    alt: 'XAAJ handcrafted tableware arranged on a dining table'
+  })
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadBrandStoryMedia = async () => {
+      try {
+        const result = await apiRequest('/cms/brand-story')
+
+        const raw =
+          result?.data?.brandStory ||
+          result?.data?.story ||
+          result?.data?.item ||
+          result?.brandStory ||
+          result?.story ||
+          result?.item ||
+          result?.data ||
+          result ||
+          null
+
+        const item = Array.isArray(raw)
+          ? raw.find(entry => entry && typeof entry === 'object')
+          : raw && typeof raw === 'object'
+            ? raw
+            : null
+
+        if (!item || cancelled) return
+
+        const url =
+          item.mediaUrl ||
+          item.image ||
+          item.imageUrl ||
+          item.videoUrl ||
+          item.url ||
+          ''
+
+        if (!url) return
+
+        const enabled =
+          item.enabled !== undefined
+            ? Boolean(item.enabled)
+            : item.isActive !== undefined
+              ? Boolean(item.isActive)
+              : true
+
+        if (!enabled) return
+
+        setBrandStoryMedia({
+          url,
+          mediaType: getBrandStoryMediaType(url, item.mediaType),
+          alt: item.alt || item.title || 'XAAJ brand story'
+        })
+      } catch (error) {
+        console.error('Brand story media load error:', error)
+      }
+    }
+
+    loadBrandStoryMedia()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return (
+    <>
+      <Header />
+
+      <style>{`
+        .xaaj-story-page{
+          --story-ink:#2d2a26;
+          --story-muted:#6f6a62;
+          --story-line:rgba(45,42,38,.14);
+          background:#ffffff;
+          color:var(--story-ink);
+          min-height:100vh;
+          padding:52px 0 84px;
+        }
+
+        .xaaj-story-page,
+        .xaaj-story-page *{
+          box-sizing:border-box;
+        }
+
+        .xaaj-story-layout{
+          width:min(1140px,calc(100% - 48px));
+          margin:0 auto;
+          display:grid;
+          grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+          gap:14px;
+          align-items:stretch;
+        }
+
+        .xaaj-story-visual{
+          position:relative;
+          min-width:0;
+          min-height:0;
+          height:auto;
+          align-self:stretch;
+          background:#eee9e1;
+          border:1px solid rgba(48,45,40,.14);
+          border-radius:7px;
+          overflow:hidden;
+        }
+
+        .xaaj-story-visual-media{
+          position:absolute;
+          inset:0;
+          width:100%;
+          height:100%;
+          display:block;
+          object-fit:cover;
+          object-position:center;
+        }
+
+        .xaaj-story-visual-caption{
+          position:absolute;
+          z-index:2;
+          left:26px;
+          bottom:25px;
+          color:rgba(255,255,255,.84);
+          font-family:'Gotham Book','Gotham',Arial,sans-serif;
+          font-size:8px;
+          line-height:1;
+          letter-spacing:2.5px;
+          text-transform:uppercase;
+          text-shadow:0 1px 12px rgba(0,0,0,.22);
+          pointer-events:none;
+        }
+
+        .xaaj-story-copy-column{
+          min-width:0;
+          background:#ffffff;
+          border:1px solid rgba(48,45,40,.14);
+          border-radius:7px;
+          padding:68px clamp(34px,5vw,72px) 72px;
+        }
+
+        .xaaj-story-copy-inner{
+          width:min(100%,500px);
+          margin:0 auto;
+        }
+
+        .xaaj-story-eyebrow{
+          display:flex;
+          align-items:center;
+          gap:12px;
+          margin:0 0 22px;
+          color:#8b847b;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif;
+          font-size:8px;
+          line-height:1;
+          font-weight:500;
+          letter-spacing:2.8px;
+          text-transform:uppercase;
+        }
+
+        .xaaj-story-eyebrow::before{
+          content:'';
+          width:30px;
+          height:1px;
+          background:currentColor;
+          flex:0 0 auto;
+        }
+
+        .xaaj-story-copy-column h1{
+          margin:0;
+          max-width:540px;
+          color:#302d28;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif;
+          font-size:clamp(42px,4.8vw,68px);
+          font-weight:400;
+          line-height:.95;
+          letter-spacing:-.05em;
+        }
+
+        .xaaj-story-intro{
+          margin:30px 0 0;
+          max-width:500px;
+          color:#6d675f;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif;
+          font-size:12px;
+          line-height:1.9;
+        }
+
+        .xaaj-story-intro p,
+        .xaaj-story-section p{
+          margin:0;
+        }
+
+        .xaaj-story-intro p + p{
+          margin-top:17px;
+        }
+
+        .xaaj-story-divider{
+          width:100%;
+          height:1px;
+          margin:48px 0 44px;
+          background:var(--story-line);
+        }
+
+        .xaaj-story-section{
+          max-width:500px;
+        }
+
+        .xaaj-story-section + .xaaj-story-section{
+          margin-top:48px;
+          padding-top:44px;
+          border-top:1px solid var(--story-line);
+        }
+
+        .xaaj-story-section h2{
+          margin:0 0 20px;
+          color:#302d28;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif;
+          font-size:clamp(28px,3vw,43px);
+          font-weight:400;
+          line-height:1;
+          letter-spacing:-.045em;
+        }
+
+        .xaaj-story-section p{
+          color:#6d675f;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif;
+          font-size:12px;
+          line-height:1.9;
+        }
+
+        .xaaj-story-section p + p{
+          margin-top:17px;
+        }
+
+        .xaaj-story-moments{
+          display:flex;
+          flex-wrap:wrap;
+          gap:8px 17px;
+          margin:24px 0 20px;
+          color:#514c45;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif;
+          font-size:10px;
+          line-height:1.7;
+          letter-spacing:.02em;
+        }
+
+        .xaaj-story-moments span{
+          position:relative;
+        }
+
+        .xaaj-story-moments span:not(:last-child)::after{
+          content:'·';
+          position:absolute;
+          right:-11px;
+          color:#a49d93;
+        }
+
+        .xaaj-story-back{
+          display:inline-flex;
+          align-items:center;
+          gap:8px;
+          margin-top:52px;
+          padding-bottom:8px;
+          border-bottom:1px solid #2d2a26;
+          color:#2d2a26;
+          text-decoration:none;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif;
+          font-size:8px;
+          font-weight:500;
+          letter-spacing:1.8px;
+          text-transform:uppercase;
+        }
+
+        .xaaj-story-back svg{
+          transition:transform .25s ease;
+        }
+
+        .xaaj-story-back:hover svg{
+          transform:translateX(4px);
+        }
+
+        @media(max-width:900px){
+          .xaaj-story-page{
+            padding:42px 0 68px;
+          }
+
+          .xaaj-story-layout{
+            width:calc(100% - 28px);
+            grid-template-columns:1fr;
+            gap:12px;
+          }
+
+          .xaaj-story-visual{
+            position:relative;
+            top:auto;
+            height:520px;
+            min-height:520px;
+          }
+
+          .xaaj-story-copy-column{
+            padding:54px 32px 60px;
+          }
+        }
+
+        @media(max-width:560px){
+          .xaaj-story-page{
+            padding:32px 0 54px;
+          }
+
+          .xaaj-story-layout{
+            width:calc(100% - 20px);
+            gap:10px;
+          }
+
+          .xaaj-story-visual{
+            height:420px;
+            border-radius:6px;
+          }
+
+          .xaaj-story-visual-caption{
+            left:18px;
+            bottom:18px;
+            font-size:7px;
+            letter-spacing:2px;
+          }
+
+          .xaaj-story-copy-column{
+            border-radius:6px;
+            padding:42px 21px 50px;
+          }
+
+          .xaaj-story-eyebrow{
+            margin-bottom:20px;
+            font-size:7px;
+            letter-spacing:2.3px;
+          }
+
+          .xaaj-story-eyebrow::before{
+            width:23px;
+          }
+
+          .xaaj-story-copy-column h1{
+            font-size:clamp(40px,13vw,56px);
+          }
+
+          .xaaj-story-intro{
+            margin-top:25px;
+            font-size:11.5px;
+            line-height:1.85;
+          }
+
+          .xaaj-story-divider{
+            margin:40px 0 36px;
+          }
+
+          .xaaj-story-section + .xaaj-story-section{
+            margin-top:40px;
+            padding-top:36px;
+          }
+
+          .xaaj-story-section h2{
+            margin-bottom:17px;
+            font-size:31px;
+          }
+
+          .xaaj-story-section p{
+            font-size:11.5px;
+            line-height:1.85;
+          }
+
+          .xaaj-story-moments{
+            gap:7px 15px;
+            margin:21px 0 18px;
+            font-size:9.5px;
+          }
+
+          .xaaj-story-back{
+            margin-top:44px;
+          }
+        }
+      `}</style>
+
+      <main className="xaaj-story-page">
+        <section className="xaaj-story-layout" aria-label="XAAJ brand story">
+          <div className="xaaj-story-visual">
+            {brandStoryMedia.mediaType === 'video' ? (
+              <video
+                className="xaaj-story-visual-media"
+                src={brandStoryMedia.url}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                aria-label={brandStoryMedia.alt}
+              />
+            ) : (
+              <img
+                className="xaaj-story-visual-media"
+                src={brandStoryMedia.url}
+                alt={brandStoryMedia.alt}
+              />
+            )}
+
+            <span className="xaaj-story-visual-caption">
+              Made by hand · Designed for now
+            </span>
+          </div>
+
+          <div className="xaaj-story-copy-column">
+            <div className="xaaj-story-copy-inner">
+              <span className="xaaj-story-eyebrow">Our story</span>
+
+              <h1>India, Made for the Table.</h1>
+
+              <div className="xaaj-story-intro">
+                <p>
+                  A little clay.<br />
+                  A lot of character.<br />
+                  And a story in every piece.
+                </p>
+
+                <p>
+                  XAAJ is contemporary crockery rooted in the colours,
+                  crafts and everyday beauty of India.
+                </p>
+
+                <p>
+                  Made by hand. Designed for now.<br />
+                  Meant to be used, loved and lived with.
+                </p>
+              </div>
+
+              <div className="xaaj-story-divider" aria-hidden="true" />
+
+              <article className="xaaj-story-section">
+                <h2>The beauty of India, served differently.</h2>
+
+                <p>
+                  We find inspiration in the things that surround us—old crafts,
+                  familiar colours, everyday rituals, places and people.
+                </p>
+
+                <p>Then we give them a new form.</p>
+
+                <p>
+                  Pieces with a sense of where they come from,
+                  and a place in how you live today.
+                </p>
+              </article>
+
+              <article className="xaaj-story-section">
+                <h2>Made to gather stories.</h2>
+
+                <div className="xaaj-story-moments" aria-label="Everyday moments">
+                  <span>Morning chai</span>
+                  <span>Long lunches</span>
+                  <span>Festive dinners</span>
+                  <span>Midnight conversations</span>
+                </div>
+
+                <p>Because a table is never just a table.</p>
+                <p>It is where life happens.</p>
+              </article>
+
+              <Link className="xaaj-story-back" to="/">
+                Back to the table <ArrowRight size={14} />
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </>
+  )
+}
+
 
 function App() {
 
@@ -7510,6 +9763,58 @@ function App() {
   const location = useLocation()
   const path = location.pathname
   const navigate = useNavigate()
+
+  // Reset the page to the top whenever the route OR query string changes.
+  // This is important for category links such as:
+  // /shop?category=Dinnerware -> /shop?category=Serveware
+  // because React Router keeps the same pathname while location.search changes.
+  // Also reset ScrollSmoother's internal position when it is active.
+  useLayoutEffect(() => {
+    const resetScroll = () => {
+      try {
+        const smoother = ScrollSmoother.get()
+        if (smoother) {
+          if (typeof smoother.scrollTop === 'function') {
+            smoother.scrollTop(0)
+          }
+          if (typeof smoother.scrollTo === 'function') {
+            smoother.scrollTo(0, true)
+          }
+        }
+      } catch (error) {
+        console.debug('ScrollSmoother reset skipped:', error)
+      }
+
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
+    }
+
+    try {
+      if ('scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'manual'
+      }
+    } catch {
+      // Ignore browsers that do not expose scrollRestoration.
+    }
+
+    // Run once immediately and again after React paints so late layout
+    // changes cannot restore the previous scroll position.
+    resetScroll()
+    const frame = window.requestAnimationFrame(resetScroll)
+    const timer = window.setTimeout(resetScroll, 60)
+
+    try {
+      ScrollTrigger.refresh()
+    } catch {
+      // Ignore refresh failures during route transitions.
+    }
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.clearTimeout(timer)
+    }
+  }, [location.pathname, location.search])
 
   const previewQueryActive =
     new URLSearchParams(location.search).get('xaajPreview') === '1'
@@ -8717,6 +11022,15 @@ function App() {
   // ABOUT US — PREMIUM BRAND EXPERIENCE
   // ==========================================================
 
+  
+  // ==========================================================
+  // XAAJ BRAND STORY
+  // ==========================================================
+
+  if (path === '/story') {
+    return <BrandStoryPage />
+  }
+
   if (path === '/about') {
     return (
       <>
@@ -8783,7 +11097,7 @@ function App() {
           .xaaj-about-hero h1 {
             max-width: 620px;
             margin: 0;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: clamp(55px, 6.5vw, 94px);
             font-weight: 400;
             line-height: .91;
@@ -8832,7 +11146,7 @@ function App() {
             right: 30px;
             bottom: 25px;
             color: rgba(37,35,31,.20);
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: 74px;
             line-height: 1;
           }
@@ -8880,7 +11194,7 @@ function App() {
           .xaaj-about-hero-badge strong {
             display: block;
             margin-bottom: 2px;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: 20px;
             font-weight: 400;
             letter-spacing: 0;
@@ -8909,7 +11223,7 @@ function App() {
           .xaaj-about-intro h2 {
             max-width: 870px;
             margin: 0;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: clamp(40px, 5.4vw, 72px);
             font-weight: 400;
             line-height: .99;
@@ -8951,7 +11265,7 @@ function App() {
 
           .xaaj-about-stat strong {
             display: block;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: 25px;
             font-weight: 400;
           }
@@ -9009,7 +11323,7 @@ function App() {
           .xaaj-about-story-copy h2 {
             max-width: 590px;
             margin: 22px 0 0;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: clamp(42px, 5vw, 68px);
             font-weight: 400;
             line-height: .98;
@@ -9031,7 +11345,7 @@ function App() {
           .xaaj-about-story-signature {
             margin-top: 38px;
             color: rgba(255,255,255,.38);
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: 22px;
             font-style: italic;
           }
@@ -9056,7 +11370,7 @@ function App() {
           .xaaj-about-values h2 {
             max-width: 760px;
             margin: 18px 0 0;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: clamp(43px, 5.5vw, 73px);
             font-weight: 400;
             line-height: .97;
@@ -9100,7 +11414,7 @@ function App() {
 
           .xaaj-about-value h3 {
             margin: 80px 0 11px;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: 27px;
             font-weight: 400;
           }
@@ -9130,7 +11444,7 @@ function App() {
             top: 50%;
             transform: translate(-50%, -53%);
             color: rgba(37,35,31,.045);
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: clamp(150px, 27vw, 400px);
             line-height: 1;
             white-space: nowrap;
@@ -9145,7 +11459,7 @@ function App() {
           .xaaj-about-cta h2 {
             max-width: 850px;
             margin: 20px auto 0;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: clamp(48px, 6.3vw, 84px);
             font-weight: 400;
             line-height: .94;
@@ -9431,7 +11745,7 @@ function App() {
 
           .xaaj-about-stat span {
             margin-top: 32px !important;
-            font-family: Georgia, 'Times New Roman', serif !important;
+            font-family:'Gotham Book','Gotham',Arial,sans-serifimportant;
             font-size: 17px !important;
             color: #35332e !important;
           }
@@ -9662,7 +11976,7 @@ function App() {
 
           .xaaj-about-stat span {
             margin-top: 31px;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: 17px;
             letter-spacing: 0;
             text-transform: none;
@@ -10043,7 +12357,7 @@ function App() {
 
         </main>
 
-        <Newsletter />
+        {/* Legacy standalone Newsletter preserved below; reference subscribe is now inside Footer. */}
         <Footer />
       </>
     )
@@ -12400,7 +14714,7 @@ function App() {
             position: absolute;
             right: 2vw;
             bottom: -18vw;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: clamp(300px, 43vw, 700px);
             font-weight: 400;
             line-height: .72;
@@ -12444,7 +14758,7 @@ function App() {
           .xaaj-contact-hero h1 {
             max-width: 850px;
             margin: 22px 0 0;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: clamp(60px, 8.2vw, 118px);
             font-weight: 400;
             line-height: .79;
@@ -12543,7 +14857,7 @@ function App() {
 
           .xaaj-contact-form-head h2 {
             margin: 0;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: clamp(42px, 5vw, 70px);
             font-weight: 400;
             line-height: .9;
@@ -12735,7 +15049,7 @@ function App() {
             position: absolute;
             right: -35px;
             bottom: -60px;
-            font-family: Georgia, serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: 300px;
             line-height: .7;
             color: transparent;
@@ -12777,7 +15091,7 @@ function App() {
 
           .xaaj-contact-care h3 {
             margin: 0;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: clamp(34px, 3.3vw, 48px);
             font-weight: 400;
             line-height: .93;
@@ -12900,7 +15214,7 @@ function App() {
             margin: 0 auto 18px;
             border: 1px solid #d9d0c5;
             color: #a84d35;
-            font-family: Georgia, serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: 22px;
           }
 
@@ -12916,7 +15230,7 @@ function App() {
           .xaaj-contact-popup-card h3 {
             margin: 0 0 13px;
             color: #292824;
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: 30px;
             font-weight: 400;
           }
@@ -13117,9 +15431,38 @@ function App() {
           </section>
         </main>
 
-        <Newsletter />
+        {/* Legacy standalone Newsletter preserved below; reference subscribe is now inside Footer. */}
         <Footer />
-      </>
+  
+      <style id="xaaj-gotham-book-global">{`
+        :root{
+          --xaaj-heading-font:'Gotham Book','Gotham',Arial,sans-serif;
+          --xaaj-body-font:'Gotham Book','Gotham',Arial,sans-serif;
+          --blog-serif:'Gotham Book','Gotham',Arial,sans-serif;
+        }
+
+        html,
+        body,
+        #root,
+        #root *{
+          font-family:'Gotham Book','Gotham',Arial,sans-serif !important;
+        }
+
+        input,
+        textarea,
+        select,
+        option,
+        button{
+          font-family:'Gotham Book','Gotham',Arial,sans-serif !important;
+        }
+
+        html{
+          -webkit-font-smoothing:antialiased;
+          -moz-osx-font-smoothing:grayscale;
+          text-rendering:optimizeLegibility;
+        }
+      `}</style>
+    </>
     )
   }
 
@@ -13181,8 +15524,20 @@ function App() {
 function SmoothScrollShell({ children }) {
   const main = useRef(null)
   const smoother = useRef(null)
+  const isBlogRoute =
+    typeof window !== 'undefined' &&
+    (window.location.pathname === '/blog' || window.location.pathname.startsWith('/blog/'))
 
   useLayoutEffect(() => {
+    // Blog pages intentionally bypass ScrollSmoother. The editorial blog
+    // layout needs normal document flow so the header/article cannot be
+    // pushed into or hidden by a transformed smooth-scroll container.
+    if (isBlogRoute) return undefined
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return undefined
+    }
+
     const wrapper = main.current
     const content = wrapper?.querySelector('#smooth-content')
 
@@ -13190,42 +15545,41 @@ function SmoothScrollShell({ children }) {
       return undefined
     }
 
-    const reducedMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)'
-    ).matches
+    smoother.current = ScrollSmoother.create({
+      wrapper,
+      content,
+      smooth: 1.25,
+      effects: true,
+      normalizeScroll: false,
+      ignoreMobileResize: true
+    })
 
-    // Respect the user's accessibility preference.
-    if (reducedMotion) {
-      return undefined
-    }
-
-    // Phones use the browser's native scroll completely.
-    // Do not run ScrollSmoother on touch devices — it can make
-    // finger scrolling feel delayed, sticky or heavy.
-    if (window.matchMedia('(max-width: 850px)').matches) {
-      return undefined
-    }
-
-    const ctx = gsap.context(() => {
-      smoother.current = ScrollSmoother.create({
-        wrapper,
-        content,
-        smooth: 1.2,
-        effects: true,
-        normalizeScroll: false,
-        ignoreMobileResize: true,
-        preventDefault: false
-      })
-
-      ScrollTrigger.refresh()
-    }, wrapper)
+    ScrollTrigger.refresh()
 
     return () => {
       smoother.current?.kill()
       smoother.current = null
-      ctx.revert()
     }
-  }, [])
+  }, [isBlogRoute])
+
+  if (isBlogRoute) {
+    return (
+      <>
+        <style>{`
+          html, body, #root {
+            min-height: 100%;
+            background: #fff !important;
+          }
+          body {
+            overflow-x: hidden !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+          }
+        `}</style>
+        {children}
+      </>
+    )
+  }
 
   return (
     <div
@@ -13233,118 +15587,29 @@ function SmoothScrollShell({ children }) {
       ref={main}
       className="xaaj-smooth-wrapper"
     >
-      <div
-        id="smooth-content"
-        className="xaaj-smooth-content"
-      >
+      <div id="smooth-content" className="xaaj-smooth-content">
         {children}
       </div>
 
       <style>{`
-        /* ==================================================
-           GLOBAL SMOOTH SCROLL
-           ================================================== */
-
         html {
           scroll-behavior: auto;
         }
 
-        body {
-          margin: 0;
-          width: 100%;
-          min-height: 100%;
-        }
-
-        #root {
-          width: 100%;
-          min-height: 100vh;
-        }
-
         .xaaj-smooth-wrapper {
-          position: relative;
           width: 100%;
           min-height: 100vh;
         }
 
         .xaaj-smooth-content {
-          position: relative;
           width: 100%;
           min-height: 100vh;
           overflow: visible;
-          will-change: transform;
         }
-
-
-        /* ==================================================
-           MOBILE
-           ================================================== */
-
-        @media (max-width: 850px) {
-
-          .xaaj-smooth-wrapper {
-            width: 100%;
-            min-height: 100svh;
-          }
-
-          .xaaj-smooth-content {
-            width: 100%;
-            min-height: 100svh;
-            overflow: visible;
-            transform: none !important;
-            will-change: auto !important;
-          }
-
-          /* Keep product grids stable on mobile. */
-          .product-grid {
-            width: 100% !important;
-            min-width: 0 !important;
-            grid-template-columns:
-              repeat(2, minmax(0, 1fr)) !important;
-            gap: 18px 10px !important;
-          }
-
-          .shop-grid {
-            width: 100% !important;
-            min-width: 0 !important;
-            grid-template-columns:
-              repeat(2, minmax(0, 1fr)) !important;
-          }
-
-          .product-grid > * {
-            min-width: 0 !important;
-          }
-        }
-
-
-        /* ==================================================
-           SMALL PHONES
-           ================================================== */
-
-        @media (max-width: 480px) {
-
-          .product-grid {
-            gap: 16px 8px !important;
-          }
-
-          .shop-grid {
-            gap: 16px 8px !important;
-          }
-        }
-
-
-        /* ==================================================
-           REDUCED MOTION
-           ================================================== */
 
         @media (prefers-reduced-motion: reduce) {
-
-          html {
-            scroll-behavior: auto !important;
-          }
-
           .xaaj-smooth-content {
             transform: none !important;
-            will-change: auto !important;
           }
         }
       `}</style>
@@ -13366,6 +15631,86 @@ export default function AppRoot() {
       <StoreProvider>
 
         <BrowserRouter>
+
+          <style id="xaaj-white-section-surfaces">{`
+            html, body, #root,
+            .xaaj-smooth-wrapper, .xaaj-smooth-content {
+              background: #ffffff !important;
+            }
+
+            /* Main page surfaces — pure white, like the cart page. */
+            main.xaaj-cinema-home,
+            main.xaaj-shop-ref,
+            main.xaaj-product-page,
+            main.policy-page,
+            main.xaaj-auth-page,
+            main.xaaj-blog-shell,
+            main.xaaj-blog-article-shell,
+            main.xaaj-about,
+            main.xaaj-contact-page,
+            .xaaj-reference-hero,
+            .xaaj-hero-product-showcase,
+            .xaaj-brand-story-split,
+            .xaaj-horeca-bundled,
+            .xaaj-cinema-intro,
+            .xaaj-cinema-intro-copy,
+            .xaaj-cinema-category,
+            .xaaj-cinema-quote,
+            .xaaj-cinema-products,
+            .xaaj-collection-story-carousel,
+            .xaaj-collection-story-copy,
+            .xaaj-category-gallery,
+            .xaaj-values-strip,
+            .xaaj-cart-page,
+            .xaaj-blog-home-shell,
+            .xaaj-blog-home-content {
+              background: #ffffff !important;
+            }
+
+            /* White content panels inside those sections. */
+            .xaaj-brand-story-split-copy,
+            .xaaj-blog-feature,
+            .xaaj-blog-card,
+            .xaaj-blog-card-home,
+            .xaaj-blog-card-home .xaaj-blog-card-copy,
+            .xaaj-contact-form-head,
+            .xaaj-contact-form-grid {
+              background: #ffffff !important;
+            }
+
+            /* Keep the main header/nav white even while cart/navigation overlays are active. */
+            .xaaj-ref-header-shell,
+            .xaaj-ref-header-shell .xaaj-ref-header,
+            .xaaj-ref-header-shell.xaaj-home-header,
+            .xaaj-ref-header-shell.xaaj-home-header.is-scrolled .xaaj-ref-header {
+              background: #ffffff !important;
+            }
+          `}</style>
+
+          <style id="xaaj-nav-premium-typography">{`
+            .xaaj-ref-main-nav a{
+              font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+              font-size:13px!important;
+              line-height:1.2!important;
+              font-weight:400!important;
+              letter-spacing:.12px!important;
+              text-transform:none!important;
+            }
+
+            @media(max-width:850px){
+              .xaaj-ref-main-nav a{
+                font-size:12px!important;
+                letter-spacing:.08px!important;
+              }
+            }
+
+            @media(max-width:520px){
+              .xaaj-ref-main-nav a{
+                font-size:11px!important;
+                letter-spacing:.05px!important;
+              }
+            }
+          `}</style>
 
           <SmoothScrollShell>
 

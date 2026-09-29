@@ -25,10 +25,12 @@ export async function apiRequest(
     options.headers || {}
   )
 
-  // JSON Content-Type only when body exists
+  // JSON Content-Type only for normal JSON bodies.
+  // For FormData uploads, the browser must set the multipart boundary.
   if (
     !headers.has('Content-Type') &&
-    options.body
+    options.body &&
+    !(typeof FormData !== 'undefined' && options.body instanceof FormData)
   ) {
     headers.set(
       'Content-Type',
@@ -357,6 +359,49 @@ export const cmsService = {
       {
         method: 'PUT',
         body: JSON.stringify(data)
+      }
+    )
+,
+
+  // ----------------------------------------------------------
+  // Get category-wise homepage hero media
+  // ----------------------------------------------------------
+
+  getCategoryHero: () =>
+    apiRequest('/cms/category-hero'),
+
+  // ----------------------------------------------------------
+  // Admin: get category-wise homepage hero media
+  // ----------------------------------------------------------
+
+  getCategoryHeroAdmin: () =>
+    apiRequest('/cms/category-hero/admin'),
+
+  // ----------------------------------------------------------
+  // Admin: update category-wise homepage hero media
+  // ----------------------------------------------------------
+
+  updateCategoryHero: categoryHeroes =>
+    apiRequest(
+      '/cms/category-hero',
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          categoryHeroes
+        })
+      }
+    ),
+
+  // ----------------------------------------------------------
+  // Admin: upload category hero media
+  // ----------------------------------------------------------
+
+  uploadCategoryHero: formData =>
+    apiRequest(
+      '/cms/category-hero/upload',
+      {
+        method: 'POST',
+        body: formData
       }
     )
 }

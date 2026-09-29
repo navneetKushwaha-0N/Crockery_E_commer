@@ -431,7 +431,7 @@
 
 /* ============================================================
    XAAJ PREMIUM INTERACTIONS
-   Cart ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Wishlist ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Product Hover ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Category Reveal
+   Cart ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ Wishlist ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ Product Hover ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ Category Reveal
    ============================================================ */
 
 /* ------------------------------------------------------------
@@ -934,7 +934,7 @@
 
 
 /* ============================================================
-   XAAJ PRODUCT CARD ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FINAL PREMIUM REDESIGN
+   XAAJ PRODUCT CARD ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â FINAL PREMIUM REDESIGN
    ============================================================ */
 
 .product-card {
@@ -1086,7 +1086,7 @@
   transform: translateY(-2px);
 }
 
-/* Wishlist button ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â always above image/link */
+/* Wishlist button ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â always above image/link */
 .product-card .heart {
   z-index: 10;
   right: 13px;
@@ -1138,7 +1138,7 @@
   transform: translate(0,-50%);
 }
 
-/* Quick Add ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â hidden until hover */
+/* Quick Add ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â hidden until hover */
 .quick-add {
   position: absolute;
   left: 14px;
@@ -1264,7 +1264,7 @@
   letter-spacing: .03em;
 }
 
-/* Wishlist pop ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â cleaner version */
+/* Wishlist pop ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â cleaner version */
 .product-card .heart.wishlist-pop {
   animation: xaajWishlistPremium .55s cubic-bezier(.34,1.56,.64,1);
 }
@@ -1361,7 +1361,7 @@
 
 
 /* ============================================================
-   XAAJ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ADD TO CART BUTTON POLISH
+   XAAJ ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ADD TO CART BUTTON POLISH
    Keep the button in its original product-card position.
    Premium interaction lives on the button itself.
    ============================================================ */
@@ -1520,7 +1520,7 @@
 }
 
 /* ============================================================
-   XAAJ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ADD TO CART / REFERENCE BUTTON STYLE
+   XAAJ ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ADD TO CART / REFERENCE BUTTON STYLE
    Matches the supplied reference: full-width, dark, clean,
    left-aligned uppercase label. Existing premium animations stay.
    ============================================================ */
@@ -1603,7 +1603,7 @@
 
 
 /* ============================================================
-   PRODUCT DETAIL ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â REFERENCE ADD TO CART BUTTON
+   PRODUCT DETAIL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â REFERENCE ADD TO CART BUTTON
    Keep the product detail design unchanged; only the CTA gets
    the clean reference look + premium interaction.
    ============================================================ */
@@ -1698,7 +1698,7 @@
 
 
 /* ============================================================
-   FINAL POLISH ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â compact premium CTA
+   FINAL POLISH ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â compact premium CTA
    Remove the image "View piece" overlay and keep the CTA
    refined instead of oversized. Animations remain intact.
    ============================================================ */
@@ -1758,7 +1758,7 @@
   }
 }
 /* ============================================================
-   XAAJ PRODUCT CARD Ã¢â‚¬â€ PRO LUXURY FINISH
+   XAAJ PRODUCT CARD ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PRO LUXURY FINISH
    Border-radius + refined spacing + premium depth
    ============================================================ */
 
@@ -2062,7 +2062,7 @@
 }
 
 /* ============================================================
-   XAAJ â€” PREMIUM CART & WISHLIST
+   XAAJ Ã¢â‚¬â€ PREMIUM CART & WISHLIST
    ============================================================ */
 .xaaj-cart-page{padding-top:42px;padding-bottom:110px;background:var(--ivory)}
 .xaaj-cart-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:30px;padding:35px 0 48px;border-bottom:1px solid var(--line)}
@@ -2157,7 +2157,7 @@
 }
 
 /* ============================================================
-   CART â€” CLEAN, NATURAL PRICE TYPOGRAPHY
+   CART Ã¢â‚¬â€ CLEAN, NATURAL PRICE TYPOGRAPHY
    Keep currency amounts simple and easy to read.
    ============================================================ */
 .xaaj-summary-total strong{
@@ -2177,7 +2177,7 @@
 
 
 /* ============================================================
-   XAAJ â€” PRODUCT CARD EXACT REFERENCE MATCH
+   XAAJ Ã¢â‚¬â€ PRODUCT CARD EXACT REFERENCE MATCH
    Keep existing XAAJ functionality; only visual presentation
    is changed to match the supplied reference image.
    ============================================================ */
@@ -2610,7 +2610,7 @@
 }
 
 /* ============================================================
-   XAAJ PRODUCT CARD â€” SOFT WHITE EDGE + SHADOW FINISH
+   XAAJ PRODUCT CARD Ã¢â‚¬â€ SOFT WHITE EDGE + SHADOW FINISH
    ============================================================ */
 .product-grid {
   gap: 18px;
@@ -2792,5 +2792,94 @@
     min-height: 38px;
     padding: 0 13px !important;
     font-size: 12px !important;
+  }
+}
+
+
+/* ============================================================
+   XAAJ BRAND STORY / FEATURE SECTION - FINAL VISIBILITY FIX
+   Fixes the global [data-xaaj-reveal] opacity rule from hiding
+   the Brand Story section and keeps the premium image reveal.
+   ============================================================ */
+
+/* The Brand Story wrapper must always occupy and display its layout. */
+.feature[data-xaaj-reveal] {
+  opacity: 1 !important;
+  transform: none !important;
+  visibility: visible !important;
+}
+
+/* Never let the global reveal rule hide Brand Story content. */
+.feature[data-xaaj-reveal] .feature-copy,
+.feature[data-xaaj-reveal] > img {
+  visibility: visible !important;
+}
+
+/* Story copy enters smoothly from the right. */
+.feature[data-xaaj-reveal] .feature-copy {
+  opacity: 0;
+  transform: translate3d(34px, 0, 0);
+  transition:
+    opacity .9s ease,
+    transform 1s cubic-bezier(.22, 1, .36, 1);
+}
+
+/* Image starts slightly zoomed and softly hidden. */
+.feature[data-xaaj-reveal] > img {
+  opacity: 0;
+  transform: scale(1.07);
+  transition:
+    opacity .9s ease,
+    transform 1.35s cubic-bezier(.22, 1, .36, 1);
+}
+
+/* Final revealed state. */
+.feature[data-xaaj-reveal].xaaj-revealed .feature-copy {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+.feature[data-xaaj-reveal].xaaj-revealed > img {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Keep the section stable even before JavaScript adds the class. */
+.feature[data-xaaj-reveal] .feature-copy h2,
+.feature[data-xaaj-reveal] .feature-copy p,
+.feature[data-xaaj-reveal] .feature-copy .button {
+  visibility: visible;
+}
+
+/* Mobile Brand Story */
+@media (max-width: 800px) {
+  .feature[data-xaaj-reveal] .feature-copy {
+    transform: translate3d(0, 24px, 0);
+    transition-duration: .7s;
+  }
+
+  .feature[data-xaaj-reveal] > img {
+    transform: scale(1.045);
+    transition-duration: 1s;
+  }
+
+  .feature[data-xaaj-reveal].xaaj-revealed .feature-copy {
+    transform: translate3d(0, 0, 0);
+  }
+
+  .feature[data-xaaj-reveal].xaaj-revealed > img {
+    transform: scale(1);
+  }
+}
+
+/* If the browser has reduced-motion enabled, show everything immediately. */
+@media (prefers-reduced-motion: reduce) {
+  .feature[data-xaaj-reveal],
+  .feature[data-xaaj-reveal] .feature-copy,
+  .feature[data-xaaj-reveal] > img {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    visibility: visible !important;
   }
 }

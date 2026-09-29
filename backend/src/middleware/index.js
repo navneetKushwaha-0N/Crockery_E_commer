@@ -194,11 +194,41 @@ export const productSchema = z.object({
           'Product description must be at least 10 characters'
         ),
 
+      // Main product category used by the store navigation.
       category: z
+        .enum([
+          'Dinnerware',
+          'Glassware',
+          'Serveware',
+          'Gifting',
+          'Horeca'
+        ]),
+
+      // Optional Dinnerware collection/subcategory.
+      // It is only meaningful when category is Dinnerware.
+      dinnerwareCollection: z
+        .union([
+          z.enum([
+            'Speckled White',
+            'Dove Gray',
+            'Blush Pink',
+            'Beachgrass Green',
+            'Midnight Blue'
+          ]),
+          z.literal('')
+        ])
+        .nullable()
+        .optional(),
+
+      // HSN code is required for every product.
+      // Leading zeroes are preserved by keeping it as a string.
+      hsnCode: z
         .string()
         .trim()
-        .min(2, 'Product category is required')
-        .max(80, 'Product category is too long'),
+        .regex(
+          /^\d{4}(?:\d{2})?(?:\d{2})?$/,
+          'HSN code must contain 4, 6, or 8 digits'
+        ),
 
       // ------------------------------------------------------
       // Pricing
@@ -315,8 +345,7 @@ export const productSchema = z.object({
     })
 
     // --------------------------------------------------------
-    // Price validation
-    // Selling price must not be greater than MRP
+    // Price + Dinnerware validation
     // --------------------------------------------------------
 
     .superRefine((data, ctx) => {
@@ -326,6 +355,18 @@ export const productSchema = z.object({
           path: ['price'],
           message:
             'Selling price cannot be higher than MRP'
+        })
+      }
+
+      if (
+        data.category !== 'Dinnerware' &&
+        data.dinnerwareCollection
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['dinnerwareCollection'],
+          message:
+            'Dinnerware collection can only be used with Dinnerware products'
         })
       }
     }),

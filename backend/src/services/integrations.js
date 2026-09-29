@@ -61,6 +61,138 @@ export const uploadImage = async (
 
 
 // ============================================================
+// CLOUDINARY - UPLOAD MEDIA
+// ============================================================
+// Supports both images and videos.
+//
+// `file` can be:
+// - a Cloudinary-compatible string/data URI
+// - a Buffer from Multer's memoryStorage
+//
+// resourceType:
+// - 'image'
+// - 'video'
+// - 'auto'
+//
+// For category hero media, use 'auto' when the uploaded file
+// may be either an image or a video.
+
+export const uploadMedia = async (
+  file,
+  folder = 'xaaj/category-heroes',
+  resourceType = 'auto'
+) => {
+  if (!cloudinaryConfigured) {
+    throw new Error(
+      'Cloudinary is not configured'
+    )
+  }
+
+  const normalizedResourceType =
+    ['image', 'video', 'auto'].includes(resourceType)
+      ? resourceType
+      : 'auto'
+
+  // ----------------------------------------------------------
+  // Buffer upload
+  // ----------------------------------------------------------
+
+  if (Buffer.isBuffer(file)) {
+    const result =
+      await new Promise((resolve, reject) => {
+        const stream =
+          cloudinary.uploader.upload_stream(
+            {
+              folder,
+              resource_type:
+                normalizedResourceType
+            },
+            (error, uploadResult) => {
+              if (error) {
+                reject(error)
+                return
+              }
+
+              resolve(uploadResult)
+            }
+          )
+
+        stream.end(file)
+      })
+
+    return {
+      secure_url:
+        result.secure_url,
+
+      public_id:
+        result.public_id,
+
+      resource_type:
+        result.resource_type,
+
+      format:
+        result.format
+    }
+  }
+
+  // ----------------------------------------------------------
+  // String / Data URI upload
+  // ----------------------------------------------------------
+
+  if (
+    typeof file !== 'string' ||
+    !file.trim()
+  ) {
+    throw new Error(
+      'A valid image/video file is required'
+    )
+  }
+
+  const result =
+    await cloudinary.uploader.upload(
+      file,
+      {
+        folder,
+        resource_type:
+          normalizedResourceType
+      }
+    )
+
+  return {
+    secure_url:
+      result.secure_url,
+
+    public_id:
+      result.public_id,
+
+    resource_type:
+      result.resource_type,
+
+    format:
+      result.format
+  }
+}
+
+
+// ============================================================
+// CLOUDINARY - UPLOAD VIDEO
+// ============================================================
+// Kept as a separate helper for places that explicitly know
+// the incoming file is a video.
+
+export const uploadVideo = async (
+  file,
+  folder = 'xaaj/category-heroes'
+) => {
+  return uploadMedia(
+    file,
+    folder,
+    'video'
+  )
+}
+
+
+// ============================================================
 // CLOUDINARY - DELETE IMAGE
 // ============================================================
 
@@ -77,6 +209,38 @@ export const removeImage =
       publicId
     )
   }
+
+
+// ============================================================
+// CLOUDINARY - DELETE MEDIA
+// ============================================================
+// Use resourceType='video' when deleting a video because
+// Cloudinary stores images and videos as different resources.
+
+export const removeMedia = async (
+  publicId,
+  resourceType = 'image'
+) => {
+  if (
+    !cloudinaryConfigured ||
+    !publicId
+  ) {
+    return null
+  }
+
+  const normalizedResourceType =
+    resourceType === 'video'
+      ? 'video'
+      : 'image'
+
+  return cloudinary.uploader.destroy(
+    publicId,
+    {
+      resource_type:
+        normalizedResourceType
+    }
+  )
+}
 
 
 // ============================================================
