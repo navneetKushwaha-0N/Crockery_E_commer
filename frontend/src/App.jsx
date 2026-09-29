@@ -31,6 +31,8 @@ import {
   Plus,
   Check,
   Mail,
+  PhoneCall,
+  MapPin,
   MessageCircle,
 
   // Trust / Service section icons
@@ -1765,6 +1767,37 @@ function ProductCard({ product }) {
       <style>{`
         .xaaj-editorial-card{min-width:0;color:#2c2924}.xaaj-editorial-card-media{position:relative;background:#f1eee7;overflow:hidden;aspect-ratio:4/5}.xaaj-editorial-card-media>a{display:block;width:100%;height:100%}.xaaj-editorial-card-media img{width:100%;height:100%;display:block;object-fit:cover;transition:opacity .45s ease,transform .8s cubic-bezier(.22,1,.36,1)}.xaaj-editorial-card-media .secondary{position:absolute;inset:0;opacity:0}.xaaj-editorial-card:hover .secondary{opacity:1}.xaaj-editorial-card:hover .primary{transform:scale(1.018)}.xaaj-editorial-tag{position:absolute;left:10px;top:10px;background:#fffdf9;padding:5px 7px;font-size:7px;letter-spacing:1px;text-transform:uppercase}.xaaj-editorial-wish{position:absolute;right:10px;top:10px;width:31px;height:31px;border:0;border-radius:50%;background:rgba(255,253,249,.9);display:grid;place-items:center;color:#302d28;cursor:pointer}.xaaj-editorial-wish.liked{color:#9a4c3d}.xaaj-editorial-add{position:absolute;right:10px;bottom:10px;height:34px;min-width:34px;border:1px solid rgba(255,255,255,.8);background:rgba(255,253,249,.92);color:#292621;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;font-size:9px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;transition:all .25s}.xaaj-editorial-add span{display:none}.xaaj-editorial-add:hover,.xaaj-editorial-add.added{background:#2f7048;color:#fff;border-color:#2f7048}.xaaj-editorial-add:hover span,.xaaj-editorial-add.added span{display:inline}.xaaj-editorial-card-copy{padding:10px 1px 0}.xaaj-editorial-card-copy>span{display:block;color:#8a8379;font-size:8px;letter-spacing:1.3px;text-transform:uppercase;margin-bottom:5px}.xaaj-editorial-card-copy h3{margin:0 0 6px;font:400 15px 'Gotham Book','Gotham',Arial,sans-serif;line-height:1.2}.xaaj-editorial-card-copy a{text-decoration:none;color:inherit}.xaaj-editorial-card-copy>div{display:flex;align-items:center;gap:7px;font-size:11px}.xaaj-editorial-card-copy del{color:#9b958b}.xaaj-editorial-card-copy strong{font-weight:500}
         @media(max-width:600px){.xaaj-editorial-card-media{aspect-ratio:3/4}.xaaj-editorial-card-copy h3{font-size:14px}.xaaj-editorial-add{min-width:32px;width:32px;padding:0}.xaaj-editorial-add span{display:none!important}}
+        /* Final mobile header: Account icon sits between Search and Cart. */
+        @media (max-width:850px){
+          .xaaj-ref-actions .xaaj-ref-header-icon[aria-label="Account"]{
+            display:grid!important;
+            place-items:center!important;
+          }
+
+          .xaaj-ref-actions{
+            gap:0!important;
+          }
+
+          .xaaj-ref-actions .xaaj-ref-header-icon,
+          .xaaj-ref-actions .xaaj-ref-cart-button{
+            width:36px!important;
+            height:36px!important;
+          }
+        }
+
+        @media (max-width:520px){
+          .xaaj-ref-actions .xaaj-ref-header-icon[aria-label="Account"]{
+            display:grid!important;
+            place-items:center!important;
+          }
+
+          .xaaj-ref-actions .xaaj-ref-header-icon,
+          .xaaj-ref-actions .xaaj-ref-cart-button{
+            width:33px!important;
+            height:33px!important;
+          }
+        }
+
       `}</style>
     </article>
   )
@@ -5325,15 +5358,15 @@ function Footer() {
         }
 
         .xaaj-reference-newsletter-form{
-          width:min(460px,100%);
+          width:min(420px,100%);
           margin:22px auto 0;
         }
 
         .xaaj-reference-newsletter-field{
           width:100%;
-          height:48px;
+          height:50px;
           border:1px solid rgba(247,244,236,.34);
-          border-radius:0;
+          border-radius:8px;
           background:rgba(255,255,255,.025);
           display:flex;
           align-items:center;
@@ -5394,21 +5427,30 @@ function Footer() {
           letter-spacing:.1px;
         }
 
-        /* Main footer */
+        /* Main footer — premium desktop editorial layout: brand | contact | shop/about */
         .xaaj-reference-footer-main{
           width:min(1320px,100%);
           margin:0 auto;
-          display:grid;
-          grid-template-columns:minmax(260px,1.55fr) minmax(120px,.75fr) minmax(120px,.75fr) minmax(240px,1.2fr);
-          gap:64px;
-          padding:64px 48px 58px;
+          display:grid!important;
+          grid-template-columns:minmax(0,1.15fr) minmax(300px,.90fr) minmax(320px,1.05fr)!important;
+          grid-template-areas:'brand contact links';
+          align-items:start;
+          column-gap:0;
+          padding:62px 56px 58px;
+          box-sizing:border-box;
+        }
+
+        .xaaj-reference-footer-brand{
+          grid-area:brand;
+          padding:0 72px 0 0;
+          min-width:0;
         }
 
         .xaaj-reference-footer-brand h3{
           margin:0;
           color:#f7f4ec;
           font-family:Georgia,'Times New Roman',serif!important;
-          font-size:64px!important;
+          font-size:62px!important;
           font-weight:400!important;
           line-height:.82!important;
           letter-spacing:2px!important;
@@ -5417,26 +5459,139 @@ function Footer() {
         .xaaj-reference-footer-brand-rule{
           width:48px;
           height:1px;
-          margin:25px 0 19px;
+          margin:24px 0 18px;
           background:rgba(247,244,236,.58);
         }
 
         .xaaj-reference-footer-brand p{
-          max-width:310px;
+          max-width:390px;
           margin:0;
           color:rgba(247,244,236,.70);
           font-family:Georgia,'Times New Roman',serif!important;
-          font-size:15px!important;
-          line-height:1.55!important;
+          font-size:14px!important;
+          line-height:1.65!important;
           letter-spacing:.05px;
         }
 
-        .xaaj-reference-footer-column h4,
+        /* Desktop contact column */
+        .xaaj-reference-footer-contact{
+          grid-area:contact;
+          border-left:1px solid rgba(247,244,236,.18);
+          border-right:1px solid rgba(247,244,236,.18);
+          padding:2px 54px 0;
+          display:flex;
+          flex-direction:column;
+          justify-content:flex-start;
+          min-width:0;
+        }
+
         .xaaj-reference-footer-contact h4{
-          margin:1px 0 21px;
+          display:none!important;
+        }
+
+        .xaaj-reference-footer-contact-list{
+          display:flex;
+          flex-direction:column;
+          gap:20px;
+          padding:0;
+        }
+
+        .xaaj-reference-footer-contact-item{
+          display:grid;
+          grid-template-columns:24px minmax(0,1fr);
+          gap:13px;
+          align-items:center;
+          min-width:0;
+          color:inherit;
+          text-decoration:none;
+          transition:color .22s ease,transform .22s ease;
+        }
+
+        .xaaj-reference-footer-contact-item:hover{
+          transform:translateX(2px);
+        }
+
+        .xaaj-reference-footer-contact-icon{
+          width:24px;
+          height:24px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          color:rgba(247,244,236,.88);
+          background:transparent;
+          border:0;
+          border-radius:0;
+          margin:0;
+          transition:color .22s ease;
+        }
+
+        .xaaj-reference-footer-contact-item:hover .xaaj-reference-footer-contact-icon{
+          color:#f7f4ec;
+        }
+
+        .xaaj-reference-footer-contact-copy{
+          min-width:0;
+        }
+
+        .xaaj-reference-footer-contact-copy strong{
+          display:none!important;
+        }
+
+        .xaaj-reference-footer-contact-copy span{
+          display:block;
+          margin:0;
+          max-width:100%;
+          overflow:visible;
+          text-overflow:clip;
+          white-space:normal;
+          color:rgba(247,244,236,.68);
+          font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+          font-size:11.5px!important;
+          line-height:1.5!important;
+          letter-spacing:.03px;
+        }
+
+        .xaaj-reference-footer-address{
+          display:flex;
+          align-items:flex-start;
+          gap:14px;
+          width:100%;
+          max-width:285px;
+          margin:27px 0 0;
+          color:rgba(247,244,236,.60);
+          text-decoration:none;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+          font-size:11px!important;
+          line-height:1.55!important;
+          letter-spacing:.05px;
+          transition:color .2s ease;
+        }
+
+        .xaaj-reference-footer-address svg{
+          flex:0 0 auto;
+          margin-top:1px;
+          color:rgba(247,244,236,.88);
+        }
+
+        .xaaj-reference-footer-address:hover{
+          color:#f7f4ec;
+        }
+
+        /* Right side: Shop + About */
+        .xaaj-reference-footer-links{
+          grid-area:links;
+          padding-left:54px;
+          display:grid;
+          grid-template-columns:minmax(125px,1fr) minmax(105px,.82fr);
+          column-gap:56px;
+          min-width:0;
+        }
+
+        .xaaj-reference-footer-column h4{
+          margin:2px 0 22px;
           color:#f7f4ec;
           font-family:Georgia,'Times New Roman',serif!important;
-          font-size:21px!important;
+          font-size:22px!important;
           font-weight:400!important;
           line-height:1.1!important;
         }
@@ -5445,7 +5600,7 @@ function Footer() {
           display:flex;
           flex-direction:column;
           align-items:flex-start;
-          gap:12px;
+          gap:13px;
         }
 
         .xaaj-reference-footer-column a{
@@ -5461,65 +5616,6 @@ function Footer() {
         .xaaj-reference-footer-column a:hover{
           color:#fff;
           transform:translateX(2px);
-        }
-
-        .xaaj-reference-footer-contact-list{
-          display:flex;
-          flex-direction:column;
-          gap:14px;
-        }
-
-        .xaaj-reference-footer-contact-item{
-          display:grid;
-          grid-template-columns:40px minmax(0,1fr);
-          gap:12px;
-          align-items:center;
-          min-width:0;
-          color:inherit;
-          text-decoration:none;
-          transition:opacity .2s ease,transform .2s ease;
-        }
-
-        .xaaj-reference-footer-contact-item:hover{
-          opacity:.88;
-          transform:translateX(2px);
-        }
-
-        .xaaj-reference-footer-contact-icon{
-          width:40px;
-          height:40px;
-          border-radius:50%;
-          display:grid;
-          place-items:center;
-          color:#f7f4ec;
-          background:rgba(255,255,255,.065);
-          border:1px solid rgba(255,255,255,.10);
-        }
-
-        .xaaj-reference-footer-contact-copy{
-          min-width:0;
-        }
-
-        .xaaj-reference-footer-contact-copy strong{
-          display:block;
-          color:#f7f4ec;
-          font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
-          font-size:13px!important;
-          font-weight:600!important;
-          line-height:1.3!important;
-        }
-
-        .xaaj-reference-footer-contact-copy span{
-          display:block;
-          margin-top:3px;
-          max-width:100%;
-          overflow:hidden;
-          text-overflow:ellipsis;
-          white-space:nowrap;
-          color:rgba(247,244,236,.55);
-          font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
-          font-size:11px!important;
-          line-height:1.35!important;
         }
 
         /* Bottom bar */
@@ -5579,9 +5675,23 @@ function Footer() {
         /* Tablet */
         @media(max-width:1050px){
           .xaaj-reference-footer-main{
-            grid-template-columns:1.3fr .8fr .8fr 1.1fr;
-            gap:36px;
+            grid-template-columns:minmax(260px,1.1fr) minmax(240px,.9fr) minmax(260px,1fr);
+            gap:28px;
             padding:54px 34px 48px;
+          }
+
+          .xaaj-reference-footer-brand{
+            padding-right:28px;
+          }
+
+          .xaaj-reference-footer-contact{
+            padding-left:30px;
+            padding-right:30px;
+          }
+
+          .xaaj-reference-footer-links{
+            padding-left:30px;
+            column-gap:28px;
           }
 
           .xaaj-reference-footer-bottom{
@@ -5749,6 +5859,306 @@ function Footer() {
           }
         }
 
+
+        /* Final desktop footer lock: Brand | Shop | About | Contact */
+        @media(min-width:761px){
+          .xaaj-reference-footer-main{
+            display:grid!important;
+            grid-template-columns:minmax(260px,1.35fr) minmax(125px,.72fr) minmax(125px,.72fr) minmax(260px,1.05fr)!important;
+            grid-template-areas:'brand shop about contact'!important;
+            align-items:start!important;
+            column-gap:0!important;
+            row-gap:0!important;
+          }
+
+          .xaaj-reference-footer-brand{grid-area:brand!important;}
+          .xaaj-reference-footer-shop{grid-area:shop!important;}
+          .xaaj-reference-footer-about{grid-area:about!important;}
+          .xaaj-reference-footer-contact{grid-area:contact!important;}
+
+          .xaaj-reference-footer-shop,
+          .xaaj-reference-footer-about{
+            padding-left:28px!important;
+            padding-right:20px!important;
+          }
+
+          /* Premium desktop contact edge: one divider only, between About and Contact. */
+          .xaaj-reference-footer-contact{
+            padding-left:34px!important;
+            padding-right:0!important;
+            border-left:1px solid rgba(247,244,236,.18)!important;
+            border-right:0!important;
+          }
+
+          .xaaj-reference-footer-contact-list{
+            gap:18px!important;
+          }
+
+          .xaaj-reference-footer-contact-item{
+            grid-template-columns:24px minmax(0,1fr)!important;
+            gap:13px!important;
+          }
+
+          .xaaj-reference-footer-contact-copy span{
+            font-size:11.5px!important;
+            line-height:1.5!important;
+          }
+
+          .xaaj-reference-footer-address{
+            margin-top:24px!important;
+            max-width:300px!important;
+            gap:12px!important;
+          }
+
+          .xaaj-mobile-footer{display:none!important;}
+        }
+
+        @media(min-width:761px){
+          /* Keep the footer visually clean: no right-side contact divider. */
+          .xaaj-reference-footer-contact{
+            border-right:none!important;
+          }
+        }
+
+        @media(min-width:761px) and (max-width:1050px){
+          .xaaj-reference-footer-main{
+            grid-template-columns:minmax(220px,1.2fr) minmax(105px,.7fr) minmax(105px,.7fr) minmax(220px,1fr)!important;
+            padding-left:34px!important;
+            padding-right:34px!important;
+          }
+
+          .xaaj-reference-footer-brand{
+            padding-right:24px!important;
+          }
+
+          .xaaj-reference-footer-shop,
+          .xaaj-reference-footer-about{
+            padding-left:18px!important;
+            padding-right:12px!important;
+          }
+
+          .xaaj-reference-footer-contact{
+            padding-left:22px!important;
+          }
+        }
+
+        /* =========================================================
+           XAAJ MOBILE FOOTER
+           Premium / responsive / compact editorial layout
+           ========================================================= */
+        .xaaj-mobile-footer{
+          display:none;
+        }
+
+        @media(max-width:760px){
+          .xaaj-reference-footer-main{
+            display:none!important;
+          }
+
+          .xaaj-mobile-footer{
+            display:block;
+            width:100%;
+            padding:0 20px;
+            box-sizing:border-box;
+          }
+
+          .xaaj-mobile-footer-section{
+            margin:0;
+            border-top:1px solid rgba(247,244,236,.13);
+          }
+
+          .xaaj-mobile-footer-section:last-child{
+            border-bottom:1px solid rgba(247,244,236,.13);
+          }
+
+          .xaaj-mobile-footer-section summary{
+            list-style:none;
+            min-height:58px;
+            padding:0;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:16px;
+            cursor:pointer;
+            color:#f7f4ec;
+            font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif!important;
+            font-size:21px!important;
+            font-weight:400!important;
+            line-height:1;
+            letter-spacing:.01em;
+            -webkit-tap-highlight-color:transparent;
+          }
+
+          .xaaj-mobile-footer-section summary::-webkit-details-marker{
+            display:none;
+          }
+
+          .xaaj-mobile-footer-section summary svg{
+            flex:0 0 auto;
+            transition:transform .25s ease;
+            opacity:.82;
+          }
+
+          .xaaj-mobile-footer-section[open] summary svg{
+            transform:rotate(180deg);
+          }
+
+          .xaaj-mobile-footer-section nav{
+            display:flex;
+            flex-direction:column;
+            gap:10px;
+            padding:0 0 18px;
+          }
+
+          .xaaj-mobile-footer-section nav a{
+            color:rgba(247,244,236,.62);
+            text-decoration:none;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+            font-size:11px!important;
+            line-height:1.45!important;
+          }
+
+          .xaaj-mobile-footer-contact-list{
+            display:flex;
+            flex-direction:column;
+            gap:13px;
+            padding:1px 0 20px;
+          }
+
+          .xaaj-mobile-footer-contact-item{
+            display:grid;
+            grid-template-columns:23px minmax(0,1fr);
+            align-items:start;
+            column-gap:14px;
+            color:rgba(247,244,236,.67);
+            text-decoration:none;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+            font-size:11px!important;
+            line-height:1.5!important;
+            min-width:0;
+          }
+
+          .xaaj-mobile-footer-contact-item svg{
+            margin-top:1px;
+            color:#f7f4ec;
+            opacity:.9;
+            flex:0 0 auto;
+          }
+
+          .xaaj-mobile-footer-contact-item span{
+            min-width:0;
+            overflow-wrap:anywhere;
+          }
+
+          .xaaj-reference-footer-bottom{
+            display:flex!important;
+            flex-direction:column!important;
+            align-items:flex-start!important;
+            gap:16px!important;
+            padding:18px 20px 21px!important;
+            margin:0!important;
+          }
+
+          .xaaj-reference-footer-copy{
+            order:2;
+            width:100%;
+            font-size:9.5px!important;
+            line-height:1.45!important;
+          }
+
+          /* Legal links: deliberate 2-column grid on phones.
+             This prevents awkward 3+2 wrapping and keeps every link aligned. */
+          .xaaj-reference-footer-policies{
+            order:1;
+            width:100%!important;
+            display:grid!important;
+            grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+            justify-content:stretch!important;
+            align-items:stretch!important;
+            gap:0!important;
+            border-top:1px solid rgba(247,244,236,.12);
+          }
+
+          .xaaj-reference-footer-policies a{
+            display:flex!important;
+            align-items:center!important;
+            min-height:38px!important;
+            box-sizing:border-box!important;
+            padding:8px 12px 8px 0!important;
+            font-size:10.5px!important;
+            line-height:1.35!important;
+            letter-spacing:.01em!important;
+            white-space:normal!important;
+            color:rgba(247,244,236,.62)!important;
+            text-decoration:none!important;
+          }
+
+          .xaaj-reference-footer-policies a:nth-child(even){
+            padding-left:12px!important;
+            padding-right:0!important;
+            border-left:1px solid rgba(247,244,236,.12);
+          }
+
+          .xaaj-reference-footer-policies a:nth-child(odd){
+            padding-right:12px!important;
+          }
+
+          .xaaj-reference-footer-policies a + a::before{
+            display:none!important;
+            content:none!important;
+          }
+
+          .xaaj-reference-footer-policies a:hover{
+            color:#f7f4ec!important;
+          }
+        }
+
+        @media(max-width:380px){
+          .xaaj-mobile-footer{
+            padding-left:18px;
+            padding-right:18px;
+          }
+
+          .xaaj-mobile-footer-section summary{
+            min-height:55px;
+            font-size:20px!important;
+          }
+
+          .xaaj-mobile-footer-contact-list{
+            gap:12px;
+            padding-bottom:18px;
+          }
+
+          .xaaj-mobile-footer-contact-item{
+            grid-template-columns:22px minmax(0,1fr);
+            column-gap:12px;
+            font-size:10.5px!important;
+          }
+
+          .xaaj-reference-footer-bottom{
+            padding-left:18px!important;
+            padding-right:18px!important;
+          }
+
+          .xaaj-reference-footer-policies{
+            grid-template-columns:1fr!important;
+          }
+
+          .xaaj-reference-footer-policies a,
+          .xaaj-reference-footer-policies a:nth-child(even),
+          .xaaj-reference-footer-policies a:nth-child(odd){
+            min-height:35px!important;
+            padding:8px 0!important;
+            font-size:9.5px!important;
+            border-left:0!important;
+            border-bottom:1px solid rgba(247,244,236,.09);
+          }
+
+          .xaaj-reference-footer-policies a:last-child{
+            border-bottom:0!important;
+          }
+        }
+
         @media(max-width:360px){
           .xaaj-reference-footer-main{
             padding-left:17px;
@@ -5789,29 +6199,23 @@ function Footer() {
           <p>Contemporary crockery rooted in the colours, crafts and everyday beauty of India.</p>
         </div>
 
-        <div className="xaaj-reference-footer-column">
-          <h4>Shop</h4>
-          <nav aria-label="Shop">
-            <Link to="/shop?category=Dinnerware">Dinnerware</Link>
-            <Link to="/shop?category=Glassware">Glassware</Link>
-            <Link to="/shop?category=Serveware">Serveware</Link>
-            <Link to="/shop?category=Gifting">Gifting</Link>
-            <Link to="/shop?category=Horeca">Horeca</Link>
-          </nav>
-        </div>
-
-        <div className="xaaj-reference-footer-column">
-          <h4>About</h4>
-          <nav aria-label="About XAAJ">
-            <Link to="/about">Our Story</Link>
-            <Link to="/faq">FAQs</Link>
-            <Link to="/contact">Contact Us</Link>
-          </nav>
-        </div>
-
         <div className="xaaj-reference-footer-contact">
           <h4>Get in Touch</h4>
+
           <div className="xaaj-reference-footer-contact-list">
+            <a
+              className="xaaj-reference-footer-contact-item"
+              href="tel:+919899446117"
+              aria-label="Call XAAJ at +91 98994 46117"
+            >
+              <div className="xaaj-reference-footer-contact-icon" aria-hidden="true">
+                <PhoneCall size={18} strokeWidth={1.35} />
+              </div>
+              <div className="xaaj-reference-footer-contact-copy">
+                <span>+91 98994 46117</span>
+              </div>
+            </a>
+
             <a
               className="xaaj-reference-footer-contact-item"
               href="https://wa.me/919899446117"
@@ -5820,10 +6224,9 @@ function Footer() {
               aria-label="Chat with XAAJ on WhatsApp"
             >
               <div className="xaaj-reference-footer-contact-icon" aria-hidden="true">
-                <FaWhatsapp size={20} />
+                <FaWhatsapp size={18} />
               </div>
               <div className="xaaj-reference-footer-contact-copy">
-                <strong>WhatsApp</strong>
                 <span>9899446117</span>
               </div>
             </a>
@@ -5834,10 +6237,9 @@ function Footer() {
               aria-label="Email XAAJ customer care"
             >
               <div className="xaaj-reference-footer-contact-icon" aria-hidden="true">
-                <Mail size={19} strokeWidth={1.5} />
+                <Mail size={18} strokeWidth={1.35} />
               </div>
               <div className="xaaj-reference-footer-contact-copy">
-                <strong>Email</strong>
                 <span>customercare@xaaj.in</span>
               </div>
             </a>
@@ -5850,15 +6252,117 @@ function Footer() {
               aria-label="XAAJ on Instagram"
             >
               <div className="xaaj-reference-footer-contact-icon" aria-hidden="true">
-                <FaInstagram size={19} />
+                <FaInstagram size={18} />
               </div>
               <div className="xaaj-reference-footer-contact-copy">
-                <strong>Instagram</strong>
-                <span>xaajstories</span>
+                <span>@xaajstories</span>
               </div>
             </a>
           </div>
+
+          <a
+            className="xaaj-reference-footer-address"
+            href="https://www.google.com/maps/search/?api=1&query=G6%2F4C%20DLF%20Garden%20City%20Sector%2092%20Gurugram%20122505"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="XAAJ business address"
+          >
+            <MapPin size={17} strokeWidth={1.25} />
+            <span>G6/4C DLF Garden City, Sector 92<br />Gurugram 122505</span>
+          </a>
         </div>
+
+        <div className="xaaj-reference-footer-column xaaj-reference-footer-shop">
+          <h4>Shop</h4>
+          <nav aria-label="Shop">
+            <Link to="/shop?category=Dinnerware">Dinnerware</Link>
+            <Link to="/shop?category=Glassware">Glassware</Link>
+            <Link to="/shop?category=Serveware">Serveware</Link>
+            <Link to="/shop?category=Gifting">Gifting</Link>
+            <Link to="/shop?category=Horeca">Horeca</Link>
+          </nav>
+        </div>
+
+        <div className="xaaj-reference-footer-column xaaj-reference-footer-about">
+          <h4>About</h4>
+          <nav aria-label="About XAAJ">
+            <Link to="/about">Our Story</Link>
+            <Link to="/faq">FAQs</Link>
+            <Link to="/contact">Contact Us</Link>
+          </nav>
+        </div>
+      </div>
+
+      {/* Mobile footer: compact editorial layout matching the XAAJ mobile reference. */}
+      <div className="xaaj-mobile-footer">
+        <details className="xaaj-mobile-footer-section">
+          <summary>
+            <span>Shop</span>
+            <ChevronDown size={17} strokeWidth={1.2} />
+          </summary>
+          <nav aria-label="Mobile Shop">
+            <Link to="/shop?category=Dinnerware">Dinnerware</Link>
+            <Link to="/shop?category=Glassware">Glassware</Link>
+            <Link to="/shop?category=Serveware">Serveware</Link>
+            <Link to="/shop?category=Gifting">Gifting</Link>
+            <Link to="/shop?category=Horeca">Horeca</Link>
+          </nav>
+        </details>
+
+        <details className="xaaj-mobile-footer-section">
+          <summary>
+            <span>About</span>
+            <ChevronDown size={17} strokeWidth={1.2} />
+          </summary>
+          <nav aria-label="Mobile About">
+            <Link to="/about">Our Story</Link>
+            <Link to="/faq">FAQs</Link>
+            <Link to="/contact">Contact Us</Link>
+          </nav>
+        </details>
+
+        <details className="xaaj-mobile-footer-section" open>
+          <summary>
+            <span>Get in Touch</span>
+            <ChevronDown size={17} strokeWidth={1.2} />
+          </summary>
+
+          <div className="xaaj-mobile-footer-contact-list">
+            <a href="https://www.google.com/maps/search/?api=1&query=G6%2F4C%20DLF%20Garden%20City%20Sector%2092%20Gurugram%20122505"
+              target="_blank"
+              rel="noreferrer"
+              className="xaaj-mobile-footer-contact-item"
+              aria-label="XAAJ business address">
+              <MapPin size={19} strokeWidth={1.35} />
+              <span>G6/4C DLF Garden City, Sector 92<br />Gurugram 122505</span>
+            </a>
+
+            <a href="https://wa.me/919899446117"
+              target="_blank"
+              rel="noreferrer"
+              className="xaaj-mobile-footer-contact-item"
+              aria-label="Chat with XAAJ on WhatsApp">
+              <FaWhatsapp size={19} />
+              <span>9899446117</span>
+            </a>
+
+            <a href="mailto:customercare@xaaj.in"
+              className="xaaj-mobile-footer-contact-item"
+              aria-label="Email XAAJ customer care">
+              <Mail size={19} strokeWidth={1.35} />
+              <span>customercare@xaaj.in</span>
+            </a>
+
+            <a href="https://www.instagram.com/xaajstories?stkn=MWxkMzRscjAzaXVjZQ%3D%3D&utm_source=qr"
+              target="_blank"
+              rel="noreferrer"
+              className="xaaj-mobile-footer-contact-item"
+              aria-label="XAAJ on Instagram">
+              <FaInstagram size={19} />
+              <span>@xaajstories</span>
+            </a>
+          </div>
+        </details>
       </div>
 
       <div className="xaaj-reference-footer-bottom">
