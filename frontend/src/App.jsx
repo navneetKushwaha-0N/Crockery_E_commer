@@ -4285,6 +4285,7 @@ function ContactForm() {
     name: '',
     email: '',
     phone: '',
+    subject: '',
     message: ''
   })
 
@@ -4293,10 +4294,7 @@ function ContactForm() {
 
   const handleChange = event => {
     const { name, value } = event.target
-    setForm(current => ({
-      ...current,
-      [name]: value
-    }))
+    setForm(current => ({ ...current, [name]: value }))
   }
 
   const handleSubmit = async event => {
@@ -4305,6 +4303,7 @@ function ContactForm() {
     const name = form.name.trim()
     const email = form.email.trim().toLowerCase()
     const phone = form.phone.trim()
+    const subject = form.subject.trim()
     const message = form.message.trim()
 
     if (!name || !email || !message) {
@@ -4328,19 +4327,18 @@ function ContactForm() {
     setLoading(true)
 
     try {
+      const submittedMessage = subject
+        ? `Subject: ${subject}\n\n${message}`
+        : message
+
       const result = await contactService.send({
         name,
         email,
         phone,
-        message
+        message: submittedMessage
       })
 
-      setForm({
-        name: '',
-        email: '',
-        phone: '',
-        message: ''
-      })
+      setForm({ name: '', email: '', phone: '', subject: '', message: '' })
 
       setPopup({
         type: 'success',
@@ -4365,177 +4363,94 @@ function ContactForm() {
 
   return (
     <>
-      <div className="xaaj-contact-form-head">
-        <div>
-          <span className="xaaj-contact-index">01 — YOUR MESSAGE</span>
-          <h2>Tell us what’s<br /><em>on your mind.</em></h2>
+      <div className="xaaj-contact-layout">
+        <section className="xaaj-contact-image-panel" aria-label="XAAJ tableware">
+          <img src="/contact.png" alt="XAAJ handcrafted tableware arranged on a table" />
+        </section>
+
+        <section className="xaaj-contact-form-side">
+          <div className="xaaj-contact-form-inner">
+            <span className="xaaj-contact-kicker">CONTACT US</span>
+            <h2>Send us a message.</h2>
+            <p className="xaaj-contact-form-subtitle">Fill out the form and our team will get back to you as soon as possible.</p>
+
+            <form className="xaaj-contact-form" onSubmit={handleSubmit}>
+              <div className="xaaj-contact-form-row">
+                <label>
+                  <span>Your Name <b>*</b></span>
+                  <input name="name" value={form.name} onChange={handleChange} required maxLength={80} autoComplete="name" placeholder="Your name" />
+                </label>
+                <label>
+                  <span>Your Email <b>*</b></span>
+                  <input type="email" name="email" value={form.email} onChange={handleChange} required maxLength={254} autoComplete="email" placeholder="you@example.com" />
+                </label>
+              </div>
+
+              <label>
+                <span>Subject</span>
+                <select name="subject" value={form.subject} onChange={handleChange}>
+                  <option value="">Select a subject</option>
+                  <option value="Order enquiry">Order enquiry</option>
+                  <option value="Product enquiry">Product enquiry</option>
+                  <option value="Corporate / Horeca">Corporate / Horeca</option>
+                  <option value="Collaboration">Collaboration</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Your Message <b>*</b></span>
+                <textarea name="message" value={form.message} onChange={handleChange} required maxLength={2000} rows={7} placeholder="Tell us how we can help..." />
+              </label>
+
+              <label className="xaaj-contact-phone-field">
+                <span>Phone / WhatsApp <small>Optional</small></span>
+                <input type="tel" name="phone" value={form.phone} onChange={handleChange} maxLength={15} autoComplete="tel" placeholder="+91 00000 00000" />
+              </label>
+
+              <div className="xaaj-contact-submit-row">
+                <span>We read every message.</span>
+                <button type="submit" disabled={loading}>
+                  <span>{loading ? 'Sending...' : 'Send Message'}</span>
+                  <ArrowRight size={16} strokeWidth={1.5} />
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
+
+      <section className="xaaj-contact-info-strip">
+        <div className="xaaj-contact-info-list">
+          <a href="https://www.google.com/maps/search/?api=1&query=G6%2F4C%20DLF%20Garden%20City%20Sector%2092%20Gurugram%20122505" target="_blank" rel="noreferrer">
+            <MapPin size={20} strokeWidth={1.35} />
+            <span><small>OUR ADDRESS</small><strong>G6/4C DLF Garden City,<br />Sector 92, Gurugram 122505</strong></span>
+          </a>
+          <a href="tel:+919899446117">
+            <PhoneCall size={20} strokeWidth={1.35} />
+            <span><small>CALL US</small><strong>+91 98994 46117</strong><em>Mon – Sat, 10:00 AM – 6:00 PM</em></span>
+          </a>
+          <a href="mailto:customercare@xaaj.in">
+            <Mail size={20} strokeWidth={1.35} />
+            <span><small>EMAIL US</small><strong>customercare@xaaj.in</strong><em>We usually respond within 1–2 business days.</em></span>
+          </a>
         </div>
-
-        <div className="xaaj-contact-form-intro">
-          <p>
-            Whether you have a question about an order, a piece you love,
-            delivery or something else entirely — we would love to hear from you.
-          </p>
-          <span className="xaaj-contact-form-note">A considered reply, usually within 1–2 working days.</span>
-        </div>
-      </div>
-
-      <div className="xaaj-contact-form-grid">
-        <form className="xaaj-contact-form-panel" onSubmit={handleSubmit}>
-          <div className="xaaj-contact-form-fields">
-            <label className="xaaj-contact-field">
-              <span><b>01</b> Your name <i>*</i></span>
-              <input
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                required
-                maxLength={80}
-                autoComplete="name"
-                placeholder="Enter your name"
-              />
-            </label>
-
-            <label className="xaaj-contact-field">
-              <span><b>02</b> Email address <i>*</i></span>
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                required
-                maxLength={254}
-                autoComplete="email"
-                placeholder="you@example.com"
-              />
-            </label>
-
-            <label className="xaaj-contact-field xaaj-contact-field-wide">
-              <span><b>03</b> Phone / WhatsApp</span>
-              <input
-                type="tel"
-                name="phone"
-                value={form.phone}
-                onChange={handleChange}
-                maxLength={15}
-                autoComplete="tel"
-                placeholder="+91 00000 00000"
-              />
-            </label>
-
-            <label className="xaaj-contact-field xaaj-contact-field-wide">
-              <span><b>04</b> Your message <i>*</i></span>
-              <textarea
-                name="message"
-                value={form.message}
-                onChange={handleChange}
-                required
-                maxLength={2000}
-                rows={6}
-                placeholder="Tell us how we can help..."
-              />
-              <small>{form.message.length}/2000</small>
-            </label>
-          </div>
-
-          <div className="xaaj-contact-submit-row">
-            <span>We read every message.</span>
-            <button type="submit" disabled={loading}>
-              <span>{loading ? 'Sending...' : 'Send message'}</span>
-              <ArrowRight size={16} strokeWidth={1.5} />
-            </button>
-          </div>
-        </form>
-
-        <aside className="xaaj-contact-care">
-          <div className="xaaj-contact-care-top">
-            <span className="xaaj-contact-index">02 — XAAJ CARE</span>
-            <div className="xaaj-contact-monogram">
-              <img
-                src={logoUrl}
-                alt="XAAJ"
-              />
-            </div>
-            <h3>Made to be<br /><em>answered.</em></h3>
-            <p>
-              Good things deserve thoughtful care. Reach us directly if you
-              need help with an order or simply want to know more about XAAJ.
-            </p>
-          </div>
-
-          <div className="xaaj-contact-care-links">
-            <a href="https://wa.me/919899446117" target="_blank" rel="noreferrer">
-              <MessageCircle size={18} strokeWidth={1.4} />
-              <span>
-                <small>WhatsApp</small>
-                <strong>+91 98994 46117</strong>
-              </span>
-              <ArrowRight size={15} />
-            </a>
-
-            <a href="mailto:customercare@xaaj.in">
-              <Mail size={18} strokeWidth={1.4} />
-              <span>
-                <small>Email</small>
-                <strong>customercare@xaaj.in</strong>
-              </span>
-              <ArrowRight size={15} />
-            </a>
-          </div>
-
-          <div className="xaaj-contact-address">
-            <small>STUDIO / BUSINESS ADDRESS</small>
-            <p>G6/4C DLF Garden City,<br />Sector 92, Gurugram 122505</p>
-          </div>
-        </aside>
-      </div>
-
-      <div className="xaaj-contact-response-note">
-        We usually respond within 1–2 working days. For urgent order support,
-        you can reach us directly by phone or WhatsApp.
-      </div>
+        <a className="xaaj-contact-map-card" href="https://www.google.com/maps/search/?api=1&query=G6%2F4C%20DLF%20Garden%20City%20Sector%2092%20Gurugram%20122505" target="_blank" rel="noreferrer" aria-label="Open XAAJ address in Google Maps">
+          <MapPin size={30} strokeWidth={1.25} />
+          <div><strong>Gurugram</strong><span>Haryana, India</span></div>
+        </a>
+      </section>
 
       {popup && (
-        <div
-          className="xaaj-contact-popup"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="xaaj-contact-popup-title"
-          onClick={event => {
-            if (event.target === event.currentTarget) {
-              setPopup(null)
-            }
-          }}
-        >
+        <div className="xaaj-contact-popup" role="dialog" aria-modal="true" aria-labelledby="xaaj-contact-popup-title" onClick={event => { if (event.target === event.currentTarget) setPopup(null) }}>
           <div className="xaaj-contact-popup-card">
-            <button
-              type="button"
-              className="xaaj-contact-popup-close"
-              onClick={() => setPopup(null)}
-              aria-label="Close"
-            >
-              ×
-            </button>
-
-            <div className="xaaj-contact-popup-mark">
-              {popup.type === 'error' ? '!' : '♡'}
-            </div>
-
+            <button type="button" className="xaaj-contact-popup-close" onClick={() => setPopup(null)} aria-label="Close">×</button>
+            <div className="xaaj-contact-popup-mark">{popup.type === 'error' ? '!' : '♡'}</div>
             <span className="xaaj-contact-popup-brand">XAAJ</span>
-
             <h3 id="xaaj-contact-popup-title">{popup.title}</h3>
-
             <p>{popup.message}</p>
-
             <div className="xaaj-contact-popup-rule" />
-
-            <button
-              type="button"
-              className="xaaj-contact-popup-action"
-              onClick={() => setPopup(null)}
-            >
-              Continue
-            </button>
+            <button type="button" className="xaaj-contact-popup-action" onClick={() => setPopup(null)}>Continue</button>
           </div>
         </div>
       )}
@@ -7828,7 +7743,7 @@ function SimplePage({
             padding: 56px 24px 80px;
             box-sizing: border-box;
             background:
-              radial-gradient(circle at 10% 5%, rgba(47,112,72,.055), transparent 28%),
+              radial-gradient(circle at 10% 5%, rgba(159,63,39,.055), transparent 28%),
               linear-gradient(180deg, #f7f5f0 0%, #f2efe8 100%);
           }
 
@@ -7866,7 +7781,10 @@ function SimplePage({
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            background: #183126;
+            background:
+              radial-gradient(circle at 72% 27%, rgba(255,220,205,.08), transparent 23%),
+              radial-gradient(circle at 18% 82%, rgba(255,235,225,.035), transparent 28%),
+              #963b27;
             color: #f8f5ed;
           }
 
@@ -7875,7 +7793,7 @@ function SimplePage({
             position: absolute;
             right: -45px;
             bottom: -125px;
-            color: rgba(255,255,255,.035);
+            color: rgba(255,245,238,.055);
             font-family:'Gotham Book','Gotham',Arial,sans-serif;
             font-size: 410px;
             line-height: 1;
@@ -7890,11 +7808,11 @@ function SimplePage({
             height: 240px;
             right: 34px;
             top: 105px;
-            border: 1px solid rgba(226,235,225,.13);
+            border: 1px solid rgba(255,226,214,.18);
             border-radius: 50%;
             box-shadow:
-              0 0 0 30px rgba(226,235,225,.018),
-              0 0 0 60px rgba(226,235,225,.012);
+              0 0 0 30px rgba(255,226,214,.028),
+              0 0 0 60px rgba(255,226,214,.018);
             pointer-events: none;
           }
 
@@ -7915,7 +7833,7 @@ function SimplePage({
             width: 30px;
             height: 1px;
             display: block;
-            background: #a8c29d;
+            background: #d9a18d;
           }
 
           .xaaj-auth-editorial-copy {
@@ -7927,7 +7845,7 @@ function SimplePage({
           .xaaj-auth-editorial-eyebrow {
             display: block;
             margin-bottom: 19px;
-            color: #a8c29d;
+            color: #d9a18d;
             font-size: 9px;
             font-weight: 700;
             letter-spacing: 2.3px;
@@ -7946,7 +7864,7 @@ function SimplePage({
           }
 
           .xaaj-auth-editorial h2 em {
-            color: #c9d7c1;
+            color: #f1d1c3;
             font-style: italic;
             font-weight: 400;
           }
@@ -7979,7 +7897,7 @@ function SimplePage({
             width: 4px;
             height: 4px;
             border-radius: 50%;
-            background: #a8c29d;
+            background: #d9a18d;
           }
 
           .xaaj-auth-form-panel {
@@ -8030,7 +7948,7 @@ function SimplePage({
           }
 
           .xaaj-auth-nav a.active {
-            background: #292824;
+            background: #9f3f27;
             color: #fffdf8;
             box-shadow: 0 4px 12px rgba(41,40,36,.12);
           }
@@ -8038,7 +7956,7 @@ function SimplePage({
           .xaaj-auth-kicker {
             display: block;
             margin-bottom: 13px;
-            color: #2f7048;
+            color: #9f3f27;
             font-size: 9px;
             font-weight: 700;
             letter-spacing: 2px;
@@ -8143,9 +8061,9 @@ function SimplePage({
           }
 
           .xaaj-auth-field input:focus {
-            border-color: #2f7048;
+            border-color: #9f3f27;
             background: #fff;
-            box-shadow: 0 0 0 3px rgba(47,112,72,.08);
+            box-shadow: 0 0 0 3px rgba(159,63,39,.10);
           }
 
           .xaaj-auth-password-toggle {
@@ -8164,7 +8082,7 @@ function SimplePage({
           }
 
           .xaaj-auth-password-toggle:hover {
-            color: #2f7048;
+            color: #9f3f27;
           }
 
           .xaaj-auth-error {
@@ -8182,9 +8100,9 @@ function SimplePage({
             align-items: center;
             justify-content: center;
             gap: 10px;
-            border: 1px solid #292824;
+            border: 1px solid #9f3f27;
             border-radius: 10px;
-            background: #292824;
+            background: #9f3f27;
             color: #fffdf8;
             font: inherit;
             font-size: 11px;
@@ -8199,8 +8117,8 @@ function SimplePage({
 
           .xaaj-auth-submit:hover {
             transform: translateY(-2px);
-            background: #2f7048;
-            box-shadow: 0 13px 28px rgba(47,112,72,.17);
+            background: #87331f;
+            box-shadow: 0 13px 28px rgba(159,63,39,.18);
           }
 
           .xaaj-auth-submit:active {
@@ -8229,7 +8147,7 @@ function SimplePage({
 
           .xaaj-auth-secondary a,
           .xaaj-auth-switch a {
-            color: #2f7048;
+            color: #9f3f27;
             text-decoration: none;
             font-size: 10px;
             font-weight: 700;
@@ -8283,8 +8201,8 @@ function SimplePage({
             align-items: center;
             justify-content: center;
             border-radius: 50%;
-            background: #e7eee7;
-            color: #2f7048;
+            background: #f1e1da;
+            color: #9f3f27;
             font-size: 8px;
           }
 
@@ -12591,271 +12509,224 @@ function App() {
               grid-column: 2;
             }
           }
-        `}</style>
+          /* Simple XAAJ Our Story layout */
+          .xaaj-about-simple {
+            background:#ffffff !important;
+            color:#2f2c28;
+          }
 
-        <main className="xaaj-about">
+          /* About / Our Story: keep the same horizontal breathing room as the main page. */
+          .xaaj-about-simple-story {
+            width:auto;
+            max-width:none;
+            margin:0;
+            min-height:calc(100vh - 190px);
+            padding:92px 3.45vw 110px;
+            box-sizing:border-box;
+            display:grid;
+            grid-template-columns:minmax(280px,.72fr) 1px minmax(0,1.28fr);
+            column-gap:clamp(48px,7vw,110px);
+            align-items:start;
+          }
 
-          {/* HERO */}
-          <section className="xaaj-about-hero">
+          .xaaj-about-simple-brand {
+            min-height:560px;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:flex-start;
+            padding-top:95px;
+            text-align:center;
+          }
 
-            <div className="xaaj-about-hero-copy">
-              <span className="xaaj-about-eyebrow">
-                The XAAJ story
-              </span>
+          .xaaj-about-simple-logo {
+            width:min(235px,70%);
+            height:auto;
+            object-fit:contain;
+            display:block;
+          }
 
-              <h1>
-                Everyday
-                <br />
-                objects,
-                <br />
-                <em>beautifully lived.</em>
+          .xaaj-about-simple-brand span {
+            margin-top:18px;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
+            font-size:10px;
+            line-height:1;
+            letter-spacing:3.2px;
+            color:#a84d35;
+            text-transform:uppercase;
+          }
+
+          .xaaj-about-simple-divider {
+            width:1px;
+            min-height:560px;
+            background:rgba(47,44,40,.14);
+          }
+
+          .xaaj-about-simple-copy {
+            max-width:790px;
+            padding:0 0 10px;
+          }
+
+          .xaaj-about-simple-eyebrow {
+            display:block;
+            margin:0 0 25px;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
+            font-size:10px;
+            line-height:1;
+            letter-spacing:3px;
+            color:#a84d35;
+            text-transform:uppercase;
+          }
+
+          .xaaj-about-simple-copy h1 {
+            margin:0 0 48px;
+            max-width:820px;
+            font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+            font-size:clamp(43px,4.15vw,67px);
+            font-weight:400;
+            line-height:1.03;
+            letter-spacing:-.035em;
+            color:#26231f;
+          }
+
+          .xaaj-about-simple-copy p {
+            max-width:780px;
+            margin:0 0 31px;
+            font-family:'Gotham Book','Gotham',Arial,sans-serif;
+            font-size:15px;
+            font-weight:400;
+            line-height:1.95;
+            letter-spacing:.005em;
+            color:#514d47;
+          }
+
+          .xaaj-about-simple-signoff {
+            margin-top:52px;
+            padding-top:22px;
+            border-top:1px solid rgba(47,44,40,.12);
+            font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+            font-size:25px;
+            font-style:italic;
+            color:#a84d35;
+          }
+
+          @media(max-width:900px){
+            .xaaj-about-simple-story {
+              width:auto;
+              padding:68px 18px 82px;
+              grid-template-columns:1fr;
+              row-gap:42px;
+            }
+
+            .xaaj-about-simple-brand {
+              min-height:auto;
+              padding-top:0;
+            }
+
+            .xaaj-about-simple-logo {
+              width:180px;
+            }
+
+            .xaaj-about-simple-brand span {
+              margin-top:13px;
+              font-size:8px;
+              letter-spacing:2.5px;
+            }
+
+            .xaaj-about-simple-divider {
+              width:100%;
+              min-height:1px;
+              height:1px;
+            }
+
+            .xaaj-about-simple-copy {
+              max-width:none;
+            }
+
+            .xaaj-about-simple-copy h1 {
+              margin-bottom:34px;
+              font-size:clamp(38px,8.5vw,54px);
+            }
+
+            .xaaj-about-simple-copy p {
+              font-size:14px;
+              line-height:1.9;
+            }
+          }
+
+          @media(max-width:520px){
+            .xaaj-about-simple-story {
+              width:auto;
+              padding:48px 12px 65px;
+              row-gap:30px;
+            }
+
+            .xaaj-about-simple-logo {
+              width:155px;
+            }
+
+            .xaaj-about-simple-eyebrow {
+              margin-bottom:18px;
+              font-size:9px;
+              letter-spacing:2.4px;
+            }
+
+            .xaaj-about-simple-copy h1 {
+              margin-bottom:30px;
+              font-size:clamp(35px,10vw,46px);
+              line-height:1.04;
+            }
+
+            .xaaj-about-simple-copy p {
+              font-size:13px;
+              line-height:1.85;
+              margin-bottom:25px;
+            }
+
+            .xaaj-about-simple-signoff {
+              margin-top:40px;
+              font-size:22px;
+            }
+          }
+
+        `}
+
+</style>
+
+        <main className="xaaj-about xaaj-about-simple">
+
+          <section className="xaaj-about-simple-story" aria-labelledby="xaaj-our-story-title">
+
+            <div className="xaaj-about-simple-brand">
+              <img
+                src={logoUrl}
+                alt="XAAJ"
+                className="xaaj-about-simple-logo"
+              />
+              <span>STORES CRAFTED IN EARTH</span>
+            </div>
+
+            <div className="xaaj-about-simple-divider" aria-hidden="true" />
+
+            <article className="xaaj-about-simple-copy">
+              <span className="xaaj-about-simple-eyebrow">OUR STORY</span>
+
+              <h1 id="xaaj-our-story-title">
+                Some things are designed to be seen. Some things are made to be felt. XAAJ is about the latter.
               </h1>
 
-              <p className="xaaj-about-hero-description">
-                We believe the objects around your table should
-                bring a little more warmth to ordinary moments.
-                XAAJ creates thoughtful crockery for the way
-                people actually live, gather and celebrate.
+              <p>
+                Born from the love for beauty that exists in India&apos;s everyday life, XAAJ presents the Story of Clay, Craft, &amp; Colour to create the cultural richness that cozies up your home. Because India has never been short of stories. They live in the morning Chai shared across a balcony. In the grandmother&apos;s favourite bowl. In the plate brought out when guests arrive. In the table that gets a little louder during festivals. In the quiet dinner shared after a long day. We thrive to create something that could become part of these moments. And thus, XAAJ was born. Our journey begins in places where craft is still handcrafted. Khurja is one of them—a place that witnesses humble workshops where generations invested themselves in pottery. Here, clay is shaped slowly, patiently, and lovingly by hands that have learned the craft over generations. XAAJ nurtures the Story of Khurja and several other such place to showcase to the rest of India. At XAAJ, we don&apos;t create crockery for occasions.
               </p>
-
-              <Link className="xaaj-about-hero-link" to="/shop">
-                Explore the collection
-                <ArrowRight size={14} />
-              </Link>
-
-              <span className="xaaj-about-hero-number">
-                01
-              </span>
-            </div>
-
-            <div className="xaaj-about-hero-visual">
-              <img
-                src={heroImage}
-                alt="XAAJ tableware arranged on a warm dining table"
-              />
-
-              <div className="xaaj-about-hero-badge">
-                <div>
-                  <strong>XAAJ</strong>
-                  Made for
-                  <br />
-                  everyday rituals
-                </div>
-              </div>
-            </div>
-
-          </section>
-
-          {/* PHILOSOPHY */}
-          <section className="xaaj-about-intro">
-
-            <div className="xaaj-about-section-label">
-              02 — Our philosophy
-            </div>
-
-            <div>
-              <h2>
-                The everyday deserves
-                <em> beautiful things.</em>
-              </h2>
-
-              <p className="xaaj-about-intro-text">
-                XAAJ began with a simple idea: beauty should not
-                be reserved for special occasions. From the first
-                cup of tea in the morning to a table shared with
-                people you love, the pieces we use every day
-                can make ordinary rituals feel meaningful.
-              </p>
-
-              <div className="xaaj-about-stat-row">
-
-                <div className="xaaj-about-stat">
-                  <strong>01</strong>
-                  <span>Thoughtful design</span>
-                </div>
-
-                <div className="xaaj-about-stat">
-                  <strong>02</strong>
-                  <span>Indian craft</span>
-                </div>
-
-                <div className="xaaj-about-stat">
-                  <strong>03</strong>
-                  <span>Made to be lived with</span>
-                </div>
-
-              </div>
-            </div>
-
-          </section>
-
-          {/* STORY */}
-          <section className="xaaj-about-story">
-
-            <div className="xaaj-about-story-grid">
-
-              <div className="xaaj-about-story-image">
-                <img
-                  src={tableImage}
-                  alt="Warm table setting with handcrafted crockery"
-                />
-              </div>
-
-              <div className="xaaj-about-story-copy">
-
-                <span className="xaaj-about-section-label">
-                  03 — The XAAJ way
-                </span>
-
-                <h2>
-                  For morning tea,
-                  <br />
-                  long lunches &
-                  <br />
-                  <em>everything between.</em>
-                </h2>
-
-                <p>
-                  We work with makers and draw inspiration from
-                  the textures, colours and quiet character of
-                  Indian craft. Our collections are designed
-                  to feel contemporary while still carrying
-                  a sense of warmth and familiarity.
-                </p>
-
-                <p>
-                  Small variations in colour, texture and form
-                  are part of the charm. They are little reminders
-                  that the objects on your table have a human story.
-                </p>
-
-                <div className="xaaj-about-story-signature">
-                  — with care, XAAJ
-                </div>
-
-              </div>
-
-            </div>
-
-          </section>
-
-          {/* VALUES */}
-          <section className="xaaj-about-values">
-
-            <div className="xaaj-about-values-head">
-
-              <div>
-                <span className="xaaj-about-section-label">
-                  04 — What we believe
-                </span>
-
-                <h2>
-                  Less clutter.
-                  <br />
-                  More <em>meaning.</em>
-                </h2>
-              </div>
 
               <p>
-                Every collection starts with the same question:
-                will this make the everyday table feel a little
-                more special?
+                We create pieces that quietly become part of your everyday life. Every collection is our way of discovering a little more of this country—its colours, its patterns, its forgotten crafts, its landscapes, its architecture, its traditions and, most importantly, its people. We take these inspirations and give them a new expression—something contemporary for today&apos;s homes, yet carrying a little piece of essence of where it came from. We want it to live on your table. In the things you use every day. A cup that becomes your morning ritual. A plate that witnesses family celebrations. A bowl that holds the meal that made a difficult day feel better. Over time, these objects become more than objects. They become ours. At XAAJ, we embrace that artistry. A brushstroke that isn&apos;t perfectly identical. A glaze that settles a little differently. A tiny variation that makes one piece unlike another. We don&apos;t see these as imperfections. We see the human hand. XAAJ is not just crockery, but pieces that slowly find their way into your life. Pieces that bring joy &amp; happiness today... and perhaps, years from now, carry memories of moments that made your house a home. Because ultimately, XAAJ is not about what we make. It is about what happens around it. The conversations. The celebrations. The ordinary evenings. The people we love. Every table has a story. XAAJ is here to become a part of yours.
               </p>
 
-            </div>
-
-            <div className="xaaj-about-value-grid">
-
-              <div className="xaaj-about-value">
-                <span className="xaaj-about-value-number">
-                  01
-                </span>
-
-                <h3>
-                  Craft over clutter
-                </h3>
-
-                <p>
-                  Thoughtful pieces that earn their place
-                  at your table.
-                </p>
+              <div className="xaaj-about-simple-signoff">
+                XAAJ Stories crafted in earth.
               </div>
-
-              <div className="xaaj-about-value">
-                <span className="xaaj-about-value-number">
-                  02
-                </span>
-
-                <h3>
-                  Beauty with purpose
-                </h3>
-
-                <p>
-                  Form, texture and function working together
-                  naturally.
-                </p>
-              </div>
-
-              <div className="xaaj-about-value">
-                <span className="xaaj-about-value-number">
-                  03
-                </span>
-
-                <h3>
-                  Made to keep
-                </h3>
-
-                <p>
-                  Objects you reach for often, share freely
-                  and enjoy for years.
-                </p>
-              </div>
-
-            </div>
-
-          </section>
-
-          {/* CTA */}
-          <section className="xaaj-about-cta">
-
-            <div className="xaaj-about-cta-inner">
-
-              <span className="xaaj-about-section-label">
-                05 — Come say hello
-              </span>
-
-              <h2>
-                Your table tells a story.
-                <br />
-                <em>Make it yours.</em>
-              </h2>
-
-              <p>
-                Questions about an order, a product or simply
-                want to say hello? Our team is always happy to help.
-              </p>
-
-              <div className="xaaj-about-cta-links">
-
-                <a href="mailto:customercare@xaaj.in">
-                  Email us
-                </a>
-
-                <a href="tel:+919899446117">
-                  +91 9899446117
-                </a>
-
-                <Link to="/contact">
-                  Contact us
-                  <ArrowRight
-                    size={13}
-                    style={{ marginLeft: 7 }}
-                  />
-                </Link>
-
-              </div>
-
-            </div>
+            </article>
 
           </section>
 
@@ -15182,757 +15053,384 @@ function App() {
         <Header />
 
         <style>{`
-          /* ==========================================================
-             XAAJ CONTACT — ULTRA PREMIUM EDITORIAL CONTACT EXPERIENCE
-             ========================================================== */
-
-          .xaaj-contact-page {
-            --contact-ink: #1d2d25;
-            --contact-green: #183126;
-            --contact-paper: #f2eee5;
-            --contact-white: #fbfaf6;
-            --contact-muted: #8b877f;
-            --contact-line: rgba(29,45,37,.15);
-            background: var(--contact-paper);
-            color: #292824;
-            overflow: hidden;
+          .xaaj-contact-page{
+            background:#ffffff;
+            color:#292824;
+            overflow:hidden;
           }
 
-          /* Hero: removes the empty feeling above the form with a strong
-             editorial composition rather than another generic card. */
-          .xaaj-contact-hero {
-            position: relative;
-            min-height: 430px;
-            width: 100%;
-            display: grid;
-            grid-template-columns: minmax(0, 1.15fr) minmax(360px, .85fr);
-            align-items: end;
-            padding: 78px clamp(28px, 7vw, 110px) 74px;
-            background: var(--contact-green);
-            color: #f5f0e7;
-            overflow: hidden;
+          .xaaj-contact-layout{
+            width:100%;
+            display:grid;
+            grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+            background:#ffffff;
           }
 
-          .xaaj-contact-hero::before {
-            content: 'X';
-            position: absolute;
-            right: 2vw;
-            bottom: -18vw;
+          .xaaj-contact-image-panel{
+            position:relative;
+            min-height:630px;
+            overflow:hidden;
+            background:#4a392b;
+          }
+
+          .xaaj-contact-image-panel::after{
+            content:"";
+            position:absolute;
+            inset:0;
+            background:linear-gradient(90deg,rgba(27,21,16,.18),rgba(34,24,17,.54));
+            pointer-events:none;
+          }
+
+          .xaaj-contact-image-panel img{
+            width:100%;
+            height:100%;
+            min-height:630px;
+            object-fit:cover;
+            display:block;
+            filter:saturate(.84) contrast(.96);
+          }
+
+          .xaaj-contact-image-copy{
+            display:none!important;
+            position:absolute;
+            z-index:2;
+            left:clamp(42px,6vw,105px);
+            top:clamp(55px,8vw,92px);
+            width:min(390px,70%);
+            color:#fffaf1;
+          }
+
+          .xaaj-contact-image-copy>span,
+          .xaaj-contact-kicker{
+            display:block;
+            color:#fffaf1;
             font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: clamp(300px, 43vw, 700px);
-            font-weight: 400;
-            line-height: .72;
-            color: transparent;
-            -webkit-text-stroke: 1px rgba(245,240,231,.08);
-            pointer-events: none;
+            font-size:10px;
+            font-weight:600;
+            letter-spacing:.23em;
+            line-height:1.2;
+            text-transform:uppercase;
           }
 
-          .xaaj-contact-hero::after {
-            content: '';
-            position: absolute;
-            inset: 18px;
-            border: 1px solid rgba(245,240,231,.10);
-            pointer-events: none;
-          }
-
-          .xaaj-contact-hero-copy,
-          .xaaj-contact-hero-details {
-            position: relative;
-            z-index: 1;
-          }
-
-          .xaaj-contact-kicker {
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            color: #d69b83;
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: .24em;
-            text-transform: uppercase;
-          }
-
-          .xaaj-contact-kicker::before {
-            content: '';
-            width: 34px;
-            height: 1px;
-            background: currentColor;
-          }
-
-          .xaaj-contact-hero h1 {
-            max-width: 850px;
-            margin: 22px 0 0;
+          .xaaj-contact-image-copy h1{
+            margin:24px 0 22px;
             font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: clamp(60px, 8.2vw, 118px);
-            font-weight: 400;
-            line-height: .79;
-            letter-spacing: -.055em;
+            font-size:clamp(52px,5.2vw,78px);
+            font-weight:400;
+            line-height:.93;
+            letter-spacing:-.045em;
           }
 
-          .xaaj-contact-hero h1 em {
-            color: #d69b83;
-            font-style: italic;
+          .xaaj-contact-image-copy i{
+            display:block;
+            width:52px;
+            height:1px;
+            margin:0 0 22px;
+            background:rgba(255,250,241,.7);
           }
 
-          .xaaj-contact-hero-details {
-            justify-self: end;
-            width: min(430px, 100%);
-            padding-left: 42px;
-            border-left: 1px solid rgba(245,240,231,.17);
-          }
-
-          .xaaj-contact-hero-details p {
-            max-width: 390px;
-            margin: 0;
-            color: rgba(245,240,231,.68);
-            font-size: 14px;
-            line-height: 1.85;
-          }
-
-          .xaaj-contact-hero-links {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 26px;
-            margin-top: 34px;
-          }
-
-          .xaaj-contact-hero-links a {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid rgba(245,240,231,.16);
-            color: #f5f0e7;
-            text-decoration: none;
-            font-size: 12px;
-            transition: border-color .3s ease, color .3s ease, transform .3s ease;
-          }
-
-          .xaaj-contact-hero-links a:hover {
-            color: #d69b83;
-            border-color: rgba(214,155,131,.6);
-            transform: translateY(-2px);
-          }
-
-          .xaaj-contact-hero-links small {
-            display: block;
-            margin-bottom: 5px;
-            color: rgba(245,240,231,.42);
-            font-size: 8px;
-            letter-spacing: .16em;
-            text-transform: uppercase;
-          }
-
-          .xaaj-contact-hero-links strong {
-            display: block;
-            font-weight: 500;
-            letter-spacing: .01em;
-          }
-
-          /* Form stage overlaps the hero for a luxury editorial finish. */
-          .xaaj-contact-content {
-            position: relative;
-            z-index: 3;
-            width: min(1240px, calc(100% - 52px));
-            /* Keep a deliberate breathing space between the green hero and the white form. */
-            margin: 30px auto 0;
-            padding: 0 0 70px;
-          }
-
-          .xaaj-contact-form-head {
-            display: grid;
-            grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr);
-            gap: 50px;
-            padding: 58px 60px 50px;
-            background: var(--contact-white);
-            border-bottom: 1px solid var(--contact-line);
-          }
-
-          .xaaj-contact-index {
-            display: block;
-            margin-bottom: 16px;
-            color: #a84d35;
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: .2em;
-            text-transform: uppercase;
-          }
-
-          .xaaj-contact-form-head h2 {
-            margin: 0;
+          .xaaj-contact-image-copy p{
+            max-width:330px;
+            margin:0;
+            color:rgba(255,250,241,.78);
             font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: clamp(42px, 5vw, 70px);
-            font-weight: 400;
-            line-height: .9;
-            letter-spacing: -.045em;
+            font-size:14px;
+            line-height:1.75;
           }
 
-          .xaaj-contact-form-head h2 em,
-          .xaaj-contact-care h3 em {
-            font-style: italic;
-            font-weight: 400;
+          .xaaj-contact-form-side{
+            background:#ffffff;
+            display:flex;
+            align-items:center;
           }
 
-          .xaaj-contact-form-intro {
-            align-self: end;
-            padding-left: 34px;
-            border-left: 1px solid var(--contact-line);
+          .xaaj-contact-form-inner{
+            width:min(720px,100%);
+            margin:0 auto;
+            padding:78px clamp(42px,6vw,96px) 74px;
+            box-sizing:border-box;
           }
 
-          .xaaj-contact-form-intro p {
-            margin: 0;
-            max-width: 430px;
-            color: #66625c;
-            font-size: 14px;
-            line-height: 1.8;
+          .xaaj-contact-kicker{
+            color:#b44832;
+            margin-bottom:22px;
           }
 
-          .xaaj-contact-form-note {
-            display: block;
-            margin-top: 22px;
-            color: #a09a90;
-            font-size: 10px;
-            letter-spacing: .02em;
-          }
-
-          .xaaj-contact-form-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1.55fr) minmax(300px, .72fr);
-            background: var(--contact-white);
-            border-bottom: 1px solid var(--contact-line);
-          }
-
-          .xaaj-contact-form-panel {
-            min-width: 0;
-            padding: 52px 60px 56px;
-            border-right: 1px solid var(--contact-line);
-          }
-
-          .xaaj-contact-form-fields {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 32px 28px;
-          }
-
-          .xaaj-contact-field {
-            position: relative;
-            display: grid;
-            gap: 10px;
-            min-width: 0;
-          }
-
-          .xaaj-contact-field-wide {
-            grid-column: 1 / -1;
-          }
-
-          .xaaj-contact-field > span {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #292824;
-            font-size: 10px;
-            font-weight: 600;
-            letter-spacing: .08em;
-            text-transform: uppercase;
-          }
-
-          .xaaj-contact-field > span b {
-            color: #a84d35;
-            font-size: 9px;
-            font-weight: 700;
-          }
-
-          .xaaj-contact-field > span i {
-            color: #a84d35;
-            font-style: normal;
-          }
-
-          .xaaj-contact-field input,
-          .xaaj-contact-field textarea {
-            width: 100%;
-            box-sizing: border-box;
-            border: 0;
-            border-bottom: 1px solid #c9c3b9;
-            border-radius: 0;
-            padding: 13px 0 14px;
-            background: transparent;
-            color: #292824;
-            font: inherit;
-            font-size: 14px;
-            line-height: 1.5;
-            outline: none;
-            transition: border-color .3s ease, padding .3s ease;
-          }
-
-          .xaaj-contact-field input::placeholder,
-          .xaaj-contact-field textarea::placeholder {
-            color: #aaa49b;
-          }
-
-          .xaaj-contact-field input:focus,
-          .xaaj-contact-field textarea:focus {
-            border-bottom-color: var(--contact-green);
-          }
-
-          .xaaj-contact-field textarea {
-            min-height: 142px;
-            resize: vertical;
-          }
-
-          .xaaj-contact-field small {
-            justify-self: end;
-            margin-top: -4px;
-            color: #aaa49b;
-            font-size: 9px;
-            letter-spacing: .05em;
-          }
-
-          .xaaj-contact-submit-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-            margin-top: 38px;
-            padding-top: 22px;
-            border-top: 1px solid var(--contact-line);
-          }
-
-          .xaaj-contact-submit-row > span {
-            color: #99938a;
-            font-size: 10px;
-            letter-spacing: .04em;
-          }
-
-          .xaaj-contact-submit-row button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 28px;
-            min-width: 205px;
-            min-height: 52px;
-            padding: 0 20px;
-            border: 0;
-            border-radius: 0;
-            background: var(--contact-green);
-            color: #fff;
-            font: inherit;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: .08em;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: background .3s ease, transform .3s ease, gap .3s ease;
-          }
-
-          .xaaj-contact-submit-row button:hover:not(:disabled) {
-            background: #274839;
-            gap: 36px;
-            transform: translateY(-2px);
-          }
-
-          .xaaj-contact-submit-row button:disabled {
-            cursor: wait;
-            opacity: .62;
-          }
-
-          .xaaj-contact-care {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-height: 100%;
-            padding: 52px 42px 44px;
-            background: var(--contact-green);
-            color: #f5f0e7;
-            overflow: hidden;
-          }
-
-          .xaaj-contact-care::after {
-            content: 'X';
-            position: absolute;
-            right: -35px;
-            bottom: -60px;
+          .xaaj-contact-form-inner h2{
+            margin:0;
             font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: 300px;
-            line-height: .7;
-            color: transparent;
-            -webkit-text-stroke: 1px rgba(245,240,231,.07);
-            pointer-events: none;
+            font-size:clamp(48px,4.6vw,68px);
+            font-weight:400;
+            line-height:.95;
+            letter-spacing:-.045em;
           }
 
-          .xaaj-contact-care-top,
-          .xaaj-contact-care-links,
-          .xaaj-contact-address {
-            position: relative;
-            z-index: 1;
+          .xaaj-contact-form-subtitle{
+            margin:24px 0 42px;
+            color:#77716a;
+            font-size:14px;
+            line-height:1.7;
           }
 
-          .xaaj-contact-care .xaaj-contact-index {
-            color: #d69b83;
+          .xaaj-contact-form{display:grid;gap:20px}
+
+          .xaaj-contact-form-row{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:20px;
           }
 
-          .xaaj-contact-monogram {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 42px;
-            height: 42px;
-            margin: 42px 0 24px;
-            border: 1px solid rgba(245,240,231,.2);
-            overflow: hidden;
-            background: rgba(245,240,231,.035);
-          }
+          .xaaj-contact-form label{display:grid;gap:9px;min-width:0}
 
-          .xaaj-contact-monogram img {
-            display: block;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            padding: 7px;
-            filter: brightness(0) invert(1);
-          }
-
-          .xaaj-contact-care h3 {
-            margin: 0;
+          .xaaj-contact-form label>span{
+            color:#625d56;
             font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: clamp(34px, 3.3vw, 48px);
-            font-weight: 400;
-            line-height: .93;
-            letter-spacing: -.035em;
+            font-size:9px;
+            font-weight:600;
+            letter-spacing:.12em;
+            text-transform:uppercase;
           }
 
-          .xaaj-contact-care-top p {
-            max-width: 330px;
-            margin: 22px 0 0;
-            color: rgba(245,240,231,.60);
-            font-size: 13px;
-            line-height: 1.8;
+          .xaaj-contact-form label>span b{color:#b44832;font-weight:600}
+          .xaaj-contact-form label>span small{color:#a29c93;font-size:8px;font-weight:400;letter-spacing:.04em;text-transform:none;margin-left:5px}
+
+          .xaaj-contact-form input,
+          .xaaj-contact-form select,
+          .xaaj-contact-form textarea{
+            width:100%;
+            box-sizing:border-box;
+            border:1px solid #dedad4;
+            border-radius:8px;
+            background:#fff;
+            color:#302d29;
+            padding:0 17px;
+            font:400 13px/1.4 'Gotham Book','Gotham',Arial,sans-serif;
+            outline:none;
+            transition:border-color .2s ease,box-shadow .2s ease;
           }
 
-          .xaaj-contact-care-links {
-            display: grid;
-            gap: 0;
-            margin-top: 54px;
+          .xaaj-contact-form input,
+          .xaaj-contact-form select{height:55px}
+          .xaaj-contact-form textarea{min-height:135px;padding-top:15px;padding-bottom:15px;resize:vertical}
+          .xaaj-contact-form input::placeholder,.xaaj-contact-form textarea::placeholder{color:#aaa49c}
+          .xaaj-contact-form select{appearance:auto;color:#77716a;cursor:pointer}
+          .xaaj-contact-form input:focus,.xaaj-contact-form select:focus,.xaaj-contact-form textarea:focus{border-color:#b44832;box-shadow:0 0 0 3px rgba(180,72,50,.07)}
+
+          .xaaj-contact-phone-field{display:none!important}
+
+          .xaaj-contact-submit-row{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:20px;
+            margin-top:2px;
           }
 
-          .xaaj-contact-care-links a {
-            display: grid;
-            grid-template-columns: 24px 1fr 15px;
-            align-items: center;
-            gap: 12px;
-            padding: 17px 0;
-            border-top: 1px solid rgba(245,240,231,.13);
-            color: #f5f0e7;
-            text-decoration: none;
-            transition: color .25s ease, padding .3s ease, border-color .25s ease;
+          .xaaj-contact-submit-row>span{color:#9a948c;font-size:10px;letter-spacing:.02em}
+
+          .xaaj-contact-submit-row button{
+            min-width:205px;
+            height:54px;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            gap:18px;
+            border:0;
+            border-radius:7px;
+            background:#b44832;
+            color:#fff;
+            font:600 11px 'Gotham Book','Gotham',Arial,sans-serif;
+            letter-spacing:.03em;
+            cursor:pointer;
+            transition:transform .2s ease,background .2s ease;
           }
 
-          .xaaj-contact-care-links a:last-child {
-            border-bottom: 1px solid rgba(245,240,231,.13);
+          .xaaj-contact-submit-row button:hover{background:#a23e2b;transform:translateY(-1px)}
+          .xaaj-contact-submit-row button:disabled{opacity:.65;cursor:wait;transform:none}
+
+          .xaaj-contact-info-strip{
+            width:min(1400px,calc(100% - 90px));
+            margin:0 auto;
+            padding:34px 0 48px;
+            border-top:1px solid #e3dfd9;
+            display:grid;
+            grid-template-columns:minmax(0,1.65fr) minmax(280px,.85fr);
+            gap:44px;
+            align-items:stretch;
           }
 
-          .xaaj-contact-care-links a:hover {
-            padding-left: 5px;
-            color: #d69b83;
-            border-color: rgba(214,155,131,.38);
+          .xaaj-contact-info-list{
+            display:grid;
+            grid-template-columns:repeat(3,1fr);
           }
 
-          .xaaj-contact-care-links small,
-          .xaaj-contact-address small {
-            display: block;
-            margin-bottom: 5px;
-            color: rgba(245,240,231,.42);
-            font-size: 8px;
-            letter-spacing: .16em;
-            text-transform: uppercase;
+          .xaaj-contact-info-list>a{
+            display:flex;
+            align-items:flex-start;
+            gap:15px;
+            min-height:130px;
+            padding:10px 34px 10px 0;
+            color:#302d29;
+            text-decoration:none;
           }
 
-          .xaaj-contact-care-links strong {
-            font-size: 12px;
-            font-weight: 500;
+          .xaaj-contact-info-list>a+a{padding-left:34px;border-left:1px solid #e0dbd4}
+          .xaaj-contact-info-list svg{color:#b44832;flex:0 0 auto;margin-top:2px}
+          .xaaj-contact-info-list span{display:block}
+          .xaaj-contact-info-list small{display:block;margin-bottom:13px;color:#b44832;font-size:8px;font-weight:600;letter-spacing:.18em;text-transform:uppercase}
+          .xaaj-contact-info-list strong{display:block;font:400 15px/1.45 'Gotham Book','Gotham',Arial,sans-serif}
+          .xaaj-contact-info-list em{display:block;margin-top:7px;color:#8c867e;font-size:10px;line-height:1.5;font-style:normal}
+
+          .xaaj-contact-map-card{
+            min-height:130px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:15px;
+            border-radius:15px;
+            background:linear-gradient(145deg,#f5f1e9,#eee9df);
+            color:#302d29;
+            text-decoration:none;
+            position:relative;
+            overflow:hidden;
           }
 
-          .xaaj-contact-address {
-            margin-top: 42px;
-            padding-top: 22px;
-            border-top: 1px solid rgba(245,240,231,.13);
+          .xaaj-contact-map-card::before{content:"";position:absolute;inset:0;background-image:linear-gradient(30deg,transparent 48%,rgba(125,112,97,.08) 49%,transparent 51%),linear-gradient(120deg,transparent 48%,rgba(125,112,97,.06) 49%,transparent 51%);background-size:72px 72px;opacity:.7}
+          .xaaj-contact-map-card svg,.xaaj-contact-map-card div{position:relative;z-index:1}
+          .xaaj-contact-map-card svg{color:#b44832}
+          .xaaj-contact-map-card strong,.xaaj-contact-map-card span{display:block}
+          .xaaj-contact-map-card strong{font:400 16px/1.2 'Gotham Book','Gotham',Arial,sans-serif}
+          .xaaj-contact-map-card span{margin-top:5px;color:#807970;font-size:10px}
+
+          .xaaj-contact-popup{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(24,29,25,.58);backdrop-filter:blur(10px)}
+          .xaaj-contact-popup-card{position:relative;width:min(100%,470px);padding:48px 36px 34px;text-align:center;background:#fff;border:1px solid rgba(41,40,37,.12);box-shadow:0 30px 100px rgba(0,0,0,.20)}
+          .xaaj-contact-popup-close{position:absolute;top:13px;right:15px;width:30px;height:30px;border:0;background:transparent;color:#77716a;font-size:23px;cursor:pointer}
+          .xaaj-contact-popup-mark{width:48px;height:48px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;border:1px solid #d9d0c5;color:#b44832;font-size:22px}
+          .xaaj-contact-popup-brand{display:block;margin-bottom:10px;color:#b44832;font-size:9px;font-weight:700;letter-spacing:.25em}
+          .xaaj-contact-popup-card h3{margin:0 0 13px;color:#292824;font:400 30px 'Gotham Book','Gotham',Arial,sans-serif}
+          .xaaj-contact-popup-card p{max-width:390px;margin:0 auto;color:#706d67;font-size:14px;line-height:1.75}
+          .xaaj-contact-popup-rule{width:54px;height:1px;margin:24px auto;background:#d9d0c5}
+          .xaaj-contact-popup-action{min-width:140px;height:44px;padding:0 22px;border:0;background:#b44832;color:#fff;font-size:11px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+
+          /* Final Contact image fix: contact.png already contains its own artwork/text.
+             Do not place a second text overlay on top of the image. */
+          .xaaj-contact-image-panel{
+            position:relative;
+            overflow:hidden;
+            background:#ffffff;
           }
 
-          .xaaj-contact-address p {
-            margin: 0;
-            color: rgba(245,240,231,.66);
-            font-size: 11px;
-            line-height: 1.7;
+          .xaaj-contact-image-panel img{
+            display:block;
+            width:100%;
+            height:100%;
+            object-fit:cover;
+            object-position:center;
           }
 
-          .xaaj-contact-response-note {
-            padding: 18px 0 0;
-            color: #918b82;
-            font-size: 10px;
-            line-height: 1.7;
+          /* Final Contact page layout: compact hero image, white surface, breathing room from header/footer. */
+          .xaaj-contact-page{
+            padding-top:52px;
+            padding-bottom:72px;
+            background:#ffffff;
           }
 
-          /* Success/error dialog */
-          .xaaj-contact-popup {
-            position: fixed;
-            inset: 0;
-            z-index: 99999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-            background: rgba(24,29,25,.58);
-            backdrop-filter: blur(10px);
+          .xaaj-contact-layout{
+            width:min(1440px,calc(100% - 72px));
+            margin:0 auto;
+            align-items:start;
           }
 
-          .xaaj-contact-popup-card {
-            position: relative;
-            width: min(100%, 470px);
-            padding: 48px 36px 34px;
-            text-align: center;
-            background: #fbfaf6;
-            border: 1px solid rgba(41,40,37,.12);
-            box-shadow: 0 30px 100px rgba(0,0,0,.20);
+          .xaaj-contact-image-panel{
+            height:560px;
+            min-height:0;
           }
 
-          .xaaj-contact-popup-close {
-            position: absolute;
-            top: 13px;
-            right: 15px;
-            width: 30px;
-            height: 30px;
-            border: 0;
-            background: transparent;
-            color: #77716a;
-            font-size: 23px;
-            cursor: pointer;
+          .xaaj-contact-image-panel img{
+            width:100%;
+            height:560px;
+            min-height:0;
+            object-fit:cover;
+            object-position:center;
           }
 
-          .xaaj-contact-popup-mark {
-            width: 48px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 18px;
-            border: 1px solid #d9d0c5;
-            color: #a84d35;
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: 22px;
+          .xaaj-contact-form-side{
+            min-height:560px;
           }
 
-          .xaaj-contact-popup-brand {
-            display: block;
-            margin-bottom: 10px;
-            color: #a84d35;
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: .25em;
+          @media(max-width:900px){
+            .xaaj-contact-page{padding-top:32px;padding-bottom:54px}
+            .xaaj-contact-layout{
+              width:calc(100% - 32px);
+              grid-template-columns:1fr;
+            }
+            .xaaj-contact-image-panel{height:480px!important;min-height:0!important}
+            .xaaj-contact-image-panel img{height:480px!important;min-height:0!important;object-position:left center!important}
+            .xaaj-contact-image-copy{left:8vw;top:8vw}
+            .xaaj-contact-form-inner{padding:60px 8vw}
+            .xaaj-contact-info-strip{width:calc(100% - 48px);grid-template-columns:1fr;gap:24px}
           }
 
-          .xaaj-contact-popup-card h3 {
-            margin: 0 0 13px;
-            color: #292824;
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: 30px;
-            font-weight: 400;
+          /* Final premium contact hero sizing.
+             The supplied contact artwork already contains the typography,
+             so the image is kept intact and aligned to the full form height. */
+          .xaaj-contact-layout{
+            align-items:stretch!important;
           }
 
-          .xaaj-contact-popup-card p {
-            max-width: 390px;
-            margin: 0 auto;
-            color: #706d67;
-            font-size: 14px;
-            line-height: 1.75;
+          .xaaj-contact-image-panel{
+            height:auto!important;
+            min-height:0!important;
+            align-self:stretch!important;
           }
 
-          .xaaj-contact-popup-rule {
-            width: 54px;
-            height: 1px;
-            margin: 24px auto;
-            background: #d9d0c5;
+          .xaaj-contact-image-panel img{
+            width:100%!important;
+            height:100%!important;
+            min-height:100%!important;
+            object-fit:cover!important;
+            object-position:left center!important;
           }
 
-          .xaaj-contact-popup-action {
-            min-width: 140px;
-            min-height: 44px;
-            padding: 0 22px;
-            border: 0;
-            background: var(--contact-green);
-            color: #fff;
-            font-size: 11px;
-            letter-spacing: .08em;
-            text-transform: uppercase;
-            cursor: pointer;
+          .xaaj-contact-form-side{
+            min-height:0!important;
+            align-self:stretch!important;
           }
 
-          @media (max-width: 900px) {
-            .xaaj-contact-hero {
-              min-height: 510px;
-              grid-template-columns: 1fr;
-              align-items: end;
-              gap: 38px;
-              padding: 70px 28px 65px;
-            }
-
-            .xaaj-contact-hero-details {
-              justify-self: start;
-              width: min(560px, 100%);
-              padding-left: 0;
-              padding-top: 24px;
-              border-left: 0;
-              border-top: 1px solid rgba(245,240,231,.17);
-            }
-
-            .xaaj-contact-content {
-              width: calc(100% - 32px);
-              margin-top: -55px;
-            }
-
-            .xaaj-contact-form-head {
-              grid-template-columns: 1fr;
-              gap: 30px;
-              padding: 42px 34px;
-            }
-
-            .xaaj-contact-form-intro {
-              padding-left: 0;
-              padding-top: 24px;
-              border-left: 0;
-              border-top: 1px solid var(--contact-line);
-            }
-
-            .xaaj-contact-form-grid {
-              grid-template-columns: 1fr;
-            }
-
-            .xaaj-contact-form-panel {
-              padding: 42px 34px 46px;
-              border-right: 0;
-              border-bottom: 1px solid var(--contact-line);
-            }
-
-            .xaaj-contact-care {
-              min-height: 540px;
-              padding: 44px 34px;
-            }
+          .xaaj-contact-form-inner{
+            width:100%!important;
+            padding:68px clamp(38px,5.2vw,78px) 64px!important;
           }
 
-          @media (max-width: 560px) {
-            .xaaj-contact-hero {
-              min-height: 570px;
-              padding: 56px 20px 50px;
-            }
-
-            .xaaj-contact-hero::after {
-              inset: 12px;
-            }
-
-            .xaaj-contact-hero h1 {
-              font-size: clamp(55px, 17vw, 78px);
-              line-height: .84;
-            }
-
-            .xaaj-contact-hero-links {
-              grid-template-columns: 1fr;
-              gap: 16px;
-              margin-top: 26px;
-            }
-
-            .xaaj-contact-content {
-              width: calc(100% - 22px);
-              margin-top: -34px;
-            }
-
-            .xaaj-contact-form-head {
-              padding: 34px 22px;
-            }
-
-            .xaaj-contact-form-head h2 {
-              font-size: 42px;
-            }
-
-            .xaaj-contact-form-panel {
-              padding: 34px 22px 38px;
-            }
-
-            .xaaj-contact-form-fields {
-              grid-template-columns: 1fr;
-              gap: 26px;
-            }
-
-            .xaaj-contact-field-wide {
-              grid-column: 1;
-            }
-
-            .xaaj-contact-submit-row {
-              align-items: stretch;
-              flex-direction: column;
-              gap: 16px;
-            }
-
-            .xaaj-contact-submit-row button {
-              width: 100%;
-            }
-
-            .xaaj-contact-care {
-              min-height: 520px;
-              padding: 36px 22px;
-            }
-
-            .xaaj-contact-monogram {
-              margin-top: 32px;
+          @media(min-width:901px){
+            .xaaj-contact-layout{
+              grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr)!important;
             }
           }
 
-          @media (prefers-reduced-motion: reduce) {
-            .xaaj-contact-hero-links a,
-            .xaaj-contact-care-links a,
-            .xaaj-contact-submit-row button,
-            .xaaj-contact-field input,
-            .xaaj-contact-field textarea {
-              transition: none !important;
-            }
+          @media(max-width:600px){
+            .xaaj-contact-page{padding-top:24px;padding-bottom:44px}
+            .xaaj-contact-layout{width:calc(100% - 24px)}
+            .xaaj-contact-image-panel{height:390px!important;min-height:0!important}
+            .xaaj-contact-image-panel img{height:390px!important;min-height:0!important;object-position:left center!important}
+            .xaaj-contact-image-copy{left:28px;top:54px;width:78%}
+            .xaaj-contact-image-copy h1{font-size:52px}
+            .xaaj-contact-image-copy p{font-size:13px}
+            .xaaj-contact-form-inner{padding:48px 22px 54px}
+            .xaaj-contact-form-inner h2{font-size:46px}
+            .xaaj-contact-form-row{grid-template-columns:1fr;gap:20px}
+            .xaaj-contact-submit-row{align-items:stretch;flex-direction:column;gap:15px}
+            .xaaj-contact-submit-row button{width:100%}
+            .xaaj-contact-info-strip{width:calc(100% - 32px);padding-top:26px}
+            .xaaj-contact-info-list{grid-template-columns:1fr}
+            .xaaj-contact-info-list>a{min-height:auto;padding:18px 0!important}
+            .xaaj-contact-info-list>a+a{border-left:0;border-top:1px solid #e0dbd4}
+            .xaaj-contact-map-card{min-height:150px}
           }
         `}</style>
 
         <main className="xaaj-contact-page">
-          <section className="xaaj-contact-hero">
-            <div className="xaaj-contact-hero-copy">
-              <span className="xaaj-contact-kicker">Contact XAAJ</span>
-              <h1>Let’s start a<br /><em>conversation.</em></h1>
-            </div>
-
-            <div className="xaaj-contact-hero-details">
-              <p>
-                Thoughtful tableware starts with thoughtful details. Tell us
-                what you need and our care team will take it from here.
-              </p>
-
-              <div className="xaaj-contact-hero-links">
-                <a href="tel:+919899446117">
-                  <span>
-                    <small>Call / WhatsApp</small>
-                    <strong>+91 98994 46117</strong>
-                  </span>
-                  <ArrowRight size={14} />
-                </a>
-
-                <a href="mailto:customercare@xaaj.in">
-                  <span>
-                    <small>Write to us</small>
-                    <strong>customercare@xaaj.in</strong>
-                  </span>
-                  <ArrowRight size={14} />
-                </a>
-              </div>
-            </div>
-          </section>
-
-          <section className="xaaj-contact-content">
-            <ContactForm />
-          </section>
+          <ContactForm />
         </main>
 
         {/* Legacy standalone Newsletter preserved below; reference subscribe is now inside Footer. */}
