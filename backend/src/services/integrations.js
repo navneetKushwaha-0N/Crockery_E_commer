@@ -63,19 +63,6 @@ export const uploadImage = async (
 // ============================================================
 // CLOUDINARY - UPLOAD MEDIA
 // ============================================================
-// Supports both images and videos.
-//
-// `file` can be:
-// - a Cloudinary-compatible string/data URI
-// - a Buffer from Multer's memoryStorage
-//
-// resourceType:
-// - 'image'
-// - 'video'
-// - 'auto'
-//
-// For category hero media, use 'auto' when the uploaded file
-// may be either an image or a video.
 
 export const uploadMedia = async (
   file,
@@ -177,8 +164,6 @@ export const uploadMedia = async (
 // ============================================================
 // CLOUDINARY - UPLOAD VIDEO
 // ============================================================
-// Kept as a separate helper for places that explicitly know
-// the incoming file is a video.
 
 export const uploadVideo = async (
   file,
@@ -214,8 +199,6 @@ export const removeImage =
 // ============================================================
 // CLOUDINARY - DELETE MEDIA
 // ============================================================
-// Use resourceType='video' when deleting a video because
-// Cloudinary stores images and videos as different resources.
 
 export const removeMedia = async (
   publicId,
@@ -292,11 +275,6 @@ export const verifyRazorpaySignature = (
         `${orderId}|${paymentId}`
       )
       .digest('hex')
-
-  // ----------------------------------------------------------
-  // timingSafeEqual requires buffers
-  // of exactly the same length
-  // ----------------------------------------------------------
 
   const expectedBuffer =
     Buffer.from(
@@ -379,10 +357,6 @@ export const sendEmail = async ({
   replyTo
 }) => {
 
-  // ----------------------------------------------------------
-  // SMTP configuration check
-  // ----------------------------------------------------------
-
   if (!mailer) {
     console.warn(
       '[XAAJ] SMTP is not configured. Email was not sent.'
@@ -390,11 +364,6 @@ export const sendEmail = async ({
 
     return null
   }
-
-
-  // ----------------------------------------------------------
-  // Validate email data
-  // ----------------------------------------------------------
 
   if (
     !to ||
@@ -405,11 +374,6 @@ export const sendEmail = async ({
       'Email recipient, subject and HTML are required'
     )
   }
-
-
-  // ----------------------------------------------------------
-  // Email options
-  // ----------------------------------------------------------
 
   const emailOptions = {
     from:
@@ -423,33 +387,19 @@ export const sendEmail = async ({
     html
   }
 
-
-  // ----------------------------------------------------------
-  // Reply-To
-  // ----------------------------------------------------------
-  // Used by Contact Form so that when the
-  // XAAJ team clicks Reply, it goes directly
-  // to the customer.
+  // Reply-To is used by contact/B2B enquiry emails.
+  // When XAAJ replies to the admin notification,
+  // the reply goes directly to the customer.
 
   if (replyTo) {
     emailOptions.replyTo =
       String(replyTo).trim().toLowerCase()
   }
 
-
-  // ----------------------------------------------------------
-  // Send email
-  // ----------------------------------------------------------
-
   const result =
     await mailer.sendMail(
       emailOptions
     )
-
-
-  // ----------------------------------------------------------
-  // Email sent successfully
-  // ----------------------------------------------------------
 
   console.log(
     `[XAAJ] Email sent successfully to ${to}`

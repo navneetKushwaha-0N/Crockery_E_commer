@@ -76,10 +76,9 @@ const productSchema = new mongoose.Schema(
       required: true,
       enum: [
         'Dinnerware',
-        'Glassware',
+        'Drinkware',
         'Serveware',
         'Gifting',
-        'Horeca',
 
         // Legacy values kept temporarily so existing products can
         // still be read/updated without breaking the old dataset.

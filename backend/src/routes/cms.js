@@ -492,11 +492,11 @@ router.put(
 // ==========================================================
 
 const CATEGORY_HEROES = [
-  { categorySlug: 'glassware', categoryName: 'Glassware', order: 0 },
+  { categorySlug: 'drinkware', categoryName: 'Drinkware', order: 0 },
   { categorySlug: 'gifting', categoryName: 'Gifting', order: 1 },
   { categorySlug: 'dinnerware', categoryName: 'Dinnerware', order: 2 },
   { categorySlug: 'serveware', categoryName: 'Serveware', order: 3 },
-  { categorySlug: 'horeca', categoryName: 'Horeca', order: 4 }
+  { categorySlug: 'b2b', categoryName: 'B2B', order: 4 }
 ]
 
 const normalizeCategoryHero = (content, fallback) => ({

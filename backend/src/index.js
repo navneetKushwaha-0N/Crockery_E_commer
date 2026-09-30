@@ -297,15 +297,16 @@ app.use(
 
 
 // -------------------------
-// Contact
+// Contact / B2B Enquiry
 // -------------------------
 // Customer contact form
+// B2B bulk-order enquiry form
 //
 // POST /api/contact
 //
 // This sends:
-// 1. Customer enquiry → XAAJ admin
-// 2. Thank-you email → Customer
+// 1. Enquiry → XAAJ customer care
+// 2. Confirmation email → Customer
 // -------------------------
 app.use(
   '/api/contact',

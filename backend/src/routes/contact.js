@@ -1,10 +1,20 @@
 import { Router } from 'express'
+
 import { asyncHandler } from '../middleware/index.js'
+
 import { sendEmail } from '../services/integrations.js'
 
 const router = Router()
 
 const CUSTOMER_CARE_EMAIL = 'customercare@xaaj.in'
+
+const ALLOWED_REQUIREMENTS = [
+  'Crockery',
+  'Serveware',
+  'Drinkware',
+  'Dinnerware',
+  'Other'
+]
 
 const isValidEmail = email =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -13,8 +23,10 @@ router.post(
   '/',
   asyncHandler(async (req, res) => {
     const name = String(req.body.name || '').trim()
-    const email = String(req.body.email || '').trim().toLowerCase()
+    const businessName = String(req.body.businessName || '').trim()
     const phone = String(req.body.phone || '').trim()
+    const email = String(req.body.email || '').trim().toLowerCase()
+    const lookingFor = String(req.body.lookingFor || '').trim()
     const message = String(req.body.message || '').trim()
 
     // ----------------------------------------------------------
@@ -37,6 +49,38 @@ router.post(
       })
     }
 
+    if (!businessName) {
+      return res.status(400).json({
+        success: false,
+        code: 'BUSINESS_NAME_REQUIRED',
+        message: 'Please enter your business name.'
+      })
+    }
+
+    if (businessName.length > 120) {
+      return res.status(400).json({
+        success: false,
+        code: 'BUSINESS_NAME_TOO_LONG',
+        message: 'Business name must be less than 120 characters.'
+      })
+    }
+
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        code: 'PHONE_REQUIRED',
+        message: 'Please enter your phone number.'
+      })
+    }
+
+    if (phone.length > 20) {
+      return res.status(400).json({
+        success: false,
+        code: 'PHONE_TOO_LONG',
+        message: 'Please enter a valid phone number.'
+      })
+    }
+
     if (!email) {
       return res.status(400).json({
         success: false,
@@ -53,19 +97,19 @@ router.post(
       })
     }
 
-    if (phone && phone.length > 20) {
+    if (!lookingFor) {
       return res.status(400).json({
         success: false,
-        code: 'PHONE_TOO_LONG',
-        message: 'Please enter a valid phone number.'
+        code: 'LOOKING_FOR_REQUIRED',
+        message: 'Please select what you are looking for.'
       })
     }
 
-    if (!message) {
+    if (!ALLOWED_REQUIREMENTS.includes(lookingFor)) {
       return res.status(400).json({
         success: false,
-        code: 'MESSAGE_REQUIRED',
-        message: 'Please enter your message.'
+        code: 'INVALID_LOOKING_FOR',
+        message: 'Please select a valid requirement.'
       })
     }
 
@@ -83,7 +127,9 @@ router.post(
 
     await sendEmail({
       to: CUSTOMER_CARE_EMAIL,
-      subject: `XAAJ Contact Form — ${name}`,
+
+      subject: `XAAJ B2B Enquiry — ${businessName}`,
+
       html: `
         <div style="
           margin:0;
@@ -92,6 +138,7 @@ router.post(
           font-family:Arial,Helvetica,sans-serif;
           color:#292824;
         ">
+
           <div style="
             max-width:650px;
             margin:0 auto;
@@ -121,7 +168,7 @@ router.post(
                 letter-spacing:3px;
                 color:#77736c;
               ">
-                CONTACT FORM
+                B2B ENQUIRY
               </div>
             </div>
 
@@ -134,7 +181,7 @@ router.post(
                 font-weight:400;
                 color:#292824;
               ">
-                New customer enquiry
+                New bulk-order enquiry
               </h2>
 
               <div style="
@@ -149,6 +196,16 @@ router.post(
                 </p>
 
                 <p style="margin:0 0 14px;">
+                  <strong>Business Name:</strong><br />
+                  ${escapeHtml(businessName)}
+                </p>
+
+                <p style="margin:0 0 14px;">
+                  <strong>Phone:</strong><br />
+                  ${escapeHtml(phone)}
+                </p>
+
+                <p style="margin:0 0 14px;">
                   <strong>Email:</strong><br />
                   <a
                     href="mailto:${escapeHtml(email)}"
@@ -158,20 +215,18 @@ router.post(
                   </a>
                 </p>
 
-                ${
-                  phone
-                    ? `
-                      <p style="margin:0 0 14px;">
-                        <strong>Phone:</strong><br />
-                        ${escapeHtml(phone)}
-                      </p>
-                    `
-                    : ''
-                }
+                <p style="margin:0 0 14px;">
+                  <strong>Looking For:</strong><br />
+                  ${escapeHtml(lookingFor)}
+                </p>
 
                 <p style="margin:0;">
-                  <strong>Message:</strong><br />
-                  ${escapeHtml(message).replace(/\n/g, '<br />')}
+                  <strong>Requirement / Message:</strong><br />
+                  ${
+                    message
+                      ? escapeHtml(message).replace(/\n/g, '<br />')
+                      : 'No additional message provided.'
+                  }
                 </p>
 
               </div>
@@ -181,11 +236,10 @@ router.post(
                 font-size:12px;
                 color:#8a857d;
               ">
-                This message was submitted through the XAAJ website contact form.
+                This enquiry was submitted through the XAAJ B2B bulk-order enquiry form.
               </p>
 
             </div>
-
           </div>
         </div>
       `
@@ -198,7 +252,9 @@ router.post(
     try {
       await sendEmail({
         to: email,
-        subject: 'XAAJ — We received your message',
+
+        subject: 'XAAJ — We received your B2B enquiry',
+
         html: `
           <div style="
             margin:0;
@@ -207,6 +263,7 @@ router.post(
             font-family:Arial,Helvetica,sans-serif;
             color:#292824;
           ">
+
             <div style="
               max-width:600px;
               margin:0 auto;
@@ -252,7 +309,7 @@ router.post(
                   color:#b84d32;
                   font-weight:600;
                 ">
-                  Thank you for reaching out
+                  Thank you for your enquiry
                 </div>
 
                 <h1 style="
@@ -263,7 +320,7 @@ router.post(
                   font-weight:400;
                   color:#292824;
                 ">
-                  We received your message.
+                  We received your B2B enquiry.
                 </h1>
 
                 <p style="
@@ -273,9 +330,9 @@ router.post(
                   line-height:1.8;
                   color:#706d67;
                 ">
-                  Hi ${escapeHtml(name)}, thank you for getting in touch
-                  with XAAJ. Our team has received your message and will
-                  get back to you as soon as possible.
+                  Hi ${escapeHtml(name)}, thank you for your interest in
+                  placing a bulk order with XAAJ. Our team has received
+                  your enquiry and will get back to you as soon as possible.
                 </p>
 
                 <div style="
@@ -312,11 +369,11 @@ router.post(
           </div>
         `
       })
+
     } catch (customerEmailError) {
-      // Customer acknowledgement fail hone par bhi
-      // main contact enquiry successfully process ho chuki hai.
+
       console.error(
-        '[Contact] Customer acknowledgement email failed:',
+        '[B2B Enquiry] Customer acknowledgement email failed:',
         customerEmailError
       )
     }
@@ -324,7 +381,7 @@ router.post(
     return res.status(200).json({
       success: true,
       message:
-        'Thank you for contacting XAAJ. We have received your message and will get back to you soon.'
+        'Thank you for your B2B enquiry. We have received your request and will get back to you soon.'
     })
   })
 )
@@ -343,4 +400,5 @@ function escapeHtml(value) {
 }
 
 // IMPORTANT: default export
+
 export default router

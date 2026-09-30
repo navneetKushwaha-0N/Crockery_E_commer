@@ -198,10 +198,9 @@ export const productSchema = z.object({
       category: z
         .enum([
           'Dinnerware',
-          'Glassware',
+          'Drinkware',
           'Serveware',
           'Gifting',
-          'Horeca'
         ]),
 
       // Optional Dinnerware collection/subcategory.

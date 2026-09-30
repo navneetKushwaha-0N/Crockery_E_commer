@@ -57,22 +57,15 @@ export default function Admin() {
   const [savingAnnouncement, setSavingAnnouncement] = useState(false)
 
   // =========================
-  // Hero Slides State
-  // =========================
-  const [heroSlides, setHeroSlides] = useState([])
-  const [loadingHeroSlides, setLoadingHeroSlides] = useState(false)
-  const [savingHeroSlides, setSavingHeroSlides] = useState(false)
-
-  // =========================
   // Category Hero Media State
   // =========================
   const categoryHeroDefaults = [
     {
-      categorySlug: 'glassware',
-      categoryName: 'Glassware',
+      categorySlug: 'drinkware',
+      categoryName: 'Drinkware',
       mediaUrl: '',
       mediaType: 'image',
-      alt: 'Glassware',
+      alt: 'Drinkware',
       enabled: true
     },
     {
@@ -100,11 +93,11 @@ export default function Admin() {
       enabled: true
     },
     {
-      categorySlug: 'horeca',
-      categoryName: 'Horeca',
+      categorySlug: 'b2b',
+      categoryName: 'B2B',
       mediaUrl: '',
       mediaType: 'image',
-      alt: 'Horeca',
+      alt: 'B2B',
       enabled: true
     }
   ]
@@ -136,9 +129,9 @@ export default function Admin() {
   // Horeca Collection Media State
   // =========================
   const horecaMediaDefault = {
-    main: { mediaUrl: '', mediaType: 'image', alt: 'XAAJ Horeca collection' },
-    sideOne: { mediaUrl: '', mediaType: 'image', alt: 'XAAJ Horeca tableware' },
-    sideTwo: { mediaUrl: '', mediaType: 'image', alt: 'XAAJ Horeca serveware' }
+    main: { mediaUrl: '', mediaType: 'image', alt: 'XAAJ B2B collection' },
+    sideOne: { mediaUrl: '', mediaType: 'image', alt: 'XAAJ B2B tableware' },
+    sideTwo: { mediaUrl: '', mediaType: 'image', alt: 'XAAJ B2B serveware' }
   }
 
   const [horecaMedia, setHorecaMedia] = useState(horecaMediaDefault)
@@ -182,10 +175,9 @@ export default function Admin() {
 
   const productCategoryOptions = [
     'Dinnerware',
-    'Glassware',
+    'Drinkware',
     'Serveware',
-    'Gifting',
-    'Horeca'
+    'Gifting'
   ]
 
   const emptyProduct = {
@@ -220,7 +212,6 @@ export default function Admin() {
     loadProducts()
     loadOrders()
     loadAnnouncement()
-    loadHeroSlides()
     loadCategoryHeroMedia()
     loadBrandStoryMedia()
     loadHorecaMedia()
@@ -299,187 +290,6 @@ export default function Admin() {
       setError(err.message || 'Unable to update announcement')
     } finally {
       setSavingAnnouncement(false)
-    }
-  }
-
-  // =========================
-  // Hero Slides API
-  // =========================
-
-  // Automatically detect whether the URL is an image or video.
-  // Existing image URLs continue to work normally.
-  const getHeroMediaType = url => {
-    const value = String(url || '').trim()
-
-    return /\.(mp4|webm|ogg|mov)(?:[?#].*)?$/i.test(value)
-      ? 'video'
-      : 'image'
-  }
-
-  const loadHeroSlides = async () => {
-    try {
-      setLoadingHeroSlides(true)
-
-      const result = await apiRequest('/cms/hero/admin')
-      const data =
-        result?.data?.slides ||
-        result?.slides ||
-        result?.data ||
-        []
-
-      setHeroSlides(
-        Array.isArray(data)
-          ? data.map((slide, index) => ({
-              image: slide?.image || slide?.imageUrl || '',
-              mediaType:
-                slide?.mediaType === 'video'
-                  ? 'video'
-                  : getHeroMediaType(
-                      slide?.image || slide?.imageUrl || ''
-                    ),
-              alt:
-                slide?.alt ||
-                slide?.title ||
-                `Hero slide ${index + 1}`,
-              enabled:
-                slide?.enabled !== undefined
-                  ? Boolean(slide.enabled)
-                  : true
-            }))
-          : []
-      )
-    } catch (err) {
-      setError(err.message || 'Unable to load hero slides')
-    } finally {
-      setLoadingHeroSlides(false)
-    }
-  }
-
-  const addHeroSlide = () => {
-    setHeroSlides(prev => [
-      ...prev,
-      {
-        image: '',
-        mediaType: 'image',
-        alt: `Hero slide ${prev.length + 1}`,
-        enabled: true
-      }
-    ])
-  }
-
-  const updateHeroSlide = (index, field, value) => {
-    setHeroSlides(prev =>
-      prev.map((slide, slideIndex) => {
-        if (slideIndex !== index) return slide
-
-        if (field === 'image') {
-          return {
-            ...slide,
-            image: value,
-            mediaType: getHeroMediaType(value)
-          }
-        }
-
-        return {
-          ...slide,
-          [field]: value
-        }
-      })
-    )
-  }
-
-  const removeHeroSlide = index => {
-    setHeroSlides(prev =>
-      prev.filter((_, slideIndex) => slideIndex !== index)
-    )
-  }
-
-  const moveHeroSlide = (index, direction) => {
-    setHeroSlides(prev => {
-      const targetIndex = index + direction
-
-      if (
-        targetIndex < 0 ||
-        targetIndex >= prev.length
-      ) {
-        return prev
-      }
-
-      const next = [...prev]
-      const [moved] = next.splice(index, 1)
-      next.splice(targetIndex, 0, moved)
-
-      return next
-    })
-  }
-
-  const handleSaveHeroSlides = async () => {
-    const cleanedSlides = heroSlides
-      .map(slide => {
-        const image = String(slide.image || '').trim()
-
-        return {
-          image,
-          mediaType:
-            slide.mediaType === 'video'
-              ? 'video'
-              : getHeroMediaType(image),
-          alt: String(slide.alt || '').trim(),
-          enabled: Boolean(slide.enabled)
-        }
-      })
-      .filter(slide => slide.image)
-
-    if (!cleanedSlides.length) {
-      setError('Please add at least one hero media URL.')
-      return
-    }
-
-    try {
-      setSavingHeroSlides(true)
-      setError('')
-      setMessage('')
-
-      const result = await apiRequest('/cms/hero', {
-        method: 'PUT',
-        body: JSON.stringify({
-          slides: cleanedSlides
-        })
-      })
-
-      const data =
-        result?.data?.slides ||
-        result?.slides ||
-        result?.data ||
-        cleanedSlides
-
-      setHeroSlides(
-        Array.isArray(data)
-          ? data.map((slide, index) => ({
-              image: slide?.image || slide?.imageUrl || '',
-              mediaType:
-                slide?.mediaType === 'video'
-                  ? 'video'
-                  : getHeroMediaType(
-                      slide?.image || slide?.imageUrl || ''
-                    ),
-              alt:
-                slide?.alt ||
-                slide?.title ||
-                `Hero slide ${index + 1}`,
-              enabled:
-                slide?.enabled !== undefined
-                  ? Boolean(slide.enabled)
-                  : true
-            }))
-          : cleanedSlides
-      )
-
-      setMessage('Hero media updated successfully.')
-    } catch (err) {
-      setError(err.message || 'Unable to update hero images')
-    } finally {
-      setSavingHeroSlides(false)
     }
   }
 
@@ -1004,7 +814,7 @@ export default function Admin() {
       const result = await apiRequest('/cms/horeca-collection')
       setHorecaMedia(normalizeHorecaMedia(result))
     } catch (err) {
-      setError(err.message || 'Unable to load Horeca collection media')
+      setError(err.message || 'Unable to load B2B collection media')
     } finally {
       setLoadingHoreca(false)
     }
@@ -1023,12 +833,12 @@ export default function Admin() {
     if (!file) return
 
     if (!file.type.startsWith('image/')) {
-      setError('Please select an image for the Horeca collection.')
+      setError('Please select an image for the B2B collection.')
       return
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setError('Horeca image cannot exceed 5 MB.')
+      setError('B2B image cannot exceed 5 MB.')
       return
     }
 
@@ -1053,7 +863,7 @@ export default function Admin() {
 
       updateHorecaField(slot, 'mediaUrl', mediaUrl)
       updateHorecaField(slot, 'mediaType', 'image')
-      setMessage('Horeca image uploaded. Click Save Horeca Collection to publish it.')
+      setMessage('Horeca image uploaded. Click Save B2B Collection to publish it.')
     } catch (err) {
       setError(err.message || 'Unable to upload Horeca image')
     } finally {
@@ -1082,7 +892,7 @@ export default function Admin() {
       })
 
       setHorecaMedia(normalizeHorecaMedia(result?.data || result))
-      setMessage('Horeca image removed. The original fallback remains on the website.')
+      setMessage('B2B image removed. The original fallback remains on the website.')
     } catch (err) {
       setError(err.message || 'Unable to remove Horeca image')
     } finally {
@@ -1109,9 +919,9 @@ export default function Admin() {
       })
 
       setHorecaMedia(normalizeHorecaMedia(result?.data || result))
-      setMessage('Horeca collection media updated successfully.')
+      setMessage('B2B collection media updated successfully.')
     } catch (err) {
-      setError(err.message || 'Unable to update Horeca collection media')
+      setError(err.message || 'Unable to update B2B collection media')
     } finally {
       setSavingHoreca(false)
     }
@@ -1799,14 +1609,253 @@ export default function Admin() {
   return (
     <main className="page xaaj-admin-v2" data-active-section={activeSection}>
       <style>{`.xaaj-admin-v2{--ink:#25231f;--muted:#777169;--line:#e7e0d6;width:100%;height:100vh;min-height:100vh!important;max-width:none!important;margin:0!important;padding:0!important;background:radial-gradient(circle at 82% 0%,rgba(154,116,72,.09),transparent 28%),#f7f4ee!important;font-family:'DM Sans',sans-serif;color:var(--ink);overflow:hidden!important}
-.xaaj-admin-v2 *{box-sizing:border-box}.xaaj-admin-v2 .admin-shell{display:flex;width:100%;height:100vh;min-height:100vh}.xaaj-admin-v2 .admin-sidebar{position:fixed;left:0;top:0;width:250px;height:100vh;min-height:100vh;background:linear-gradient(180deg,#10271c,#0b1f16);color:#fff;padding:28px 18px;display:flex;flex-direction:column;z-index:20;box-shadow:14px 0 45px rgba(34,29,23,.12);overflow:hidden}.xaaj-admin-v2 .admin-main{margin-left:250px;width:calc(100% - 250px);height:100vh;min-height:100vh;min-width:0;padding:28px 34px 70px;overflow-y:auto;overflow-x:hidden}.xaaj-admin-v2 .brand-mark{padding:6px 12px 30px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:22px}.xaaj-admin-v2 .brand-mark strong{font-family:'Playfair Display',serif;font-size:27px;letter-spacing:.08em;font-weight:500}.xaaj-admin-v2 .brand-mark span{display:block;margin-top:5px;color:#bdb5aa;font-size:9px;letter-spacing:.18em;text-transform:uppercase}.xaaj-admin-v2 .side-label{font-size:9px;text-transform:uppercase;letter-spacing:.18em;color:#8f887d;padding:0 12px 10px}.xaaj-admin-v2 .side-nav{display:grid;gap:5px}.xaaj-admin-v2 .side-nav button{width:100%!important;border:0!important;background:transparent!important;color:#bdb7ae!important;box-shadow:none!important;border-radius:12px!important;padding:12px 13px!important;display:flex!important;align-items:center!important;gap:12px!important;text-align:left!important;font:600 12px 'DM Sans',sans-serif!important;transform:none!important}.xaaj-admin-v2 .side-nav button:hover{background:rgba(47,112,72,.28)!important;color:#fff!important;border-color:rgba(82,157,105,.45)!important;transform:translateX(3px)!important}.xaaj-admin-v2 .side-nav button.active{background:linear-gradient(90deg,#2f7048,#245d3b)!important;color:#fff!important;box-shadow:0 8px 22px rgba(47,112,72,.28),inset 3px 0 #8bd19d!important}.xaaj-admin-v2 .side-nav button.active:hover{background:linear-gradient(90deg,#398356,#2f7048)!important}.xaaj-admin-v2 .side-icon{width:25px;height:25px;border:1px solid rgba(255,255,255,.13);border-radius:8px;display:grid;place-items:center;font-size:11px;color:#9dd5aa;flex:none}.xaaj-admin-v2 .side-footer{margin-top:auto;padding:15px 0 4px}.xaaj-admin-v2 .sidebar-logout{width:100%!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;background:rgba(255,255,255,.045)!important;color:#d8ddd9!important;border:1px solid rgba(255,255,255,.13)!important;border-radius:12px!important;padding:11px 14px!important;box-shadow:none!important}.xaaj-admin-v2 .sidebar-logout:hover{background:#2f7048!important;border-color:#4d9666!important;color:#fff!important}.xaaj-admin-v2 .sidebar-logout span:first-child{font-size:15px;color:#9bcda7}.xaaj-admin-v2 .content-width{max-width:1320px;margin:0 auto}.xaaj-admin-v2 .topbar{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:26px;padding:22px 26px;background:rgba(255,253,249,.88);border:1px solid var(--line);border-radius:20px;box-shadow:0 12px 35px rgba(63,53,41,.055);backdrop-filter:blur(10px)}.xaaj-admin-v2 .topbar h1,.xaaj-admin-v2 h1,.xaaj-admin-v2 h2,.xaaj-admin-v2 h3{font-family:'Playfair Display',serif;letter-spacing:-.025em}.xaaj-admin-v2 .topbar h1{font-size:32px!important;margin:3px 0 4px!important}.xaaj-admin-v2 .topbar p{margin:0;color:var(--muted);font-size:13px}.xaaj-admin-v2 .top-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.xaaj-admin-v2 .live-store-btn{display:inline-flex!important;align-items:center!important;gap:9px!important;background:#fff!important;color:#205c36!important;border:1px solid #a9c9b1!important;border-radius:999px!important;padding:10px 15px!important;box-shadow:0 5px 16px rgba(47,112,72,.10)!important}.xaaj-admin-v2 .live-store-btn:hover{background:#2f7048!important;color:#fff!important;border-color:#2f7048!important;box-shadow:0 9px 22px rgba(47,112,72,.24)!important}.xaaj-admin-v2 .live-dot{width:9px;height:9px;border-radius:50%;background:#35a85a;box-shadow:0 0 0 0 rgba(53,168,90,.55);animation:xaaj-live-pulse 1.25s infinite}.xaaj-admin-v2 .live-store-btn:hover .live-dot{background:#fff;box-shadow:0 0 0 0 rgba(255,255,255,.55)}@keyframes xaaj-live-pulse{0%{box-shadow:0 0 0 0 rgba(53,168,90,.55);opacity:1}70%{box-shadow:0 0 0 7px rgba(53,168,90,0);opacity:.72}100%{box-shadow:0 0 0 0 rgba(53,168,90,0);opacity:1}}.xaaj-admin-v2 button,.xaaj-admin-v2 .button{appearance:none!important;border:1px solid #d8d0c4!important;background:#fff!important;color:#292621!important;border-radius:11px!important;padding:10px 15px!important;font:600 12px 'DM Sans',sans-serif!important;cursor:pointer!important;transition:all .2s ease!important;box-shadow:0 2px 0 rgba(0,0,0,.02)!important}.xaaj-admin-v2 button:hover:not(:disabled){transform:translateY(-1px)!important;border-color:#3b8758!important;background:#eef8f1!important;color:#1f5c35!important;box-shadow:0 8px 18px rgba(47,112,72,.12)!important}.xaaj-admin-v2 button.button,.xaaj-admin-v2 button[type=submit]{background:#292621!important;color:#fff!important;border-color:#292621!important;box-shadow:0 7px 18px rgba(41,38,33,.18)!important}.xaaj-admin-v2 button.button:hover,.xaaj-admin-v2 button[type=submit]:hover{background:#2f7048!important;border-color:#2f7048!important;color:#fff!important;box-shadow:0 9px 22px rgba(47,112,72,.24)!important}.xaaj-admin-v2 button:disabled{opacity:.45!important;cursor:not-allowed!important;transform:none!important}.xaaj-admin-v2 section{background:rgba(255,253,249,.94)!important;border:1px solid var(--line)!important;border-radius:20px!important;padding:28px!important;margin-bottom:26px!important;box-shadow:0 12px 35px rgba(63,53,41,.055)!important}.xaaj-admin-v2 .summary{background:linear-gradient(145deg,#fffefa,#f2ece2)!important;border:1px solid #e4dcd1!important;border-radius:18px!important;padding:23px!important;min-height:120px!important;box-shadow:0 10px 25px rgba(57,47,35,.065)!important}.xaaj-admin-v2 .summary strong{font-family:'Playfair Display',serif!important;font-size:30px!important}.xaaj-admin-v2 .summary span{display:block!important;margin-top:7px!important;color:var(--muted)!important;font-size:11px!important;text-transform:uppercase!important;letter-spacing:.12em!important}.xaaj-admin-v2 input:not([type=checkbox]),.xaaj-admin-v2 textarea,.xaaj-admin-v2 select{background:#fffefa!important;border:1px solid #ded7cd!important;border-radius:10px!important;padding:11px 13px!important;color:#2c2925!important;outline:none!important;transition:.2s!important}.xaaj-admin-v2 input:not([type=checkbox]):focus,.xaaj-admin-v2 textarea:focus,.xaaj-admin-v2 select:focus{border-color:#9b7c58!important;box-shadow:0 0 0 4px rgba(139,106,67,.10)!important}.xaaj-admin-v2 label{font-weight:600!important;font-size:12px!important;color:#4c4741!important}.xaaj-admin-v2 img{border-radius:13px}.xaaj-admin-v2 .eyebrow{text-transform:uppercase!important;letter-spacing:.16em!important;font-size:9px!important;font-weight:700!important;color:#9a7954!important}.xaaj-admin-v2 small{color:#8b857d!important}.xaaj-admin-v2[data-active-section=dashboard] [data-admin-section]:not([data-admin-section=dashboard]),.xaaj-admin-v2[data-active-section=announcement] [data-admin-section]:not([data-admin-section=announcement]),.xaaj-admin-v2[data-active-section=hero] [data-admin-section]:not([data-admin-section=hero]),.xaaj-admin-v2[data-active-section=brand-story] [data-admin-section]:not([data-admin-section=brand-story]),.xaaj-admin-v2[data-active-section=horeca] [data-admin-section]:not([data-admin-section=horeca]),.xaaj-admin-v2[data-active-section=blog] [data-admin-section]:not([data-admin-section=blog]),.xaaj-admin-v2[data-active-section=orders] [data-admin-section]:not([data-admin-section=orders]),.xaaj-admin-v2[data-active-section=products] [data-admin-section]:not([data-admin-section=products]){display:none!important}.xaaj-admin-v2 .side-icon svg{display:block}.xaaj-admin-v2 .sidebar-logout svg{color:#9bcda7;flex:none}.xaaj-admin-v2 .sidebar-logout:hover svg{color:#fff}.xaaj-admin-v2 .live-store-btn svg{flex:none}.xaaj-admin-v2 .product-header-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.xaaj-admin-v2 .product-header-actions button{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-height:39px!important}.xaaj-admin-v2 .product-add-btn{background:#292621!important;color:#fff!important;border-color:#292621!important;box-shadow:0 7px 18px rgba(41,38,33,.14)!important}.xaaj-admin-v2 .product-add-btn:hover{background:#2f7048!important;border-color:#2f7048!important;color:#fff!important;box-shadow:0 9px 22px rgba(47,112,72,.22)!important}.xaaj-admin-v2 .product-refresh-btn{background:#fff!important;color:#3f3a34!important}.xaaj-admin-v2 .product-refresh-btn:hover{background:#eef8f1!important;color:#1f5c35!important;border-color:#3b8758!important}.xaaj-admin-v2 .is-spinning{animation:xaaj-spin .8s linear infinite}@keyframes xaaj-spin{to{transform:rotate(360deg)}}
+.xaaj-admin-v2 *{box-sizing:border-box}.xaaj-admin-v2 .admin-shell{display:flex;width:100%;height:100vh;min-height:100vh}.xaaj-admin-v2 .admin-sidebar{position:fixed;left:0;top:0;width:250px;height:100vh;min-height:100vh;background:linear-gradient(180deg,#10271c,#0b1f16);color:#fff;padding:28px 18px;display:flex;flex-direction:column;z-index:20;box-shadow:14px 0 45px rgba(34,29,23,.12);overflow:hidden}.xaaj-admin-v2 .admin-main{margin-left:250px;width:calc(100% - 250px);height:100vh;min-height:100vh;min-width:0;padding:28px 34px 70px;overflow-y:auto;overflow-x:hidden}.xaaj-admin-v2 .brand-mark{padding:6px 12px 30px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:22px}.xaaj-admin-v2 .brand-mark strong{font-family:'Playfair Display',serif;font-size:27px;letter-spacing:.08em;font-weight:500}.xaaj-admin-v2 .brand-mark span{display:block;margin-top:5px;color:#bdb5aa;font-size:9px;letter-spacing:.18em;text-transform:uppercase}.xaaj-admin-v2 .side-label{font-size:9px;text-transform:uppercase;letter-spacing:.18em;color:#8f887d;padding:0 12px 10px}.xaaj-admin-v2 .side-nav{display:grid;gap:5px}.xaaj-admin-v2 .side-nav button{width:100%!important;border:0!important;background:transparent!important;color:#bdb7ae!important;box-shadow:none!important;border-radius:12px!important;padding:12px 13px!important;display:flex!important;align-items:center!important;gap:12px!important;text-align:left!important;font:600 12px 'DM Sans',sans-serif!important;transform:none!important}.xaaj-admin-v2 .side-nav button:hover{background:rgba(47,112,72,.28)!important;color:#fff!important;border-color:rgba(82,157,105,.45)!important;transform:translateX(3px)!important}.xaaj-admin-v2 .side-nav button.active{background:linear-gradient(90deg,#2f7048,#245d3b)!important;color:#fff!important;box-shadow:0 8px 22px rgba(47,112,72,.28),inset 3px 0 #8bd19d!important}.xaaj-admin-v2 .side-nav button.active:hover{background:linear-gradient(90deg,#398356,#2f7048)!important}.xaaj-admin-v2 .side-icon{width:25px;height:25px;border:1px solid rgba(255,255,255,.13);border-radius:8px;display:grid;place-items:center;font-size:11px;color:#9dd5aa;flex:none}.xaaj-admin-v2 .side-footer{margin-top:auto;padding:15px 0 4px}.xaaj-admin-v2 .sidebar-logout{width:100%!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;background:rgba(255,255,255,.045)!important;color:#d8ddd9!important;border:1px solid rgba(255,255,255,.13)!important;border-radius:12px!important;padding:11px 14px!important;box-shadow:none!important}.xaaj-admin-v2 .sidebar-logout:hover{background:#2f7048!important;border-color:#4d9666!important;color:#fff!important}.xaaj-admin-v2 .sidebar-logout span:first-child{font-size:15px;color:#9bcda7}.xaaj-admin-v2 .content-width{max-width:1320px;margin:0 auto}.xaaj-admin-v2 .topbar{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:26px;padding:22px 26px;background:rgba(255,253,249,.88);border:1px solid var(--line);border-radius:20px;box-shadow:0 12px 35px rgba(63,53,41,.055);backdrop-filter:blur(10px)}.xaaj-admin-v2 .topbar h1,.xaaj-admin-v2 h1,.xaaj-admin-v2 h2,.xaaj-admin-v2 h3{font-family:'Playfair Display',serif;letter-spacing:-.025em}.xaaj-admin-v2 .topbar h1{font-size:32px!important;margin:3px 0 4px!important}.xaaj-admin-v2 .topbar p{margin:0;color:var(--muted);font-size:13px}.xaaj-admin-v2 .top-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.xaaj-admin-v2 .live-store-btn{display:inline-flex!important;align-items:center!important;gap:9px!important;background:#fff!important;color:#205c36!important;border:1px solid #a9c9b1!important;border-radius:999px!important;padding:10px 15px!important;box-shadow:0 5px 16px rgba(47,112,72,.10)!important}.xaaj-admin-v2 .live-store-btn:hover{background:#2f7048!important;color:#fff!important;border-color:#2f7048!important;box-shadow:0 9px 22px rgba(47,112,72,.24)!important}.xaaj-admin-v2 .live-dot{width:9px;height:9px;border-radius:50%;background:#35a85a;box-shadow:0 0 0 0 rgba(53,168,90,.55);animation:xaaj-live-pulse 1.25s infinite}.xaaj-admin-v2 .live-store-btn:hover .live-dot{background:#fff;box-shadow:0 0 0 0 rgba(255,255,255,.55)}@keyframes xaaj-live-pulse{0%{box-shadow:0 0 0 0 rgba(53,168,90,.55);opacity:1}70%{box-shadow:0 0 0 7px rgba(53,168,90,0);opacity:.72}100%{box-shadow:0 0 0 0 rgba(53,168,90,0);opacity:1}}.xaaj-admin-v2 button,.xaaj-admin-v2 .button{appearance:none!important;border:1px solid #d8d0c4!important;background:#fff!important;color:#292621!important;border-radius:11px!important;padding:10px 15px!important;font:600 12px 'DM Sans',sans-serif!important;cursor:pointer!important;transition:all .2s ease!important;box-shadow:0 2px 0 rgba(0,0,0,.02)!important}.xaaj-admin-v2 button:hover:not(:disabled){transform:translateY(-1px)!important;border-color:#3b8758!important;background:#eef8f1!important;color:#1f5c35!important;box-shadow:0 8px 18px rgba(47,112,72,.12)!important}.xaaj-admin-v2 button.button,.xaaj-admin-v2 button[type=submit]{background:#292621!important;color:#fff!important;border-color:#292621!important;box-shadow:0 7px 18px rgba(41,38,33,.18)!important}.xaaj-admin-v2 button.button:hover,.xaaj-admin-v2 button[type=submit]:hover{background:#2f7048!important;border-color:#2f7048!important;color:#fff!important;box-shadow:0 9px 22px rgba(47,112,72,.24)!important}.xaaj-admin-v2 button:disabled{opacity:.45!important;cursor:not-allowed!important;transform:none!important}.xaaj-admin-v2 section{background:rgba(255,253,249,.94)!important;border:1px solid var(--line)!important;border-radius:20px!important;padding:28px!important;margin-bottom:26px!important;box-shadow:0 12px 35px rgba(63,53,41,.055)!important}.xaaj-admin-v2 .summary{background:linear-gradient(145deg,#fffefa,#f2ece2)!important;border:1px solid #e4dcd1!important;border-radius:18px!important;padding:23px!important;min-height:120px!important;box-shadow:0 10px 25px rgba(57,47,35,.065)!important}.xaaj-admin-v2 .summary strong{font-family:'Playfair Display',serif!important;font-size:30px!important}.xaaj-admin-v2 .summary span{display:block!important;margin-top:7px!important;color:var(--muted)!important;font-size:11px!important;text-transform:uppercase!important;letter-spacing:.12em!important}.xaaj-admin-v2 input:not([type=checkbox]),.xaaj-admin-v2 textarea,.xaaj-admin-v2 select{background:#fffefa!important;border:1px solid #ded7cd!important;border-radius:10px!important;padding:11px 13px!important;color:#2c2925!important;outline:none!important;transition:.2s!important}.xaaj-admin-v2 input:not([type=checkbox]):focus,.xaaj-admin-v2 textarea:focus,.xaaj-admin-v2 select:focus{border-color:#9b7c58!important;box-shadow:0 0 0 4px rgba(139,106,67,.10)!important}.xaaj-admin-v2 label{font-weight:600!important;font-size:12px!important;color:#4c4741!important}.xaaj-admin-v2 img{border-radius:13px}.xaaj-admin-v2 .eyebrow{text-transform:uppercase!important;letter-spacing:.16em!important;font-size:9px!important;font-weight:700!important;color:#9a7954!important}.xaaj-admin-v2 small{color:#8b857d!important}.xaaj-admin-v2[data-active-section=dashboard] [data-admin-section]:not([data-admin-section=dashboard]),.xaaj-admin-v2[data-active-section=announcement] [data-admin-section]:not([data-admin-section=announcement]),.xaaj-admin-v2[data-active-section=category-hero] [data-admin-section]:not([data-admin-section=category-hero]),.xaaj-admin-v2[data-active-section=brand-story] [data-admin-section]:not([data-admin-section=brand-story]),.xaaj-admin-v2[data-active-section=horeca] [data-admin-section]:not([data-admin-section=horeca]),.xaaj-admin-v2[data-active-section=blog] [data-admin-section]:not([data-admin-section=blog]),.xaaj-admin-v2[data-active-section=orders] [data-admin-section]:not([data-admin-section=orders]),.xaaj-admin-v2[data-active-section=products] [data-admin-section]:not([data-admin-section=products]){display:none!important}.xaaj-admin-v2 .side-icon svg{display:block}.xaaj-admin-v2 .sidebar-logout svg{color:#9bcda7;flex:none}.xaaj-admin-v2 .sidebar-logout:hover svg{color:#fff}.xaaj-admin-v2 .live-store-btn svg{flex:none}.xaaj-admin-v2 .product-header-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.xaaj-admin-v2 .product-header-actions button{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-height:39px!important}.xaaj-admin-v2 .product-add-btn{background:#292621!important;color:#fff!important;border-color:#292621!important;box-shadow:0 7px 18px rgba(41,38,33,.14)!important}.xaaj-admin-v2 .product-add-btn:hover{background:#2f7048!important;border-color:#2f7048!important;color:#fff!important;box-shadow:0 9px 22px rgba(47,112,72,.22)!important}.xaaj-admin-v2 .product-refresh-btn{background:#fff!important;color:#3f3a34!important}.xaaj-admin-v2 .product-refresh-btn:hover{background:#eef8f1!important;color:#1f5c35!important;border-color:#3b8758!important}.xaaj-admin-v2 .is-spinning{animation:xaaj-spin .8s linear infinite}@keyframes xaaj-spin{to{transform:rotate(360deg)}}
 .xaaj-admin-v2 [data-admin-section="brand-story"] .brand-story-media-preview{min-height:220px}
 @media(max-width:760px){
   .xaaj-admin-v2 [data-admin-section="brand-story"] > div:nth-child(2){
     grid-template-columns:1fr!important;
   }
 }
-@media(max-width:900px){.xaaj-admin-v2{height:auto;min-height:100vh;overflow:visible!important}.xaaj-admin-v2 .admin-shell{display:block;width:100%;height:auto;min-height:100vh}.xaaj-admin-v2 .admin-sidebar{position:sticky;left:auto;top:0;width:100%;height:auto;min-height:0;padding:13px 12px;overflow:visible}.xaaj-admin-v2 .brand-mark,.xaaj-admin-v2 .side-label{display:none}.xaaj-admin-v2 .side-footer{display:block;margin:0 0 0 8px;padding:0;flex:none}.xaaj-admin-v2 .sidebar-logout{width:auto!important;padding:9px 12px!important}.xaaj-admin-v2 .side-nav{display:flex;overflow-x:auto;gap:5px}.xaaj-admin-v2 .side-nav button{width:auto!important;white-space:nowrap;padding:9px 11px!important}.xaaj-admin-v2 .side-icon{display:none}.xaaj-admin-v2 .admin-main{margin-left:0;width:100%;height:auto;min-height:0;padding:18px 14px 50px;overflow:visible}.xaaj-admin-v2 .topbar{padding:18px}.xaaj-admin-v2 .topbar h1{font-size:27px!important}}`}</style>
+@media(max-width:900px){.xaaj-admin-v2{height:auto;min-height:100vh;overflow:visible!important}.xaaj-admin-v2 .admin-shell{display:block;width:100%;height:auto;min-height:100vh}.xaaj-admin-v2 .admin-sidebar{position:sticky;left:auto;top:0;width:100%;height:auto;min-height:0;padding:13px 12px;overflow:visible}.xaaj-admin-v2 .brand-mark,.xaaj-admin-v2 .side-label{display:none}.xaaj-admin-v2 .side-footer{display:block;margin:0 0 0 8px;padding:0;flex:none}.xaaj-admin-v2 .sidebar-logout{width:auto!important;padding:9px 12px!important}.xaaj-admin-v2 .side-nav{display:flex;overflow-x:auto;gap:5px}.xaaj-admin-v2 .side-nav button{width:auto!important;white-space:nowrap;padding:9px 11px!important}.xaaj-admin-v2 .side-icon{display:none}.xaaj-admin-v2 .admin-main{margin-left:0;width:100%;height:auto;min-height:0;padding:18px 14px 50px;overflow:visible}.xaaj-admin-v2 .topbar{padding:18px}.xaaj-admin-v2 .topbar h1{font-size:27px!important}}
+/* =========================
+   XAAJ Admin Premium System
+   ========================= */
+.xaaj-admin-v2{
+  --admin-ink:#25231f;
+  --admin-muted:#777169;
+  --admin-line:#e7e0d6;
+  --admin-paper:#fffdf9;
+  --admin-green:#2f7048;
+  font-family:'DM Sans',Arial,sans-serif!important;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+.xaaj-admin-v2 h1,
+.xaaj-admin-v2 h2,
+.xaaj-admin-v2 h3,
+.xaaj-admin-v2 h4{
+  font-family:'Playfair Display',Georgia,serif!important;
+  font-weight:500!important;
+  color:var(--admin-ink)!important;
+}
+.xaaj-admin-v2 p,
+.xaaj-admin-v2 label,
+.xaaj-admin-v2 input,
+.xaaj-admin-v2 textarea,
+.xaaj-admin-v2 select,
+.xaaj-admin-v2 button{
+  font-family:'DM Sans',Arial,sans-serif!important;
+}
+.xaaj-admin-v2 .content-width{
+  width:min(100%,1380px)!important;
+}
+.xaaj-admin-v2 section[data-admin-section]{
+  overflow:hidden;
+  scroll-margin-top:20px;
+}
+.xaaj-admin-v2 section[data-admin-section] > div:first-child h2{
+  margin:4px 0 8px!important;
+  font-size:30px!important;
+  line-height:1.08!important;
+}
+.xaaj-admin-v2 section[data-admin-section] > div:first-child p{
+  max-width:720px;
+  margin:0!important;
+  font-size:13px!important;
+  line-height:1.7!important;
+}
+.xaaj-admin-v2 input:not([type=checkbox]),
+.xaaj-admin-v2 textarea,
+.xaaj-admin-v2 select{
+  min-height:44px!important;
+  width:100%;
+}
+.xaaj-admin-v2 textarea{
+  resize:vertical;
+  min-height:120px!important;
+}
+.xaaj-admin-v2 input[type=checkbox]{
+  accent-color:var(--admin-green)!important;
+}
+.xaaj-admin-v2 button{
+  min-height:42px;
+}
+.xaaj-admin-v2 button:focus-visible,
+.xaaj-admin-v2 input:focus-visible,
+.xaaj-admin-v2 select:focus-visible,
+.xaaj-admin-v2 textarea:focus-visible{
+  outline:3px solid rgba(47,112,72,.14)!important;
+  outline-offset:2px!important;
+}
+.xaaj-admin-v2 .admin-main{
+  scrollbar-width:thin;
+  scrollbar-color:#cfc6ba transparent;
+}
+.xaaj-admin-v2 .admin-main::-webkit-scrollbar{width:8px}
+.xaaj-admin-v2 .admin-main::-webkit-scrollbar-track{background:transparent}
+.xaaj-admin-v2 .admin-main::-webkit-scrollbar-thumb{
+  background:#cfc6ba;
+  border-radius:999px;
+}
+.xaaj-admin-v2 .summary{
+  transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;
+}
+.xaaj-admin-v2 .summary:hover{
+  transform:translateY(-2px);
+  border-color:#d8cfc2!important;
+  box-shadow:0 16px 34px rgba(57,47,35,.09)!important;
+}
+@media (max-width:1180px){
+  .xaaj-admin-v2 .admin-sidebar{
+    width:220px;
+    padding-left:14px;
+    padding-right:14px;
+  }
+  .xaaj-admin-v2 .admin-main{
+    margin-left:220px;
+    width:calc(100% - 220px);
+    padding-left:24px;
+    padding-right:24px;
+  }
+  .xaaj-admin-v2 .side-nav button{
+    font-size:11px!important;
+  }
+}
+@media (max-width:900px){
+  .xaaj-admin-v2 .admin-sidebar{
+    position:sticky!important;
+    top:0!important;
+    z-index:50!important;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .xaaj-admin-v2 .side-nav{
+    scrollbar-width:none;
+    padding-bottom:2px;
+  }
+  .xaaj-admin-v2 .side-nav::-webkit-scrollbar{display:none}
+  .xaaj-admin-v2 .side-nav button{
+    flex:0 0 auto!important;
+    min-height:40px!important;
+    border-radius:999px!important;
+  }
+  .xaaj-admin-v2 .admin-main{
+    padding:18px 14px 50px!important;
+  }
+  .xaaj-admin-v2 .topbar{
+    position:relative;
+    top:auto;
+    padding:18px!important;
+    margin-bottom:18px;
+    border-radius:16px!important;
+  }
+  .xaaj-admin-v2 .topbar h1{
+    font-size:28px!important;
+  }
+  .xaaj-admin-v2 section[data-admin-section]{
+    padding:22px!important;
+    margin-bottom:20px!important;
+    border-radius:18px!important;
+  }
+  .xaaj-admin-v2 section[data-admin-section] > div:first-child h2{
+    font-size:26px!important;
+  }
+  .xaaj-admin-v2 [style*="gridTemplateColumns: '140px 1fr auto'"],
+  .xaaj-admin-v2 [style*="gridTemplateColumns: '150px 1fr auto'"],
+  .xaaj-admin-v2 [style*="gridTemplateColumns: '90px 1fr auto'"]{
+    grid-template-columns:1fr!important;
+  }
+  .xaaj-admin-v2 [style*="gridTemplateColumns: '90px 1fr auto'"] > div:first-child,
+  .xaaj-admin-v2 [style*="gridTemplateColumns: '140px 1fr auto'"] > div:first-child,
+  .xaaj-admin-v2 [style*="gridTemplateColumns: '150px 1fr auto'"] > div:first-child{
+    width:100%!important;
+    max-width:none!important;
+  }
+  .xaaj-admin-v2 [style*="gridTemplateColumns: '90px 1fr auto'"] img,
+  .xaaj-admin-v2 [style*="gridTemplateColumns: '140px 1fr auto'"] img,
+  .xaaj-admin-v2 [style*="gridTemplateColumns: '150px 1fr auto'"] img{
+    width:100%!important;
+    height:auto!important;
+    aspect-ratio:16/9;
+    object-fit:cover!important;
+  }
+  .xaaj-admin-v2 [style*="gridTemplateColumns: 'repeat(3, minmax(0, 1fr))'"]{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  .xaaj-admin-v2 .product-header-actions{
+    width:100%;
+  }
+  .xaaj-admin-v2 .product-header-actions button{
+    flex:1 1 150px;
+  }
+}
+@media (max-width:640px){
+  .xaaj-admin-v2 .admin-main{
+    padding:14px 10px 40px!important;
+  }
+  .xaaj-admin-v2 section[data-admin-section]{
+    padding:17px!important;
+    border-radius:15px!important;
+  }
+  .xaaj-admin-v2 .topbar{
+    padding:16px!important;
+    border-radius:15px!important;
+    align-items:flex-start!important;
+    flex-direction:column!important;
+    gap:14px!important;
+  }
+  .xaaj-admin-v2 .topbar h1{
+    font-size:25px!important;
+    line-height:1.1!important;
+  }
+  .xaaj-admin-v2 .top-actions,
+  .xaaj-admin-v2 .top-actions button{
+    width:100%;
+  }
+  .xaaj-admin-v2 section[data-admin-section] > div:first-child h2{
+    font-size:23px!important;
+  }
+  .xaaj-admin-v2 section[data-admin-section] > div:first-child p{
+    font-size:12px!important;
+    line-height:1.65!important;
+  }
+  .xaaj-admin-v2 .summary{
+    min-height:105px!important;
+    padding:18px!important;
+  }
+  .xaaj-admin-v2 .summary strong{
+    font-size:26px!important;
+  }
+  .xaaj-admin-v2 button{
+    min-height:44px!important;
+  }
+  .xaaj-admin-v2 [style*="gridTemplateColumns: 'repeat(3, minmax(0, 1fr))'"],
+  .xaaj-admin-v2 [style*="gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))'"],
+  .xaaj-admin-v2 [style*="gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))'"],
+  .xaaj-admin-v2 [style*="gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))'"]{
+    grid-template-columns:1fr!important;
+  }
+  .xaaj-admin-v2 [style*="gridTemplateColumns: '90px 1fr auto'"] > div:last-child,
+  .xaaj-admin-v2 [style*="gridTemplateColumns: '140px 1fr auto'"] > div:last-child,
+  .xaaj-admin-v2 [style*="gridTemplateColumns: '150px 1fr auto'"] > div:last-child{
+    width:100%;
+    display:flex;
+    flex-wrap:wrap;
+  }
+  .xaaj-admin-v2 [style*="gridTemplateColumns: '90px 1fr auto'"] > div:last-child button,
+  .xaaj-admin-v2 [style*="gridTemplateColumns: '140px 1fr auto'"] > div:last-child button,
+  .xaaj-admin-v2 [style*="gridTemplateColumns: '150px 1fr auto'"] > div:last-child button{
+    flex:1 1 120px;
+  }
+  .xaaj-admin-v2 [data-admin-section="category-hero"]{
+    overflow:visible!important;
+  }
+  .xaaj-admin-v2 [data-admin-section="category-hero"] img,
+  .xaaj-admin-v2 [data-admin-section="category-hero"] video{
+    min-height:190px;
+  }
+}
+
+`}</style>
       <div className="admin-shell">
         <aside className="admin-sidebar">
           <div className="brand-mark"><strong>XAAJ</strong><span>Stories Crafted in Earth</span></div>
@@ -1815,9 +1864,9 @@ export default function Admin() {
             {[
               ['dashboard', 'Overview', FiGrid],
               ['announcement', 'Announcement', FiBell],
-              ['hero', 'Hero Media', FiImage],
+              ['category-hero', 'Category Hero Media', FiImage],
               ['brand-story', 'Brand Story', FiBookOpen],
-              ['horeca', 'Horeca Collection', FiImage],
+              ['horeca', 'B2B', FiImage],
               ['blog', 'Blog', FiEdit3],
               ['orders', 'Orders', FiClock],
               ['products', 'Products', FiPackage]
@@ -1859,7 +1908,7 @@ export default function Admin() {
         <div className="topbar">
           <div>
             <span className="eyebrow">XAAJ / Admin</span>
-            <h1>{activeSection === 'dashboard' ? 'Store overview' : activeSection === 'announcement' ? 'Announcement bar' : activeSection === 'hero' ? 'Hero media' : activeSection === 'brand-story' ? 'Brand Story' : activeSection === 'horeca' ? 'Horeca Collection' : activeSection === 'blog' ? 'Blog management' : activeSection === 'orders' ? 'Customer orders' : 'Product management'}</h1>
+            <h1>{activeSection === 'dashboard' ? 'Store overview' : activeSection === 'announcement' ? 'Announcement bar' : activeSection === 'category-hero' ? 'Category Hero Media' : activeSection === 'brand-story' ? 'Brand Story' : activeSection === 'horeca' ? 'B2B' : activeSection === 'blog' ? 'Blog management' : activeSection === 'orders' ? 'Customer orders' : 'Product management'}</h1>
             <p>Manage your XAAJ storefront from one place.</p>
           </div>
           <div className="top-actions">
@@ -2091,303 +2140,9 @@ export default function Admin() {
         </section>
 
         {/* =========================
-            Hero Images Management
-        ========================== */}
-        <section data-admin-section="hero"
-          style={{
-            marginBottom: '50px',
-            padding: '28px',
-            border: '1px solid #e5e5e5',
-            borderRadius: '12px'
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '20px',
-              flexWrap: 'wrap',
-              marginBottom: '24px'
-            }}
-          >
-            <div>
-              <span className="eyebrow">Website Content</span>
-              <h2>Hero Media</h2>
-              <p>
-                Change the homepage hero image or video using a URL.
-                The existing hero text and button remain unchanged.
-              </p>
-            </div>
-
-            <div
-              style={{
-                padding: '8px 12px',
-                borderRadius: '999px',
-                background: '#f5f5f5',
-                color: '#555',
-                fontSize: '13px',
-                fontWeight: 600
-              }}
-            >
-              {heroSlides.length} slide{heroSlides.length === 1 ? '' : 's'}
-            </div>
-          </div>
-
-          {loadingHeroSlides ? (
-            <p>Loading hero media...</p>
-          ) : (
-            <>
-              {heroSlides.length > 0 && (
-                <div
-                  style={{
-                    display: 'grid',
-                    gap: '16px'
-                  }}
-                >
-                  {heroSlides.map((slide, index) => (
-                    <div
-                      key={`hero-slide-${index}`}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '140px 1fr auto',
-                        gap: '18px',
-                        alignItems: 'start',
-                        padding: '16px',
-                        border: '1px solid #e5e5e5',
-                        borderRadius: '10px'
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: '140px',
-                          height: '90px',
-                          borderRadius: '7px',
-                          overflow: 'hidden',
-                          background: '#f5f5f5'
-                        }}
-                      >
-                        {slide.image ? (
-                          slide.mediaType === 'video' ? (
-                            <video
-                              src={slide.image}
-                              muted
-                              autoPlay
-                              loop
-                              playsInline
-                              controls
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover'
-                              }}
-                            />
-                          ) : (
-                            <img
-                              src={slide.image}
-                              alt={slide.alt || `Hero slide ${index + 1}`}
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover'
-                              }}
-                            />
-                          )
-                        ) : (
-                          <div
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              display: 'grid',
-                              placeItems: 'center',
-                              fontSize: '11px',
-                              color: '#777'
-                            }}
-                          >
-                            Media preview
-                          </div>
-                        )}
-                      </div>
-
-                      <div
-                        style={{
-                          display: 'grid',
-                          gap: '9px'
-                        }}
-                      >
-                        <strong>Slide {index + 1}</strong>
-
-                        <input
-                          value={slide.image}
-                          onChange={e =>
-                            updateHeroSlide(
-                              index,
-                              'image',
-                              e.target.value
-                            )
-                          }
-                          placeholder="Hero image or video URL"
-                        />
-
-                        <input
-                          value={slide.alt}
-                          onChange={e =>
-                            updateHeroSlide(
-                              index,
-                              'alt',
-                              e.target.value
-                            )
-                          }
-                          placeholder="Image alt text (for images)"
-                        />
-
-                        <label
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={slide.enabled}
-                            onChange={e =>
-                              updateHeroSlide(
-                                index,
-                                'enabled',
-                                e.target.checked
-                              )
-                            }
-                          />
-                          Active on website
-                        </label>
-                      </div>
-
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '7px'
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() =>
-                            moveHeroSlide(index, -1)
-                          }
-                          disabled={index === 0}
-                          title="Move slide up"
-                        >
-                          ↑
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            moveHeroSlide(index, 1)
-                          }
-                          disabled={
-                            index === heroSlides.length - 1
-                          }
-                          title="Move slide down"
-                        >
-                          ↓
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            removeHeroSlide(index)
-                          }
-                          title="Remove slide"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {heroSlides.length === 0 && (
-                <div
-                  style={{
-                    padding: '30px 20px',
-                    textAlign: 'center',
-                    border: '1px dashed #d9d3ca',
-                    borderRadius: '10px',
-                    marginBottom: '15px'
-                  }}
-                >
-                  <p style={{ marginTop: 0 }}>
-                    No hero media configured yet.
-                  </p>
-                </div>
-              )}
-
-              <small
-                style={{
-                  display: 'block',
-                  marginTop: '14px',
-                  color: '#777'
-                }}
-              >
-                The homepage hero text and “Explore the collection”
-                button remain unchanged. Only the hero image/video media are
-                managed here.
-              </small>
-
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '12px',
-                  flexWrap: 'wrap',
-                  marginTop: '18px'
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={addHeroSlide}
-                  disabled={savingHeroSlides}
-                >
-                  + Add Hero Media
-                </button>
-
-                <button
-                  type="button"
-                  className="button"
-                  onClick={handleSaveHeroSlides}
-                  disabled={
-                    savingHeroSlides ||
-                    loadingHeroSlides
-                  }
-                >
-                  {savingHeroSlides
-                    ? 'Saving...'
-                    : 'Save Hero Media'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={loadHeroSlides}
-                  disabled={
-                    savingHeroSlides ||
-                    loadingHeroSlides
-                  }
-                >
-                  Refresh
-                </button>
-              </div>
-            </>
-          )}
-        </section>
-
-        {/* =========================
             Category Hero Media Management
         ========================== */}
-        <section data-admin-section="hero"
+        <section data-admin-section="category-hero"
           style={{
             marginBottom: '50px',
             padding: '28px',
@@ -3006,7 +2761,7 @@ export default function Admin() {
         </section>
 
         {/* =========================
-            Horeca Collection Management
+            B2B Collection Management
         ========================== */}
         <section data-admin-section="horeca"
           style={{
@@ -3018,16 +2773,16 @@ export default function Admin() {
         >
           <div style={{ marginBottom: '24px' }}>
             <span className="eyebrow">Store Management</span>
-            <h2>Horeca Collection</h2>
+            <h2>B2B Collection</h2>
             <p>
-              Change the three images in the “Discover our Horeca collections”
+              Change the three images in the “Discover our B2B collections”
               section. Remove clears only the custom CMS image; the original
               image remains as the homepage fallback.
             </p>
           </div>
 
           {loadingHoreca ? (
-            <p>Loading Horeca collection media...</p>
+            <p>Loading B2B collection media...</p>
           ) : (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '18px' }}>
@@ -3076,7 +2831,7 @@ export default function Admin() {
                       <input
                         value={item.alt}
                         onChange={e => updateHorecaField(slot, 'alt', e.target.value)}
-                        placeholder="Horeca collection image"
+                        placeholder="B2B collection image"
                         disabled={savingHoreca || uploading}
                         style={{ width: '100%', marginTop: '7px', marginBottom: '12px' }}
                       />
@@ -3096,7 +2851,7 @@ export default function Admin() {
 
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '18px' }}>
                 <button type="button" className="button" onClick={handleSaveHorecaMedia} disabled={savingHoreca || loadingHoreca || Boolean(uploadingHorecaSlot)}>
-                  {savingHoreca ? 'Saving...' : 'Save Horeca Collection'}
+                  {savingHoreca ? 'Saving...' : 'Save B2B Collection'}
                 </button>
                 <button type="button" onClick={loadHorecaMedia} disabled={savingHoreca || loadingHoreca || Boolean(uploadingHorecaSlot)}>
                   {loadingHoreca ? 'Loading...' : 'Refresh'}

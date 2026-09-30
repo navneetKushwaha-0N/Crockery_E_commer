@@ -146,8 +146,8 @@ const horecaDefaultMedia = {
 // the category links or product/category filtering.
 const categoryHeroDefinitions = [
   {
-    name: 'Glassware',
-    slug: 'glassware',
+    name: 'Drinkware',
+    slug: 'drinkware',
     fallback:
       'https://images.unsplash.com/photo-1577937927133-66ef06acdf18?auto=format&fit=crop&w=1200&q=88'
   },
@@ -168,9 +168,10 @@ const categoryHeroDefinitions = [
       'https://res.cloudinary.com/kswukbpp/image/upload/v1790269104/ChatGPT_Image_Sep_24_2026_10_27_52_PM.png'
   },
   {
-    name: 'Horeca',
-    slug: 'horeca',
-    fallback: heroImage
+    name: 'B2B',
+    slug: 'b2b',
+    fallback: heroImage,
+    isB2B: true
   }
 ]
 
@@ -404,10 +405,10 @@ function Header() {
               </div>
 
               <Link
-                className={new URLSearchParams(location.search).get('category') === 'Glassware' ? 'active' : ''}
-                to="/shop?category=Glassware"
+                className={new URLSearchParams(location.search).get('category') === 'Drinkware' ? 'active' : ''}
+                to="/shop?category=Drinkware"
               >
-                Glassware
+                Drinkware
               </Link>
 
               <Link
@@ -425,10 +426,9 @@ function Header() {
               </Link>
 
               <Link
-                className={new URLSearchParams(location.search).get('category') === 'Horeca' ? 'active' : ''}
-                to="/shop?category=Horeca"
+                to="/enquiry"
               >
-                Horeca
+                B2B
               </Link>
             </nav>
           </div>
@@ -554,8 +554,8 @@ function Header() {
                     <ArrowRight size={22} strokeWidth={1.15} />
                   </button>
 
-                  <Link to="/shop?category=Glassware" onClick={closeMenu}>
-                    <span>Glassware</span>
+                  <Link to="/shop?category=Drinkware" onClick={closeMenu}>
+                    <span>Drinkware</span>
                   </Link>
 
                   <Link to="/shop?category=Serveware" onClick={closeMenu}>
@@ -566,8 +566,8 @@ function Header() {
                     <span>Gifting</span>
                   </Link>
 
-                  <Link to="/shop?category=Horeca" onClick={closeMenu}>
-                    <span>Horeca</span>
+                  <Link to="/enquiry" onClick={closeMenu}>
+                    <span>B2B</span>
                   </Link>
                 </>
               ) : (
@@ -592,7 +592,7 @@ function Header() {
             </nav>
 
             <div className="xaaj-ref-mobile-menu-secondary">
-              <button type="button" onClick={() => go('/about')}>Our Story</button>
+              <button type="button" onClick={() => go('/story')}>Our Story</button>
               <button type="button" onClick={() => go('/faq')}>FAQs</button>
               <button type="button" onClick={() => go('/contact')}>Contact Us</button>
             </div>
@@ -614,14 +614,11 @@ function Header() {
                 ))}
               </div>
               <div>
-                <span>DRINKWARE</span>
-                {['Cups & Mugs', 'Glassware'].map(name => (
-                  <button key={name} onClick={() => go(`/shop?category=${encodeURIComponent(name)}`)}>{name}</button>
-                ))}
+                <button type="button" onClick={() => go('/shop?category=Drinkware')}>DRINKWARE</button>
               </div>
               <div>
                 <span>ABOUT XAAJ</span>
-                <button onClick={() => go('/about')}>Our story</button>
+                <button onClick={() => go('/story')}>Our story</button>
                 <button onClick={() => go('/contact')}>Contact</button>
                 <button onClick={() => go('/faq')}>FAQs</button>
               </div>
@@ -1899,7 +1896,7 @@ function Home() {
             item.url ||
             ''
 
-          const slug = toCategoryHeroSlug(
+          const rawSlug = toCategoryHeroSlug(
             item.categorySlug ||
             item.slug ||
             item.categoryName ||
@@ -1908,9 +1905,14 @@ function Home() {
             item.category?.name
           )
 
-          if (!slug || !url) return
+          // Support legacy CMS records while the frontend uses the new names.
+          const slug = rawSlug === 'glassware' ? 'drinkware' : rawSlug
 
-          mediaBySlug[slug] = {
+          const normalizedSlug = slug === 'horeca' ? 'b2b' : slug
+
+          if (!normalizedSlug || !url) return
+
+          mediaBySlug[normalizedSlug] = {
             url,
             mediaType: getCategoryHeroMediaType(url, item.mediaType),
             alt: item.alt || item.title || ''
@@ -3475,8 +3477,8 @@ function Home() {
                 <Link
                   key={category.slug}
                   className="xaaj-reference-hero-card xaaj-reference-hero-card-top"
-                  to={`/shop?category=${encodeURIComponent(category.name)}`}
-                  aria-label={`Shop ${category.name}`}
+                  to={category.isB2B ? '/enquiry' : `/shop?category=${encodeURIComponent(category.name)}`}
+                  aria-label={category.isB2B ? 'B2B enquiry' : `Shop ${category.name}`}
                 >
                   {category.mediaType === 'video' ? (
                     <video
@@ -3515,8 +3517,8 @@ function Home() {
                   <Link
                     key={category.slug}
                     className="xaaj-reference-hero-bottom-card"
-                    to={`/shop?category=${encodeURIComponent(category.name)}`}
-                    aria-label={`Shop ${category.name}`}
+                    to={category.isB2B ? '/enquiry' : `/shop?category=${encodeURIComponent(category.name)}`}
+                    aria-label={category.isB2B ? 'B2B enquiry' : `Shop ${category.name}`}
                   >
                     {category.mediaType === 'video' ? (
                       <video
@@ -3653,9 +3655,9 @@ function Home() {
             The section uses the same max-width as the hero follow-up so
             the left and right edges line up across the homepage.
            ============================================================ */}
-        <section className="xaaj-brand-story-split xaaj-cinema-reveal" data-xaaj-cinema-reveal aria-label="XAAJ brand story">
+        <section className="xaaj-brand-story-split xaaj-brand-story-homepage xaaj-cinema-reveal" data-xaaj-cinema-reveal aria-label="XAAJ brand story">
           <div className="xaaj-brand-story-split-inner">
-            <Link className="xaaj-brand-story-split-media" to="/story" aria-label="Read the full XAAJ story">
+            <Link className="xaaj-brand-story-split-media" to="/story" aria-label="Read the full XAAJ brand story">
               {brandStoryMedia.mediaType === 'video' ? (
                 <video
                   src={brandStoryMedia.url}
@@ -3676,25 +3678,249 @@ function Home() {
             </Link>
 
             <div className="xaaj-brand-story-split-copy">
+              <img
+                src={logoUrl}
+                alt=""
+                aria-hidden="true"
+                className="xaaj-brand-story-home-watermark"
+              />
+
               <div className="xaaj-brand-story-split-copy-inner">
-                <span className="xaaj-brand-story-split-eyebrow">Our story</span>
-                <h2>India, Made for the Table.</h2>
-                <p>
-                  A little clay. A lot of character. And a story in every piece.
-                  <br />
-                  XAAJ is contemporary crockery rooted in the colours, crafts and everyday beauty of India.
-                  <br />
-                  Made by hand. Designed for now.
-                  <br />
-                  Meant to be used, loved and lived with.
+                <span className="xaaj-brand-story-split-eyebrow">Brand Story</span>
+
+                <h2>Stories, shaped by hand.</h2>
+
+                <p className="xaaj-brand-story-home-lead">
+                  Some things are designed to be seen.<br />
+                  Some things are made to be felt.<br />
+                  <strong>XAAJ is about the latter.</strong>
                 </p>
+
+                <p>
+                  Born from the love for beauty that exists in India&apos;s everyday life,
+                  XAAJ brings together clay, craft, colour and stories to create pieces
+                  that feel at home in the cultural richness of India.
+                </p>
+
+                <p>
+                  Our journey begins in places where craft is still made by hand. In Khurja,
+                  clay is shaped slowly, patiently and lovingly by hands that have learned
+                  the craft over generations. We take these stories and give them a new,
+                  contemporary expression for today&apos;s homes.
+                </p>
+
+                <p className="xaaj-brand-story-home-closing">
+                  We don&apos;t create crockery just for occasions. We create pieces that
+                  quietly become part of your everyday life.
+                </p>
+
                 <Link className="xaaj-brand-story-split-button" to="/story">
-                  <span>Read more</span>
+                  <span>Read the full story</span>
                   <ArrowRight size={15} strokeWidth={1.35} />
                 </Link>
               </div>
             </div>
           </div>
+
+          <style>{`
+            .xaaj-brand-story-homepage{
+              background:#ffffff!important;
+              border-top:0!important;
+              border-bottom:0!important;
+            }
+            .xaaj-brand-story-homepage .xaaj-brand-story-split-inner{
+              max-width:1180px!important;
+              margin:0 auto!important;
+              display:grid!important;
+              grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+              min-height:720px;
+            }
+            .xaaj-brand-story-homepage .xaaj-brand-story-split-media{
+              min-height:720px;
+              display:block;
+              overflow:hidden;
+              background:#e9e3d8;
+            }
+            .xaaj-brand-story-homepage .xaaj-brand-story-split-media img,
+            .xaaj-brand-story-homepage .xaaj-brand-story-split-media video{
+              width:100%;
+              height:100%;
+              min-height:720px;
+              display:block;
+              object-fit:cover;
+              transition:transform .9s cubic-bezier(.22,1,.36,1);
+            }
+            .xaaj-brand-story-homepage .xaaj-brand-story-split-media:hover img,
+            .xaaj-brand-story-homepage .xaaj-brand-story-split-media:hover video{
+              transform:scale(1.025);
+            }
+            .xaaj-brand-story-homepage .xaaj-brand-story-split-copy{
+              position:relative;
+              min-height:720px;
+              display:flex;
+              align-items:center;
+              overflow:hidden;
+              background:#ffffff!important;
+              padding:82px 78px!important;
+              box-sizing:border-box;
+            }
+            .xaaj-brand-story-homepage .xaaj-brand-story-split-copy-inner{
+              position:relative;
+              z-index:2;
+              width:min(100%,520px);
+              margin:0 auto;
+            }
+            .xaaj-brand-story-homepage .xaaj-brand-story-split-eyebrow{
+              display:block;
+              margin-bottom:25px;
+              color:#7b746b!important;
+              font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+              font-size:10px!important;
+              font-weight:400!important;
+              line-height:1;
+              letter-spacing:2.5px!important;
+              text-transform:uppercase;
+            }
+            .xaaj-brand-story-homepage .xaaj-brand-story-split-copy h2{
+              margin:0 0 30px!important;
+              color:#302d28!important;
+              font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif!important;
+              font-size:clamp(46px,4.2vw,68px)!important;
+              font-weight:400!important;
+              line-height:.96!important;
+              letter-spacing:-.045em!important;
+              max-width:470px;
+            }
+            .xaaj-brand-story-home-lead{
+              margin:0 0 27px!important;
+              color:#413c36!important;
+              font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif!important;
+              font-size:22px!important;
+              line-height:1.35!important;
+              letter-spacing:-.01em;
+            }
+            .xaaj-brand-story-home-lead strong{
+              font-weight:600!important;
+            }
+            .xaaj-brand-story-homepage .xaaj-brand-story-split-copy p:not(.xaaj-brand-story-home-lead):not(.xaaj-brand-story-home-closing){
+              max-width:490px;
+              margin:0 0 17px!important;
+              color:#716a62!important;
+              font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+              font-size:12px!important;
+              font-weight:400!important;
+              line-height:1.75!important;
+              letter-spacing:.01em;
+            }
+            .xaaj-brand-story-home-closing{
+              max-width:470px;
+              margin:23px 0 31px!important;
+              color:#4b453e!important;
+              font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif!important;
+              font-size:18px!important;
+              line-height:1.45!important;
+            }
+            .xaaj-brand-story-homepage .xaaj-brand-story-split-button{
+              display:inline-flex!important;
+              align-items:center;
+              justify-content:center;
+              gap:13px;
+              min-height:45px;
+              padding:0 18px!important;
+              border:1px solid rgba(48,45,40,.55)!important;
+              color:#302d28!important;
+              background:transparent!important;
+              font-family:'Gotham Book','Gotham',Arial,sans-serif!important;
+              font-size:9px!important;
+              font-weight:400!important;
+              letter-spacing:1.7px!important;
+              line-height:1!important;
+              text-transform:uppercase;
+              text-decoration:none!important;
+              transition:background .25s ease,color .25s ease,border-color .25s ease;
+            }
+            .xaaj-brand-story-homepage .xaaj-brand-story-split-button svg{
+              color:#8d4e3d!important;
+              transition:color .25s ease, transform .25s ease;
+            }
+            .xaaj-brand-story-homepage .xaaj-brand-story-split-button:hover{
+              background:#8d4e3d!important;
+              color:#fff!important;
+              border-color:#8d4e3d!important;
+            }
+            .xaaj-brand-story-homepage .xaaj-brand-story-split-button:hover svg{
+              color:#fff!important;
+              transform:translateX(2px);
+            }
+            .xaaj-brand-story-home-watermark{
+              position:absolute;
+              right:-38px;
+              bottom:-42px;
+              width:300px;
+              height:300px;
+              object-fit:contain;
+              opacity:.055;
+              filter:grayscale(1);
+              pointer-events:none;
+              z-index:1;
+            }
+            @media(max-width:850px){
+              .xaaj-brand-story-homepage .xaaj-brand-story-split-inner{
+                grid-template-columns:1fr!important;
+                min-height:0;
+              }
+              .xaaj-brand-story-homepage .xaaj-brand-story-split-media,
+              .xaaj-brand-story-homepage .xaaj-brand-story-split-media img,
+              .xaaj-brand-story-homepage .xaaj-brand-story-split-media video{
+                min-height:0;
+                height:auto;
+                aspect-ratio:1 / 1.08;
+              }
+              .xaaj-brand-story-homepage .xaaj-brand-story-split-copy{
+                min-height:0;
+                padding:64px 28px 70px!important;
+              }
+              .xaaj-brand-story-homepage .xaaj-brand-story-split-copy-inner{
+                width:100%;
+              }
+              .xaaj-brand-story-homepage .xaaj-brand-story-split-copy h2{
+                font-size:clamp(42px,11vw,58px)!important;
+              }
+              .xaaj-brand-story-home-lead{
+                font-size:20px!important;
+              }
+              .xaaj-brand-story-home-watermark{
+                width:220px;
+                height:220px;
+                right:-35px;
+                bottom:-30px;
+              }
+            }
+            @media(max-width:520px){
+              .xaaj-brand-story-homepage .xaaj-brand-story-split-copy{
+                padding:52px 22px 58px!important;
+              }
+              .xaaj-brand-story-homepage .xaaj-brand-story-split-eyebrow{
+                font-size:9px!important;
+                letter-spacing:2.2px!important;
+              }
+              .xaaj-brand-story-homepage .xaaj-brand-story-split-copy h2{
+                font-size:42px!important;
+                line-height:.98!important;
+                margin-bottom:25px!important;
+              }
+              .xaaj-brand-story-home-lead{
+                font-size:19px!important;
+              }
+              .xaaj-brand-story-homepage .xaaj-brand-story-split-copy p:not(.xaaj-brand-story-home-lead):not(.xaaj-brand-story-home-closing){
+                font-size:11.5px!important;
+                line-height:1.72!important;
+              }
+              .xaaj-brand-story-home-closing{
+                font-size:17px!important;
+              }
+            }
+          `}</style>
         </section>
 
         {/* ============================================================
@@ -3703,16 +3929,16 @@ function Home() {
         <section
           className="xaaj-horeca-bundled xaaj-cinema-reveal"
           data-xaaj-cinema-reveal
-          aria-label="Horeca collection"
+          aria-label="B2B collection"
         >
           <div className="xaaj-horeca-bundled-inner">
-            <h2>Discover our Horeca collections</h2>
+            <h2>Discover our B2B collections</h2>
 
             <div className="xaaj-horeca-bundled-grid">
               <Link
-                to="/shop?category=Horeca"
+                to="/enquiry"
                 className="xaaj-horeca-bundled-main"
-                aria-label="Shop Horeca"
+                aria-label="B2B enquiry"
               >
                 <div className="xaaj-horeca-bundled-media">
                   <img
@@ -3723,15 +3949,15 @@ function Home() {
                 </div>
 
                 <div className="xaaj-horeca-bundled-label">
-                  Horeca <ArrowRight size={18} strokeWidth={1.25} />
+                  B2B <ArrowRight size={18} strokeWidth={1.25} />
                 </div>
               </Link>
 
               <div className="xaaj-horeca-bundled-side">
                 <Link
-                  to="/shop?category=Horeca"
+                  to="/enquiry"
                   className="xaaj-horeca-bundled-small"
-                  aria-label="Shop Horeca"
+                  aria-label="B2B enquiry"
                 >
                   <img
                     src={horecaMedia.sideOne.url}
@@ -3741,9 +3967,9 @@ function Home() {
                 </Link>
 
                 <Link
-                  to="/shop?category=Horeca"
+                  to="/enquiry"
                   className="xaaj-horeca-bundled-small"
-                  aria-label="Shop Horeca"
+                  aria-label="B2B enquiry"
                 >
                   <img
                     src={horecaMedia.sideTwo.url}
@@ -3966,7 +4192,7 @@ function Home() {
               <span className="xaaj-cinema-section-eyebrow">The collection story</span>
               <h2>Made slowly. Meant to live with you.</h2>
               <p>We look to everyday rituals, natural materials and the quiet beauty around us, then shape useful objects with a calmer point of view.</p>
-              <Link className="xaaj-cinema-text-link" to="/about">Our story <ArrowRight size={13} /></Link>
+              <Link className="xaaj-cinema-text-link" to="/story">Our story <ArrowRight size={13} /></Link>
             </div>
           </div>
         </section>
@@ -4392,7 +4618,7 @@ function ContactForm() {
                   <option value="">Select a subject</option>
                   <option value="Order enquiry">Order enquiry</option>
                   <option value="Product enquiry">Product enquiry</option>
-                  <option value="Corporate / Horeca">Corporate / Horeca</option>
+                  <option value="Corporate / B2B">Corporate / B2B</option>
                   <option value="Collaboration">Collaboration</option>
                   <option value="Other">Other</option>
                 </select>
@@ -4994,7 +5220,7 @@ function LegacyFooter() {
 
               <h4>About us</h4>
 
-              <Link to="/about">Our story</Link>
+              <Link to="/story">Our story</Link>
               <Link to="/story">The XAAJ way</Link>
               <Link to="/blog">Journal</Link>
               <Link to="/contact">Contact</Link>
@@ -6099,6 +6325,20 @@ function Footer() {
             font-size:18px!important;
           }
         }
+        /* Final desktop footer: Brand | Shop | About | Contact */
+        @media (min-width: 761px){
+          .xaaj-reference-footer-main{
+            display:grid!important;
+            grid-template-columns:minmax(260px,1.35fr) minmax(125px,.72fr) minmax(125px,.72fr) minmax(260px,1.05fr)!important;
+            grid-template-areas:"brand shop about contact"!important;
+            align-items:start!important;
+          }
+          .xaaj-reference-footer-brand{grid-area:brand!important;}
+          .xaaj-reference-footer-shop{grid-area:shop!important;}
+          .xaaj-reference-footer-about{grid-area:about!important;}
+          .xaaj-reference-footer-contact{grid-area:contact!important;}
+        }
+
       `}</style>
 
       <section className="xaaj-reference-newsletter" aria-labelledby="xaaj-reference-subscribe-title">
@@ -6115,8 +6355,6 @@ function Footer() {
         </div>
 
         <div className="xaaj-reference-footer-contact">
-          <h4>Get in Touch</h4>
-
           <div className="xaaj-reference-footer-contact-list">
             <a
               className="xaaj-reference-footer-contact-item"
@@ -6191,17 +6429,17 @@ function Footer() {
           <h4>Shop</h4>
           <nav aria-label="Shop">
             <Link to="/shop?category=Dinnerware">Dinnerware</Link>
-            <Link to="/shop?category=Glassware">Glassware</Link>
+            <Link to="/shop?category=Drinkware">Drinkware</Link>
             <Link to="/shop?category=Serveware">Serveware</Link>
             <Link to="/shop?category=Gifting">Gifting</Link>
-            <Link to="/shop?category=Horeca">Horeca</Link>
+            <Link to="/enquiry">B2B</Link>
           </nav>
         </div>
 
         <div className="xaaj-reference-footer-column xaaj-reference-footer-about">
           <h4>About</h4>
           <nav aria-label="About XAAJ">
-            <Link to="/about">Our Story</Link>
+            <Link to="/story">Our Story</Link>
             <Link to="/faq">FAQs</Link>
             <Link to="/contact">Contact Us</Link>
           </nav>
@@ -6217,10 +6455,10 @@ function Footer() {
           </summary>
           <nav aria-label="Mobile Shop">
             <Link to="/shop?category=Dinnerware">Dinnerware</Link>
-            <Link to="/shop?category=Glassware">Glassware</Link>
+            <Link to="/shop?category=Drinkware">Drinkware</Link>
             <Link to="/shop?category=Serveware">Serveware</Link>
             <Link to="/shop?category=Gifting">Gifting</Link>
-            <Link to="/shop?category=Horeca">Horeca</Link>
+            <Link to="/enquiry">B2B</Link>
           </nav>
         </details>
 
@@ -6230,7 +6468,7 @@ function Footer() {
             <ChevronDown size={17} strokeWidth={1.2} />
           </summary>
           <nav aria-label="Mobile About">
-            <Link to="/about">Our Story</Link>
+            <Link to="/story">Our Story</Link>
             <Link to="/faq">FAQs</Link>
             <Link to="/contact">Contact Us</Link>
           </nav>
@@ -9685,486 +9923,802 @@ function BlogArticle({ slug }) {
 // ==========================================================
 
 function BrandStoryPage() {
-  const [brandStoryMedia, setBrandStoryMedia] = useState({
-    url: tableImage,
-    mediaType: 'image',
-    alt: 'XAAJ handcrafted tableware arranged on a dining table'
-  })
-
-  useEffect(() => {
-    let cancelled = false
-
-    const loadBrandStoryMedia = async () => {
-      try {
-        const result = await apiRequest('/cms/brand-story')
-
-        const raw =
-          result?.data?.brandStory ||
-          result?.data?.story ||
-          result?.data?.item ||
-          result?.brandStory ||
-          result?.story ||
-          result?.item ||
-          result?.data ||
-          result ||
-          null
-
-        const item = Array.isArray(raw)
-          ? raw.find(entry => entry && typeof entry === 'object')
-          : raw && typeof raw === 'object'
-            ? raw
-            : null
-
-        if (!item || cancelled) return
-
-        const url =
-          item.mediaUrl ||
-          item.image ||
-          item.imageUrl ||
-          item.videoUrl ||
-          item.url ||
-          ''
-
-        if (!url) return
-
-        const enabled =
-          item.enabled !== undefined
-            ? Boolean(item.enabled)
-            : item.isActive !== undefined
-              ? Boolean(item.isActive)
-              : true
-
-        if (!enabled) return
-
-        setBrandStoryMedia({
-          url,
-          mediaType: getBrandStoryMediaType(url, item.mediaType),
-          alt: item.alt || item.title || 'XAAJ brand story'
-        })
-      } catch (error) {
-        console.error('Brand story media load error:', error)
-      }
-    }
-
-    loadBrandStoryMedia()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
   return (
     <>
       <Header />
 
       <style>{`
-        .xaaj-story-page{
-          --story-ink:#2d2a26;
-          --story-muted:#6f6a62;
-          --story-line:rgba(45,42,38,.14);
-          background:#ffffff;
-          color:var(--story-ink);
+        .xaaj-brand-story-page{
+          position:relative;
+          isolation:isolate;
+          overflow:hidden;
+          background:#fff;
+          color:#292722;
           min-height:100vh;
-          padding:52px 0 84px;
+          padding:72px 24px 110px;
         }
 
-        .xaaj-story-page,
-        .xaaj-story-page *{
+        .xaaj-brand-story-page,
+        .xaaj-brand-story-page *{
           box-sizing:border-box;
         }
 
-        .xaaj-story-layout{
-          width:min(1140px,calc(100% - 48px));
-          margin:0 auto;
-          display:grid;
-          grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-          gap:14px;
-          align-items:stretch;
-        }
-
-        .xaaj-story-visual{
-          position:relative;
-          min-width:0;
-          min-height:0;
-          height:auto;
-          align-self:stretch;
-          background:#eee9e1;
-          border:1px solid rgba(48,45,40,.14);
-          border-radius:7px;
-          overflow:hidden;
-        }
-
-        .xaaj-story-visual-media{
+        .xaaj-brand-story-page::before{
+          content:"";
           position:absolute;
           inset:0;
-          width:100%;
-          height:100%;
-          display:block;
-          object-fit:cover;
-          object-position:center;
-        }
-
-        .xaaj-story-visual-caption{
-          position:absolute;
-          z-index:2;
-          left:26px;
-          bottom:25px;
-          color:rgba(255,255,255,.84);
-          font-family:'Gotham Book','Gotham',Arial,sans-serif;
-          font-size:8px;
-          line-height:1;
-          letter-spacing:2.5px;
-          text-transform:uppercase;
-          text-shadow:0 1px 12px rgba(0,0,0,.22);
+          background:
+            radial-gradient(circle at 50% 14%, rgba(181,151,128,.055), transparent 23%),
+            linear-gradient(180deg,#fff 0%,#fff 72%,#fcfbf8 100%);
           pointer-events:none;
+          z-index:-2;
         }
 
-        .xaaj-story-copy-column{
-          min-width:0;
-          background:#ffffff;
-          border:1px solid rgba(48,45,40,.14);
-          border-radius:7px;
-          padding:68px clamp(34px,5vw,72px) 72px;
-        }
-
-        .xaaj-story-copy-inner{
-          width:min(100%,500px);
+        .xaaj-brand-story-inner{
+          position:relative;
+          width:min(760px,100%);
           margin:0 auto;
+          text-align:center;
+          z-index:1;
         }
 
-        .xaaj-story-eyebrow{
-          display:flex;
-          align-items:center;
-          gap:12px;
-          margin:0 0 22px;
-          color:#8b847b;
-          font-family:'Gotham Book','Gotham',Arial,sans-serif;
-          font-size:8px;
-          line-height:1;
-          font-weight:500;
-          letter-spacing:2.8px;
-          text-transform:uppercase;
-        }
-
-        .xaaj-story-eyebrow::before{
-          content:'';
-          width:30px;
-          height:1px;
-          background:currentColor;
-          flex:0 0 auto;
-        }
-
-        .xaaj-story-copy-column h1{
-          margin:0;
-          max-width:540px;
-          color:#302d28;
-          font-family:'Gotham Book','Gotham',Arial,sans-serif;
-          font-size:clamp(42px,4.8vw,68px);
-          font-weight:400;
-          line-height:.95;
-          letter-spacing:-.05em;
-        }
-
-        .xaaj-story-intro{
-          margin:30px 0 0;
-          max-width:500px;
-          color:#6d675f;
-          font-family:'Gotham Book','Gotham',Arial,sans-serif;
-          font-size:12px;
-          line-height:1.9;
-        }
-
-        .xaaj-story-intro p,
-        .xaaj-story-section p{
-          margin:0;
-        }
-
-        .xaaj-story-intro p + p{
-          margin-top:17px;
-        }
-
-        .xaaj-story-divider{
-          width:100%;
-          height:1px;
-          margin:48px 0 44px;
-          background:var(--story-line);
-        }
-
-        .xaaj-story-section{
-          max-width:500px;
-        }
-
-        .xaaj-story-section + .xaaj-story-section{
-          margin-top:48px;
-          padding-top:44px;
-          border-top:1px solid var(--story-line);
-        }
-
-        .xaaj-story-section h2{
-          margin:0 0 20px;
-          color:#302d28;
-          font-family:'Gotham Book','Gotham',Arial,sans-serif;
-          font-size:clamp(28px,3vw,43px);
-          font-weight:400;
-          line-height:1;
-          letter-spacing:-.045em;
-        }
-
-        .xaaj-story-section p{
-          color:#6d675f;
-          font-family:'Gotham Book','Gotham',Arial,sans-serif;
-          font-size:12px;
-          line-height:1.9;
-        }
-
-        .xaaj-story-section p + p{
-          margin-top:17px;
-        }
-
-        .xaaj-story-moments{
-          display:flex;
-          flex-wrap:wrap;
-          gap:8px 17px;
-          margin:24px 0 20px;
-          color:#514c45;
+        .xaaj-brand-story-eyebrow{
+          display:block;
+          margin:0 0 24px;
+          color:#6e675e;
           font-family:'Gotham Book','Gotham',Arial,sans-serif;
           font-size:10px;
-          line-height:1.7;
-          letter-spacing:.02em;
-        }
-
-        .xaaj-story-moments span{
-          position:relative;
-        }
-
-        .xaaj-story-moments span:not(:last-child)::after{
-          content:'·';
-          position:absolute;
-          right:-11px;
-          color:#a49d93;
-        }
-
-        .xaaj-story-back{
-          display:inline-flex;
-          align-items:center;
-          gap:8px;
-          margin-top:52px;
-          padding-bottom:8px;
-          border-bottom:1px solid #2d2a26;
-          color:#2d2a26;
-          text-decoration:none;
-          font-family:'Gotham Book','Gotham',Arial,sans-serif;
-          font-size:8px;
-          font-weight:500;
-          letter-spacing:1.8px;
+          font-weight:400;
+          line-height:1;
+          letter-spacing:3px;
           text-transform:uppercase;
         }
 
-        .xaaj-story-back svg{
-          transition:transform .25s ease;
+        /* The original logo is intentionally treated as a very light watermark. */
+        .xaaj-brand-story-mark{
+          position:absolute;
+          top:6px;
+          left:50%;
+          width:190px;
+          height:150px;
+          object-fit:contain;
+          object-position:center;
+          transform:translateX(-50%);
+          opacity:.075;
+          filter:grayscale(1);
+          mix-blend-mode:multiply;
+          pointer-events:none;
+          user-select:none;
+          z-index:-1;
         }
 
-        .xaaj-story-back:hover svg{
-          transform:translateX(4px);
+        .xaaj-brand-story-title{
+          position:relative;
+          margin:0 0 25px;
+          color:#292722;
+          font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+          font-size:31px;
+          font-weight:600;
+          line-height:1.05;
+          letter-spacing:-.025em;
         }
 
-        @media(max-width:900px){
-          .xaaj-story-page{
-            padding:42px 0 68px;
-          }
-
-          .xaaj-story-layout{
-            width:calc(100% - 28px);
-            grid-template-columns:1fr;
-            gap:12px;
-          }
-
-          .xaaj-story-visual{
-            position:relative;
-            top:auto;
-            height:520px;
-            min-height:520px;
-          }
-
-          .xaaj-story-copy-column{
-            padding:54px 32px 60px;
-          }
+        .xaaj-brand-story-title::after{
+          content:"";
+          display:block;
+          width:34px;
+          height:1px;
+          margin:17px auto 0;
+          background:rgba(41,39,34,.28);
         }
 
-        @media(max-width:560px){
-          .xaaj-story-page{
-            padding:32px 0 54px;
+        .xaaj-brand-story-lead{
+          width:min(600px,100%);
+          margin:0 auto 40px;
+          color:#35312c;
+          font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+          font-size:21px;
+          font-weight:400;
+          line-height:1.42;
+          letter-spacing:.005em;
+        }
+
+        .xaaj-brand-story-lead p{
+          margin:0;
+        }
+
+        .xaaj-brand-story-lead strong{
+          font-weight:600;
+        }
+
+        .xaaj-brand-story-copy{
+          width:min(680px,100%);
+          margin:0 auto;
+          color:#555049;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif;
+          font-size:13px;
+          font-weight:400;
+          line-height:1.85;
+          letter-spacing:.01em;
+        }
+
+        .xaaj-brand-story-copy p{
+          margin:0 0 18px;
+        }
+
+        .xaaj-brand-story-copy p:nth-child(8),
+        .xaaj-brand-story-copy p:nth-child(15),
+        .xaaj-brand-story-copy p:nth-child(25),
+        .xaaj-brand-story-copy p:nth-child(31){
+          margin-top:32px;
+        }
+
+        .xaaj-brand-story-copy p:nth-child(8),
+        .xaaj-brand-story-copy p:nth-child(15),
+        .xaaj-brand-story-copy p:nth-child(25),
+        .xaaj-brand-story-copy p:nth-child(31),
+        .xaaj-brand-story-copy p:nth-child(32),
+        .xaaj-brand-story-copy p:nth-child(37){
+          color:#302d28;
+          font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+          font-size:19px;
+          line-height:1.35;
+        }
+
+        .xaaj-brand-story-copy strong{
+          color:#302d28;
+          font-weight:600;
+        }
+
+        .xaaj-brand-story-closing{
+          margin-top:34px!important;
+        }
+
+        .xaaj-brand-story-signoff{
+          margin-top:42px;
+          padding-top:24px;
+          border-top:1px solid rgba(48,45,40,.12);
+          color:#302d28;
+          font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+          font-size:18px;
+          line-height:1.4;
+        }
+
+        .xaaj-brand-story-signoff strong{
+          display:block;
+          font-family:'Gotham Book','Gotham',Arial,sans-serif;
+          font-size:10px;
+          font-weight:500;
+          letter-spacing:3px;
+          margin-bottom:5px;
+        }
+
+        .xaaj-brand-story-signoff em{
+          font-style:italic;
+        }
+
+        @media(max-width:700px){
+          .xaaj-brand-story-page{
+            padding:58px 20px 82px;
           }
 
-          .xaaj-story-layout{
-            width:calc(100% - 20px);
-            gap:10px;
+          .xaaj-brand-story-mark{
+            width:150px;
+            height:120px;
+            top:4px;
+            opacity:.07;
           }
 
-          .xaaj-story-visual{
-            height:420px;
-            border-radius:6px;
-          }
-
-          .xaaj-story-visual-caption{
-            left:18px;
-            bottom:18px;
-            font-size:7px;
-            letter-spacing:2px;
-          }
-
-          .xaaj-story-copy-column{
-            border-radius:6px;
-            padding:42px 21px 50px;
-          }
-
-          .xaaj-story-eyebrow{
+          .xaaj-brand-story-eyebrow{
             margin-bottom:20px;
-            font-size:7px;
-            letter-spacing:2.3px;
+            font-size:9px;
+            letter-spacing:2.6px;
           }
 
-          .xaaj-story-eyebrow::before{
-            width:23px;
+          .xaaj-brand-story-title{
+            font-size:27px;
+            margin-bottom:22px;
           }
 
-          .xaaj-story-copy-column h1{
-            font-size:clamp(40px,13vw,56px);
+          .xaaj-brand-story-lead{
+            font-size:19px;
+            margin-bottom:34px;
           }
 
-          .xaaj-story-intro{
-            margin-top:25px;
+          .xaaj-brand-story-copy{
+            font-size:12px;
+            line-height:1.82;
+          }
+
+          .xaaj-brand-story-copy p{
+            margin-bottom:16px;
+          }
+
+          .xaaj-brand-story-copy p:nth-child(8),
+          .xaaj-brand-story-copy p:nth-child(15),
+          .xaaj-brand-story-copy p:nth-child(25),
+          .xaaj-brand-story-copy p:nth-child(31),
+          .xaaj-brand-story-copy p:nth-child(32),
+          .xaaj-brand-story-copy p:nth-child(37){
+            font-size:18px;
+          }
+
+          .xaaj-brand-story-signoff{
+            margin-top:34px;
+          }
+        }
+
+        @media(max-width:430px){
+          .xaaj-brand-story-page{
+            padding:48px 15px 70px;
+          }
+
+          .xaaj-brand-story-mark{
+            width:128px;
+            height:105px;
+          }
+
+          .xaaj-brand-story-title{
+            font-size:25px;
+          }
+
+          .xaaj-brand-story-lead{
+            font-size:18px;
+            line-height:1.4;
+          }
+
+          .xaaj-brand-story-copy{
             font-size:11.5px;
-            line-height:1.85;
+            line-height:1.8;
           }
 
-          .xaaj-story-divider{
-            margin:40px 0 36px;
+          .xaaj-brand-story-copy p:nth-child(8),
+          .xaaj-brand-story-copy p:nth-child(15),
+          .xaaj-brand-story-copy p:nth-child(25),
+          .xaaj-brand-story-copy p:nth-child(31),
+          .xaaj-brand-story-copy p:nth-child(32),
+          .xaaj-brand-story-copy p:nth-child(37){
+            font-size:17px;
           }
 
-          .xaaj-story-section + .xaaj-story-section{
-            margin-top:40px;
-            padding-top:36px;
-          }
-
-          .xaaj-story-section h2{
-            margin-bottom:17px;
-            font-size:31px;
-          }
-
-          .xaaj-story-section p{
-            font-size:11.5px;
-            line-height:1.85;
-          }
-
-          .xaaj-story-moments{
-            gap:7px 15px;
-            margin:21px 0 18px;
-            font-size:9.5px;
-          }
-
-          .xaaj-story-back{
-            margin-top:44px;
+          .xaaj-brand-story-signoff{
+            font-size:17px;
           }
         }
       `}</style>
 
-      <main className="xaaj-story-page">
-        <section className="xaaj-story-layout" aria-label="XAAJ brand story">
-          <div className="xaaj-story-visual">
-            {brandStoryMedia.mediaType === 'video' ? (
-              <video
-                className="xaaj-story-visual-media"
-                src={brandStoryMedia.url}
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="metadata"
-                aria-label={brandStoryMedia.alt}
-              />
-            ) : (
-              <img
-                className="xaaj-story-visual-media"
-                src={brandStoryMedia.url}
-                alt={brandStoryMedia.alt}
-              />
-            )}
+<main className="xaaj-brand-story-page">
+        <article className="xaaj-brand-story-inner" aria-labelledby="xaaj-brand-story-title">
+          <span className="xaaj-brand-story-eyebrow">Brand Story</span>
 
-            <span className="xaaj-story-visual-caption">
-              Made by hand · Designed for now
-            </span>
+          <img
+            src={logoUrl}
+            alt=""
+            aria-hidden="true"
+            className="xaaj-brand-story-mark"
+          />
+
+          <h1 id="xaaj-brand-story-title" className="xaaj-brand-story-title">
+            Stories, shaped by hand.
+          </h1>
+
+          <div className="xaaj-brand-story-lead">
+            <p>
+              Some things are designed to be seen.<br />
+              Some things are made to be felt.<br />
+              <strong>XAAJ is about the latter.</strong>
+            </p>
           </div>
 
-          <div className="xaaj-story-copy-column">
-            <div className="xaaj-story-copy-inner">
-              <span className="xaaj-story-eyebrow">Our story</span>
+          <div className="xaaj-brand-story-copy">
+            <p>
+              Born from the love for beauty that exists in India&apos;s everyday life,
+              XAAJ presents the Story of Clay, Craft, &amp; Colour to create the cultural
+              richness that cozies up your home.
+            </p>
 
-              <h1>India, Made for the Table.</h1>
+            <p>Because India has never been short of stories.</p>
 
-              <div className="xaaj-story-intro">
-                <p>
-                  A little clay.<br />
-                  A lot of character.<br />
-                  And a story in every piece.
-                </p>
+            <p>They live in the morning Chai shared across a balcony.</p>
 
-                <p>
-                  XAAJ is contemporary crockery rooted in the colours,
-                  crafts and everyday beauty of India.
-                </p>
+            <p>In the grandmother&apos;s favourite bowl.</p>
 
-                <p>
-                  Made by hand. Designed for now.<br />
-                  Meant to be used, loved and lived with.
-                </p>
-              </div>
+            <p>In the plate brought out when guests arrive.</p>
 
-              <div className="xaaj-story-divider" aria-hidden="true" />
+            <p>In the table that gets a little louder during festivals.</p>
 
-              <article className="xaaj-story-section">
-                <h2>The beauty of India, served differently.</h2>
+            <p>In the quiet dinner shared after a long day.</p>
 
-                <p>
-                  We find inspiration in the things that surround us—old crafts,
-                  familiar colours, everyday rituals, places and people.
-                </p>
+            <p>We thrive to create something that could become part of these moments.</p>
 
-                <p>Then we give them a new form.</p>
+            <p>And thus, <strong>XAAJ was born.</strong></p>
 
-                <p>
-                  Pieces with a sense of where they come from,
-                  and a place in how you live today.
-                </p>
-              </article>
+            <p>
+              Our journey begins in places where craft is still handcrafted. Khurja is
+              one of them—a place that witnesses humble workshops where generations
+              invested themselves in pottery. Here, clay is shaped slowly, patiently,
+              and lovingly by hands that have learned the craft over generations.
+            </p>
 
-              <article className="xaaj-story-section">
-                <h2>Made to gather stories.</h2>
+            <p>
+              XAAJ nurtures the Story of Khurja and several other such place to showcase
+              to the rest of India.
+            </p>
 
-                <div className="xaaj-story-moments" aria-label="Everyday moments">
-                  <span>Morning chai</span>
-                  <span>Long lunches</span>
-                  <span>Festive dinners</span>
-                  <span>Midnight conversations</span>
-                </div>
+            <p>At XAAJ, we don&apos;t create crockery for occasions.</p>
 
-                <p>Because a table is never just a table.</p>
-                <p>It is where life happens.</p>
-              </article>
+            <p>We create pieces that quietly become part of your everyday life.</p>
 
-              <Link className="xaaj-story-back" to="/">
-                Back to the table <ArrowRight size={14} />
-              </Link>
-            </div>
+            <p>
+              Every collection is our way of discovering a little more of this
+              country—its colours, its patterns, its forgotten crafts, its landscapes,
+              its architecture, its traditions and, most importantly, its people.
+            </p>
+
+            <p>
+              We take these inspirations and give them a new expression—something
+              contemporary for today&apos;s homes, yet carrying a little piece of essence
+              of where it came from.
+            </p>
+
+            <p><strong>We want it to live on your table.</strong></p>
+
+            <p>In the things you use every day.</p>
+
+            <p>A cup that becomes your morning ritual.</p>
+
+            <p>A plate that witnesses family celebrations.</p>
+
+            <p>A bowl that holds the meal that made a difficult day feel better.</p>
+
+            <p>Over time, these objects become more than objects.</p>
+
+            <p>They become ours.</p>
+
+            <p><strong>At XAAJ, we embrace that artistry.</strong></p>
+
+            <p>A brushstroke that isn&apos;t perfectly identical.</p>
+
+            <p>A glaze that settles a little differently.</p>
+
+            <p>A tiny variation that makes one piece unlike another.</p>
+
+            <p>We don&apos;t see these as imperfections.</p>
+
+            <p><strong>We see the human hand.</strong></p>
+
+            <p>
+              XAAJ is not just crockery, but pieces that slowly find their way into your life.
+            </p>
+
+            <p>Pieces that bring joy &amp; happiness today...</p>
+
+            <p>
+              and perhaps, years from now, carry memories of moments that made your house a home.
+            </p>
+
+            <p className="xaaj-brand-story-closing">
+              Because ultimately, <strong>XAAJ is not about what we make.</strong>
+            </p>
+
+            <p><strong>It is about what happens around it.</strong></p>
+
+            <p>The conversations.</p>
+
+            <p>The celebrations.</p>
+
+            <p>The ordinary evenings.</p>
+
+            <p>The people we love.</p>
+
+            <p><strong>Every table has a story.</strong></p>
+
+            <p><strong>XAAJ is here to become a part of yours.</strong></p>
           </div>
-        </section>
+
+          <div className="xaaj-brand-story-signoff">
+            <strong>XAAJ</strong>
+            <em>Stories crafted in earth.</em>
+          </div>
+        </article>
       </main>
-
       <Footer />
     </>
   )
 }
 
+function B2BEnquiry() {
+  const initialForm = {
+    name: '',
+    businessName: '',
+    phone: '',
+    email: '',
+    interest: '',
+    message: ''
+  }
+
+  const [form, setForm] = useState(initialForm)
+  const [submitting, setSubmitting] = useState(false)
+  const [status, setStatus] = useState({ type: '', message: '' })
+
+  const updateField = (field, value) => {
+    setForm(current => ({ ...current, [field]: value }))
+    if (status.message) setStatus({ type: '', message: '' })
+  }
+
+  const handleSubmit = async event => {
+    event.preventDefault()
+
+    if (!form.name.trim() || !form.businessName.trim() || !form.phone.trim() || !form.email.trim() || !form.interest) {
+      setStatus({ type: 'error', message: 'Please fill in all required fields.' })
+      return
+    }
+
+    setSubmitting(true)
+    setStatus({ type: '', message: '' })
+
+    try {
+      await apiRequest('/contact', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: form.name.trim(),
+          businessName: form.businessName.trim(),
+          phone: form.phone.trim(),
+          email: form.email.trim(),
+          lookingFor: form.interest,
+          message: form.message.trim()
+        })
+      })
+
+      setForm(initialForm)
+      setStatus({
+        type: 'success',
+        message: 'Thank you. Your enquiry has been received and our team will get in touch shortly.'
+      })
+    } catch (error) {
+      console.error('B2B enquiry submission error:', error)
+      setStatus({
+        type: 'error',
+        message: 'We could not submit your enquiry right now. Please try again.'
+      })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <>
+      <Header />
+
+      <main className="xaaj-b2b-enquiry-page">
+        <section className="xaaj-b2b-enquiry-shell" aria-labelledby="b2b-enquiry-title">
+          <div className="xaaj-b2b-enquiry-heading">
+            <span className="xaaj-b2b-enquiry-eyebrow">B2B ENQUIRY</span>
+            <h1 id="b2b-enquiry-title">Enquire for Bulk Orders</h1>
+            <p>Share a few details and our team will get in touch with you shortly.</p>
+          </div>
+
+          <form className="xaaj-b2b-enquiry-form" onSubmit={handleSubmit} noValidate>
+            <div className="xaaj-b2b-enquiry-grid">
+              <label>
+                <span>Full Name <i>*</i></span>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={event => updateField('name', event.target.value)}
+                  placeholder="Enter your full name"
+                  autoComplete="name"
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Business Name <i>*</i></span>
+                <input
+                  type="text"
+                  value={form.businessName}
+                  onChange={event => updateField('businessName', event.target.value)}
+                  placeholder="Enter your business name"
+                  autoComplete="organization"
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Phone Number <i>*</i></span>
+                <input
+                  type="tel"
+                  value={form.phone}
+                  onChange={event => updateField('phone', event.target.value)}
+                  placeholder="Enter your phone number"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Email Address <i>*</i></span>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={event => updateField('email', event.target.value)}
+                  placeholder="Enter your email address"
+                  autoComplete="email"
+                  required
+                />
+              </label>
+            </div>
+
+            <label className="xaaj-b2b-enquiry-full-field">
+              <span>What are you looking for? <i>*</i></span>
+              <select
+                value={form.interest}
+                onChange={event => updateField('interest', event.target.value)}
+                required
+              >
+                <option value="">Select an option</option>
+                <option value="Crockery">Crockery</option>
+                <option value="Serveware">Serveware</option>
+                <option value="Drinkware">Drinkware</option>
+                <option value="Dinnerware">Dinnerware</option>
+                <option value="Other">Other</option>
+              </select>
+            </label>
+
+            <label className="xaaj-b2b-enquiry-full-field">
+              <span>Message / Requirement</span>
+              <textarea
+                value={form.message}
+                onChange={event => updateField('message', event.target.value)}
+                placeholder="Tell us briefly about your requirement"
+                rows={5}
+              />
+            </label>
+
+            {status.message && (
+              <div className={`xaaj-b2b-enquiry-status ${status.type}`} role="status">
+                {status.message}
+              </div>
+            )}
+
+            <button className="xaaj-b2b-enquiry-submit" type="submit" disabled={submitting}>
+              <span>{submitting ? 'Submitting...' : 'Submit Enquiry'}</span>
+              {!submitting && <ArrowRight size={18} strokeWidth={1.25} />}
+            </button>
+          </form>
+        </section>
+      </main>
+
+      <style>{`
+        .xaaj-b2b-enquiry-page {
+          min-height: calc(100vh - 186px);
+          background: #fffdf9;
+          padding: 72px 24px 100px;
+          color: #302d28;
+        }
+
+        .xaaj-b2b-enquiry-shell {
+          width: min(100%, 1040px);
+          margin: 0 auto;
+          padding: clamp(34px, 5vw, 64px);
+          background: #fbf8f1;
+          border: 1px solid rgba(48,45,40,.13);
+          border-radius: 4px;
+          box-shadow: 0 20px 60px rgba(48,45,40,.045);
+        }
+
+        .xaaj-b2b-enquiry-heading {
+          max-width: 720px;
+          margin: 0 auto 44px;
+          text-align: center;
+        }
+
+        .xaaj-b2b-enquiry-eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 16px;
+          color: #87745d;
+          font: 500 10px/1 'Gotham Book','Gotham',Arial,sans-serif;
+          letter-spacing: 2.1px;
+          text-transform: uppercase;
+        }
+
+        .xaaj-b2b-enquiry-eyebrow::before,
+        .xaaj-b2b-enquiry-eyebrow::after {
+          content: '';
+          width: 42px;
+          height: 1px;
+          background: rgba(135,116,93,.5);
+        }
+
+        .xaaj-b2b-enquiry-heading h1 {
+          margin: 18px 0 12px;
+          color: #292621;
+          font: 400 clamp(42px, 5.2vw, 68px)/.98 'Cormorant Garamond',Georgia,'Times New Roman',serif;
+          letter-spacing: -.035em;
+        }
+
+        .xaaj-b2b-enquiry-heading p {
+          max-width: 520px;
+          margin: 0 auto;
+          color: #777169;
+          font: 400 14px/1.7 'Gotham Book','Gotham',Arial,sans-serif;
+        }
+
+        .xaaj-b2b-enquiry-form {
+          width: 100%;
+        }
+
+        .xaaj-b2b-enquiry-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0,1fr));
+          gap: 24px 22px;
+        }
+
+        .xaaj-b2b-enquiry-form label {
+          display: block;
+          min-width: 0;
+        }
+
+        .xaaj-b2b-enquiry-form label > span {
+          display: block;
+          margin-bottom: 9px;
+          color: #3b3732;
+          font: 400 11px/1.3 'Gotham Book','Gotham',Arial,sans-serif;
+          letter-spacing: .15px;
+        }
+
+        .xaaj-b2b-enquiry-form label > span i {
+          color: #9a4e3d;
+          font-style: normal;
+        }
+
+        .xaaj-b2b-enquiry-form input,
+        .xaaj-b2b-enquiry-form select,
+        .xaaj-b2b-enquiry-form textarea {
+          width: 100%;
+          box-sizing: border-box;
+          border: 1px solid rgba(48,45,40,.18);
+          border-radius: 2px;
+          outline: none;
+          background: #fffdf9;
+          color: #302d28;
+          font: 400 13px/1.45 'Gotham Book','Gotham',Arial,sans-serif;
+          transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+        }
+
+        .xaaj-b2b-enquiry-form input,
+        .xaaj-b2b-enquiry-form select {
+          height: 52px;
+          padding: 0 15px;
+        }
+
+        .xaaj-b2b-enquiry-form textarea {
+          min-height: 126px;
+          padding: 15px;
+          resize: vertical;
+        }
+
+        .xaaj-b2b-enquiry-form input::placeholder,
+        .xaaj-b2b-enquiry-form textarea::placeholder {
+          color: #aaa39a;
+        }
+
+        .xaaj-b2b-enquiry-form input:focus,
+        .xaaj-b2b-enquiry-form select:focus,
+        .xaaj-b2b-enquiry-form textarea:focus {
+          border-color: #77705f;
+          box-shadow: 0 0 0 3px rgba(119,112,95,.08);
+          background: #ffffff;
+        }
+
+        .xaaj-b2b-enquiry-full-field {
+          margin-top: 24px;
+        }
+
+        .xaaj-b2b-enquiry-status {
+          margin-top: 18px;
+          padding: 13px 15px;
+          border: 1px solid rgba(48,45,40,.12);
+          font: 400 11px/1.55 'Gotham Book','Gotham',Arial,sans-serif;
+        }
+
+        .xaaj-b2b-enquiry-status.success {
+          background: rgba(43,69,44,.06);
+          color: #3d5a40;
+        }
+
+        .xaaj-b2b-enquiry-status.error {
+          background: rgba(145,66,51,.06);
+          color: #8d4e3d;
+        }
+
+        .xaaj-b2b-enquiry-submit {
+          width: 100%;
+          min-height: 54px;
+          margin-top: 26px;
+          border: 1px solid #2e3527;
+          border-radius: 2px;
+          background: #2e3527;
+          color: #fffdf9;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 11px;
+          cursor: pointer;
+          font: 400 11px/1 'Gotham Book','Gotham',Arial,sans-serif;
+          letter-spacing: 1.2px;
+          text-transform: uppercase;
+          transition: background .22s ease, transform .22s ease, opacity .22s ease;
+        }
+
+        .xaaj-b2b-enquiry-submit:hover:not(:disabled) {
+          background: #252b20;
+          transform: translateY(-1px);
+        }
+
+        .xaaj-b2b-enquiry-submit:disabled {
+          opacity: .62;
+          cursor: wait;
+        }
+
+        @media (max-width: 700px) {
+          .xaaj-b2b-enquiry-page {
+            padding: 42px 14px 64px;
+          }
+
+          .xaaj-b2b-enquiry-shell {
+            padding: 34px 20px 28px;
+            border-radius: 3px;
+          }
+
+          .xaaj-b2b-enquiry-heading {
+            margin-bottom: 34px;
+          }
+
+          .xaaj-b2b-enquiry-heading h1 {
+            font-size: clamp(39px, 11vw, 54px);
+          }
+
+          .xaaj-b2b-enquiry-grid {
+            grid-template-columns: 1fr;
+            gap: 21px;
+          }
+
+          .xaaj-b2b-enquiry-full-field {
+            margin-top: 21px;
+          }
+        }
+
+        @media (max-width: 430px) {
+          .xaaj-b2b-enquiry-page {
+            padding: 28px 10px 48px;
+          }
+
+          .xaaj-b2b-enquiry-shell {
+            padding: 30px 15px 22px;
+          }
+
+          .xaaj-b2b-enquiry-heading h1 {
+            font-size: 39px;
+          }
+
+          .xaaj-b2b-enquiry-eyebrow {
+            gap: 10px;
+            font-size: 8.5px;
+            letter-spacing: 1.7px;
+          }
+
+          .xaaj-b2b-enquiry-eyebrow::before,
+          .xaaj-b2b-enquiry-eyebrow::after {
+            width: 25px;
+          }
+        }
+      `}</style>
+    </>
+  )
+}
 
 function App() {
 
@@ -11411,6 +11965,10 @@ function App() {
   // SHOP
   // ==========================================================
 
+  if (path === '/enquiry') {
+    return <B2BEnquiry />
+  }
+
   if (path === '/shop') {
     return <Shop />
   }
@@ -11454,1288 +12012,7 @@ function App() {
   }
 
   if (path === '/about') {
-    return (
-      <>
-        <Header />
-
-        <style>{`
-          .xaaj-about {
-            --ink: #25231f;
-            --muted: #756f66;
-            --paper: #f5f1e9;
-            --paper-2: #ebe5da;
-            --line: rgba(37,35,31,.14);
-            --accent: #a84d35;
-            background: var(--paper);
-            color: var(--ink);
-            overflow: hidden;
-          }
-
-          .xaaj-about *,
-          .xaaj-about *::before,
-          .xaaj-about *::after {
-            box-sizing: border-box;
-          }
-
-          /* ================= HERO ================= */
-
-          .xaaj-about-hero {
-            width: min(1380px, calc(100% - 32px));
-            min-height: 720px;
-            margin: 16px auto 0;
-            display: grid;
-            grid-template-columns: .84fr 1.16fr;
-            background: #e9e1d5;
-            overflow: hidden;
-          }
-
-          .xaaj-about-hero-copy {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 74px clamp(34px, 6vw, 92px);
-          }
-
-          .xaaj-about-eyebrow {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 28px;
-            color: var(--accent);
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: .28em;
-            text-transform: uppercase;
-          }
-
-          .xaaj-about-eyebrow::before {
-            content: '';
-            width: 30px;
-            height: 1px;
-            background: currentColor;
-          }
-
-          .xaaj-about-hero h1 {
-            max-width: 620px;
-            margin: 0;
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: clamp(55px, 6.5vw, 94px);
-            font-weight: 400;
-            line-height: .91;
-            letter-spacing: -.06em;
-          }
-
-          .xaaj-about-hero h1 em {
-            color: var(--accent);
-            font-style: italic;
-          }
-
-          .xaaj-about-hero-description {
-            max-width: 475px;
-            margin: 31px 0 0;
-            color: #666057;
-            font-size: 14px;
-            line-height: 1.9;
-          }
-
-          .xaaj-about-hero-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 9px;
-            width: fit-content;
-            margin-top: 32px;
-            padding-bottom: 9px;
-            border-bottom: 1px solid var(--ink);
-            color: var(--ink);
-            text-decoration: none;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: .12em;
-            text-transform: uppercase;
-          }
-
-          .xaaj-about-hero-link svg {
-            transition: transform .25s ease;
-          }
-
-          .xaaj-about-hero-link:hover svg {
-            transform: translateX(4px);
-          }
-
-          .xaaj-about-hero-number {
-            position: absolute;
-            right: 30px;
-            bottom: 25px;
-            color: rgba(37,35,31,.20);
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: 74px;
-            line-height: 1;
-          }
-
-          .xaaj-about-hero-visual {
-            position: relative;
-            min-height: 720px;
-            overflow: hidden;
-          }
-
-          .xaaj-about-hero-visual img {
-            width: 100%;
-            height: 100%;
-            display: block;
-            object-fit: cover;
-            object-position: center;
-            filter: saturate(.82);
-            transition: transform 1.2s cubic-bezier(.22,1,.36,1);
-          }
-
-          .xaaj-about-hero:hover .xaaj-about-hero-visual img {
-            transform: scale(1.035);
-          }
-
-          .xaaj-about-hero-badge {
-            position: absolute;
-            left: 28px;
-            bottom: 28px;
-            width: 112px;
-            height: 112px;
-            display: grid;
-            place-items: center;
-            border: 1px solid rgba(255,255,255,.58);
-            border-radius: 50%;
-            background: rgba(37,35,31,.78);
-            color: #fff;
-            text-align: center;
-            font-size: 8px;
-            line-height: 1.55;
-            letter-spacing: .14em;
-            text-transform: uppercase;
-            backdrop-filter: blur(7px);
-          }
-
-          .xaaj-about-hero-badge strong {
-            display: block;
-            margin-bottom: 2px;
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: 20px;
-            font-weight: 400;
-            letter-spacing: 0;
-          }
-
-          /* ================= INTRO ================= */
-
-          .xaaj-about-intro {
-            width: min(1180px, calc(100% - 42px));
-            margin: 0 auto;
-            padding: 125px 0 118px;
-            display: grid;
-            grid-template-columns: .55fr 1.45fr;
-            gap: 55px;
-          }
-
-          .xaaj-about-section-label {
-            padding-top: 8px;
-            color: var(--accent);
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: .25em;
-            text-transform: uppercase;
-          }
-
-          .xaaj-about-intro h2 {
-            max-width: 870px;
-            margin: 0;
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: clamp(40px, 5.4vw, 72px);
-            font-weight: 400;
-            line-height: .99;
-            letter-spacing: -.055em;
-          }
-
-          .xaaj-about-intro h2 em {
-            font-style: italic;
-          }
-
-          .xaaj-about-intro-text {
-            max-width: 620px;
-            margin-top: 30px;
-            color: var(--muted);
-            font-size: 15px;
-            line-height: 1.9;
-          }
-
-          .xaaj-about-stat-row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            margin-top: 52px;
-            border-top: 1px solid var(--line);
-            border-bottom: 1px solid var(--line);
-          }
-
-          .xaaj-about-stat {
-            padding: 24px 22px 25px 0;
-            border-right: 1px solid var(--line);
-          }
-
-          .xaaj-about-stat:not(:first-child) {
-            padding-left: 22px;
-          }
-
-          .xaaj-about-stat:last-child {
-            border-right: 0;
-          }
-
-          .xaaj-about-stat strong {
-            display: block;
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: 25px;
-            font-weight: 400;
-          }
-
-          .xaaj-about-stat span {
-            display: block;
-            margin-top: 7px;
-            color: #817a70;
-            font-size: 10px;
-            line-height: 1.55;
-            letter-spacing: .08em;
-            text-transform: uppercase;
-          }
-
-          /* ================= STORY IMAGE STRIP ================= */
-
-          .xaaj-about-story {
-            background: var(--ink);
-            color: #fff;
-            padding: 0;
-          }
-
-          .xaaj-about-story-grid {
-            width: min(1380px, 100%);
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1.08fr .92fr;
-            min-height: 690px;
-          }
-
-          .xaaj-about-story-image {
-            min-height: 690px;
-            overflow: hidden;
-          }
-
-          .xaaj-about-story-image img {
-            width: 100%;
-            height: 100%;
-            display: block;
-            object-fit: cover;
-            filter: saturate(.75);
-          }
-
-          .xaaj-about-story-copy {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 80px clamp(38px, 7vw, 100px);
-          }
-
-          .xaaj-about-story-copy .xaaj-about-section-label {
-            color: #d58b76;
-          }
-
-          .xaaj-about-story-copy h2 {
-            max-width: 590px;
-            margin: 22px 0 0;
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: clamp(42px, 5vw, 68px);
-            font-weight: 400;
-            line-height: .98;
-            letter-spacing: -.055em;
-          }
-
-          .xaaj-about-story-copy h2 em {
-            font-style: italic;
-          }
-
-          .xaaj-about-story-copy p {
-            max-width: 530px;
-            margin: 27px 0 0;
-            color: rgba(255,255,255,.61);
-            font-size: 14px;
-            line-height: 1.9;
-          }
-
-          .xaaj-about-story-signature {
-            margin-top: 38px;
-            color: rgba(255,255,255,.38);
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: 22px;
-            font-style: italic;
-          }
-
-          /* ================= VALUES ================= */
-
-          .xaaj-about-values {
-            width: min(1180px, calc(100% - 42px));
-            margin: 0 auto;
-            padding: 125px 0 130px;
-          }
-
-          .xaaj-about-values-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: end;
-            gap: 50px;
-            padding-bottom: 48px;
-            border-bottom: 1px solid var(--line);
-          }
-
-          .xaaj-about-values h2 {
-            max-width: 760px;
-            margin: 18px 0 0;
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: clamp(43px, 5.5vw, 73px);
-            font-weight: 400;
-            line-height: .97;
-            letter-spacing: -.055em;
-          }
-
-          .xaaj-about-values-head p {
-            max-width: 250px;
-            margin: 0;
-            color: var(--muted);
-            font-size: 12px;
-            line-height: 1.75;
-          }
-
-          .xaaj-about-value-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-          }
-
-          .xaaj-about-value {
-            position: relative;
-            min-height: 280px;
-            padding: 30px 38px 25px 0;
-            border-right: 1px solid var(--line);
-          }
-
-          .xaaj-about-value:not(:first-child) {
-            padding-left: 38px;
-          }
-
-          .xaaj-about-value:last-child {
-            border-right: 0;
-          }
-
-          .xaaj-about-value-number {
-            color: var(--accent);
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: .2em;
-          }
-
-          .xaaj-about-value h3 {
-            margin: 80px 0 11px;
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: 27px;
-            font-weight: 400;
-          }
-
-          .xaaj-about-value p {
-            max-width: 270px;
-            margin: 0;
-            color: var(--muted);
-            font-size: 13px;
-            line-height: 1.8;
-          }
-
-          /* ================= CTA ================= */
-
-          .xaaj-about-cta {
-            position: relative;
-            padding: 120px 20px 130px;
-            background: #e8e0d4;
-            text-align: center;
-            overflow: hidden;
-          }
-
-          .xaaj-about-cta::before {
-            content: 'XAAJ';
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -53%);
-            color: rgba(37,35,31,.045);
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: clamp(150px, 27vw, 400px);
-            line-height: 1;
-            white-space: nowrap;
-            pointer-events: none;
-          }
-
-          .xaaj-about-cta-inner {
-            position: relative;
-            z-index: 1;
-          }
-
-          .xaaj-about-cta h2 {
-            max-width: 850px;
-            margin: 20px auto 0;
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: clamp(48px, 6.3vw, 84px);
-            font-weight: 400;
-            line-height: .94;
-            letter-spacing: -.06em;
-          }
-
-          .xaaj-about-cta h2 em {
-            color: var(--accent);
-            font-style: italic;
-          }
-
-          .xaaj-about-cta p {
-            max-width: 500px;
-            margin: 25px auto 0;
-            color: var(--muted);
-            font-size: 13px;
-            line-height: 1.8;
-          }
-
-          .xaaj-about-cta-links {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 9px;
-            margin-top: 34px;
-          }
-
-          .xaaj-about-cta-links a {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 46px;
-            padding: 0 20px;
-            border: 1px solid rgba(37,35,31,.22);
-            border-radius: 999px;
-            color: var(--ink);
-            text-decoration: none;
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: .08em;
-            text-transform: uppercase;
-            transition: .25s ease;
-          }
-
-          .xaaj-about-cta-links a:hover {
-            background: var(--ink);
-            border-color: var(--ink);
-            color: #fff;
-            transform: translateY(-2px);
-          }
-
-          /* ================= MOBILE ================= */
-
-          @media (max-width: 800px) {
-            .xaaj-about-hero {
-              width: calc(100% - 20px);
-              margin-top: 10px;
-              min-height: auto;
-              grid-template-columns: 1fr;
-            }
-
-            .xaaj-about-hero-copy {
-              min-height: 520px;
-              padding: 65px 28px 55px;
-            }
-
-            .xaaj-about-hero h1 {
-              font-size: clamp(51px, 15vw, 70px);
-            }
-
-            .xaaj-about-hero-visual {
-              min-height: 430px;
-            }
-
-            .xaaj-about-hero-badge {
-              left: 20px;
-              bottom: 20px;
-            }
-
-            .xaaj-about-intro {
-              width: calc(100% - 30px);
-              padding: 78px 0 75px;
-              grid-template-columns: 1fr;
-              gap: 28px;
-            }
-
-            .xaaj-about-intro h2 {
-              font-size: clamp(40px, 12vw, 55px);
-            }
-
-            .xaaj-about-stat-row {
-              grid-template-columns: 1fr;
-            }
-
-            .xaaj-about-stat,
-            .xaaj-about-stat:not(:first-child) {
-              padding: 20px 0;
-              border-right: 0;
-              border-bottom: 1px solid var(--line);
-            }
-
-            .xaaj-about-stat:last-child {
-              border-bottom: 0;
-            }
-
-            .xaaj-about-story-grid {
-              grid-template-columns: 1fr;
-            }
-
-            .xaaj-about-story-image {
-              min-height: 480px;
-            }
-
-            .xaaj-about-story-copy {
-              min-height: 560px;
-              padding: 72px 28px;
-            }
-
-            .xaaj-about-story-copy h2 {
-              font-size: clamp(42px, 12vw, 56px);
-            }
-
-            .xaaj-about-values {
-              width: calc(100% - 30px);
-              padding: 78px 0 82px;
-            }
-
-            .xaaj-about-values-head {
-              display: block;
-            }
-
-            .xaaj-about-values-head p {
-              margin-top: 25px;
-            }
-
-            .xaaj-about-value-grid {
-              grid-template-columns: 1fr;
-            }
-
-            .xaaj-about-value,
-            .xaaj-about-value:not(:first-child) {
-              min-height: auto;
-              padding: 27px 0 32px;
-              border-right: 0;
-              border-bottom: 1px solid var(--line);
-            }
-
-            .xaaj-about-value:last-child {
-              border-bottom: 0;
-            }
-
-            .xaaj-about-value h3 {
-              margin-top: 35px;
-            }
-
-            .xaaj-about-cta {
-              padding: 82px 18px 90px;
-            }
-          }
-
-          /* XAAJ V3 — editorial atelier redesign */
-          .xaaj-about {
-            --paper: #f4f0e8 !important;
-            --paper-2: #e9e2d7 !important;
-            --ink: #292825 !important;
-            --muted: #746f67 !important;
-            --line: rgba(41,40,37,.14) !important;
-            --accent: #a84d35 !important;
-            background: var(--paper) !important;
-          }
-
-          .xaaj-about-hero {
-            width: min(1320px, calc(100% - 52px)) !important;
-            min-height: min(760px, calc(100vh - 110px)) !important;
-            margin: 26px auto 0 !important;
-            grid-template-columns: 1.08fr .92fr !important;
-            background: #e7dfd2 !important;
-            border: 1px solid rgba(41,40,37,.10);
-          }
-
-          .xaaj-about-hero-visual {
-            grid-column: 1 !important;
-            grid-row: 1 !important;
-            min-height: min(760px, calc(100vh - 110px)) !important;
-            order: 0 !important;
-          }
-
-          .xaaj-about-hero-copy {
-            grid-column: 2 !important;
-            grid-row: 1 !important;
-            min-height: min(760px, calc(100vh - 110px)) !important;
-            padding: clamp(46px, 6vw, 92px) clamp(34px, 5vw, 76px) !important;
-            justify-content: space-between !important;
-            background: #e7dfd2 !important;
-          }
-
-          .xaaj-about-hero-visual::before {
-            display: none !important;
-          }
-
-          .xaaj-about-hero-visual img {
-            filter: saturate(.78) contrast(.97) !important;
-            transform: scale(1.01);
-          }
-
-          .xaaj-about-hero:hover .xaaj-about-hero-visual img {
-            transform: scale(1.045) !important;
-          }
-
-          .xaaj-about-hero-badge {
-            left: 22px !important;
-            bottom: 22px !important;
-            width: 104px !important;
-            height: 104px !important;
-            border-radius: 50% !important;
-            background: rgba(24,49,38,.88) !important;
-            border-color: rgba(255,255,255,.45) !important;
-          }
-
-          .xaaj-about-hero h1 {
-            max-width: 650px !important;
-            font-size: clamp(58px, 6.1vw, 88px) !important;
-            line-height: .86 !important;
-            letter-spacing: -.06em !important;
-          }
-
-          .xaaj-about-hero h1 em {
-            color: #a84d35 !important;
-          }
-
-          .xaaj-about-hero-description {
-            max-width: 430px !important;
-            margin-top: 25px !important;
-            font-size: 13px !important;
-            line-height: 1.85 !important;
-          }
-
-          .xaaj-about-hero-link {
-            margin-top: 24px !important;
-          }
-
-          .xaaj-about-hero-number {
-            right: 28px !important;
-            bottom: 25px !important;
-            font-size: 62px !important;
-            color: rgba(41,40,37,.13) !important;
-          }
-
-          .xaaj-about-intro {
-            width: min(1180px, calc(100% - 52px)) !important;
-            padding: 125px 0 118px !important;
-            grid-template-columns: 170px 1fr !important;
-            gap: 70px !important;
-          }
-
-          .xaaj-about-intro h2 {
-            max-width: 880px !important;
-            font-size: clamp(46px, 5.4vw, 74px) !important;
-            line-height: .96 !important;
-          }
-
-          .xaaj-about-intro-text {
-            max-width: 620px !important;
-            margin-top: 28px !important;
-            font-size: 14px !important;
-            line-height: 1.9 !important;
-          }
-
-          .xaaj-about-stat-row {
-            margin-top: 52px !important;
-          }
-
-          .xaaj-about-stat {
-            min-height: 132px !important;
-            padding: 24px 22px 25px 0 !important;
-          }
-
-          .xaaj-about-stat strong {
-            color: #a84d35 !important;
-            font-size: 10px !important;
-            letter-spacing: .18em !important;
-          }
-
-          .xaaj-about-stat span {
-            margin-top: 32px !important;
-            font-family:'Gotham Book','Gotham',Arial,sans-serifimportant;
-            font-size: 17px !important;
-            color: #35332e !important;
-          }
-
-          .xaaj-about-story {
-            background: #183126 !important;
-          }
-
-          .xaaj-about-story-grid {
-            width: min(1320px, 100%) !important;
-            min-height: 690px !important;
-            grid-template-columns: .9fr 1.1fr !important;
-          }
-
-          .xaaj-about-story-image {
-            grid-column: 2 !important;
-            min-height: 690px !important;
-          }
-
-          .xaaj-about-story-copy {
-            grid-column: 1 !important;
-            grid-row: 1 !important;
-            padding: 82px clamp(40px, 6vw, 92px) !important;
-          }
-
-          .xaaj-about-story-copy h2 {
-            font-size: clamp(44px, 5vw, 70px) !important;
-          }
-
-          .xaaj-about-story-copy p {
-            font-size: 13px !important;
-            line-height: 1.9 !important;
-          }
-
-          .xaaj-about-values {
-            width: min(1180px, calc(100% - 52px)) !important;
-            padding: 120px 0 110px !important;
-          }
-
-          .xaaj-about-values-head {
-            padding-bottom: 46px !important;
-          }
-
-          .xaaj-about-values h2 {
-            font-size: clamp(45px, 5.3vw, 72px) !important;
-          }
-
-          .xaaj-about-value-grid {
-            grid-template-columns: 1fr !important;
-          }
-
-          .xaaj-about-value {
-            min-height: 0 !important;
-            display: grid !important;
-            grid-template-columns: 70px 1fr 1fr !important;
-            gap: 28px !important;
-            align-items: center !important;
-            padding: 29px 0 !important;
-            border-right: 0 !important;
-            border-bottom: 1px solid var(--line) !important;
-          }
-
-          .xaaj-about-value:not(:first-child) {
-            padding-left: 0 !important;
-          }
-
-          .xaaj-about-value:last-child {
-            border-bottom: 0 !important;
-          }
-
-          .xaaj-about-value h3 {
-            margin: 0 !important;
-            font-size: 28px !important;
-          }
-
-          .xaaj-about-value p {
-            max-width: 340px !important;
-            margin: 0 !important;
-          }
-
-          .xaaj-about-cta {
-            min-height: 430px !important;
-            padding: 105px 20px 110px !important;
-            background: #e7dfd2 !important;
-          }
-
-          .xaaj-about-cta h2 {
-            font-size: clamp(48px, 6vw, 80px) !important;
-          }
-
-          .xaaj-about-cta-links a {
-            border-radius: 0 !important;
-            background: transparent !important;
-            border: 0 !important;
-            border-bottom: 1px solid rgba(41,40,37,.35) !important;
-            padding: 9px 2px !important;
-          }
-
-          @media (max-width: 800px) {
-            .xaaj-about-hero {
-              width: calc(100% - 22px) !important;
-              margin-top: 11px !important;
-              grid-template-columns: 1fr !important;
-            }
-
-            .xaaj-about-hero-visual {
-              grid-column: 1 !important;
-              grid-row: 2 !important;
-              min-height: 440px !important;
-            }
-
-            .xaaj-about-hero-copy {
-              grid-column: 1 !important;
-              grid-row: 1 !important;
-              min-height: 530px !important;
-              padding: 55px 28px 50px !important;
-            }
-
-            .xaaj-about-intro {
-              width: calc(100% - 30px) !important;
-              padding: 78px 0 76px !important;
-              grid-template-columns: 1fr !important;
-              gap: 25px !important;
-            }
-
-            .xaaj-about-story-grid {
-              grid-template-columns: 1fr !important;
-            }
-
-            .xaaj-about-story-image {
-              grid-column: 1 !important;
-              grid-row: 1 !important;
-              min-height: 470px !important;
-            }
-
-            .xaaj-about-story-copy {
-              grid-column: 1 !important;
-              grid-row: 2 !important;
-              padding: 65px 28px 75px !important;
-            }
-
-            .xaaj-about-values {
-              width: calc(100% - 30px) !important;
-              padding: 78px 0 80px !important;
-            }
-
-            .xaaj-about-value {
-              grid-template-columns: 50px 1fr !important;
-              gap: 20px !important;
-            }
-
-            .xaaj-about-value p {
-              grid-column: 2 !important;
-            }
-
-            .xaaj-about-cta {
-              padding: 82px 18px 90px !important;
-            }
-          }
-
-          /* XAAJ V2 — editorial refinement */
-          .xaaj-about-hero {
-            width: 100%;
-            margin: 0;
-            min-height: min(760px, calc(100vh - 112px));
-            grid-template-columns: .78fr 1.22fr;
-            background: #183126;
-            border-radius: 0;
-          }
-
-          .xaaj-about-hero-copy {
-            min-height: min(760px, calc(100vh - 112px));
-            padding: clamp(34px,5vw,72px);
-          }
-
-          .xaaj-about-hero h1 {
-            font-size: clamp(58px,6.7vw,94px);
-            line-height: .86;
-          }
-
-          .xaaj-about-hero-visual {
-            min-height: min(760px, calc(100vh - 112px));
-          }
-
-          .xaaj-about-hero-visual::before {
-            content: '';
-            position: absolute;
-            z-index: 2;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 22%;
-            background: linear-gradient(90deg, rgba(24,49,38,.35), transparent);
-            pointer-events: none;
-          }
-
-          .xaaj-about-intro {
-            width: min(1240px, calc(100% - 52px));
-            padding: 135px 0 125px;
-            grid-template-columns: .42fr 1.58fr;
-            gap: 75px;
-          }
-
-          .xaaj-about-intro h2 {
-            max-width: 900px;
-            font-size: clamp(44px,5.7vw,78px);
-          }
-
-          .xaaj-about-intro-text {
-            max-width: 680px;
-            font-size: 15px;
-          }
-
-          .xaaj-about-stat-row {
-            margin-top: 62px;
-          }
-
-          .xaaj-about-stat {
-            min-height: 145px;
-            padding-top: 28px;
-          }
-
-          .xaaj-about-stat strong {
-            color: #a84d35;
-            font-size: 11px;
-            letter-spacing: .15em;
-          }
-
-          .xaaj-about-stat span {
-            margin-top: 31px;
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size: 17px;
-            letter-spacing: 0;
-            text-transform: none;
-            color: #35332e;
-          }
-
-          .xaaj-about-story-grid {
-            width: 100%;
-            min-height: 720px;
-            grid-template-columns: 1.2fr .8fr;
-          }
-
-          .xaaj-about-story-image {
-            min-height: 720px;
-          }
-
-          .xaaj-about-story-copy {
-            padding: 82px clamp(40px,6vw,96px);
-          }
-
-          .xaaj-about-story-copy h2 {
-            font-size: clamp(44px,5.2vw,72px);
-          }
-
-          .xaaj-about-values {
-            width: min(1240px, calc(100% - 52px));
-            padding: 130px 0 125px;
-          }
-
-          .xaaj-about-values-head {
-            padding-bottom: 52px;
-          }
-
-          .xaaj-about-value-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .xaaj-about-value {
-            min-height: 0;
-            display: grid;
-            grid-template-columns: 80px 1fr 1fr;
-            gap: 28px;
-            align-items: center;
-            padding: 30px 0;
-            border-right: 0;
-            border-bottom: 1px solid var(--line);
-          }
-
-          .xaaj-about-value:not(:first-child) {
-            padding-left: 0;
-          }
-
-          .xaaj-about-value:last-child {
-            border-bottom: 0;
-          }
-
-          .xaaj-about-value h3 {
-            margin: 0;
-            font-size: 28px;
-          }
-
-          .xaaj-about-value p {
-            max-width: 340px;
-          }
-
-          .xaaj-about-cta {
-            min-height: 540px;
-            padding: 110px 20px;
-          }
-
-          .xaaj-about-cta-links a {
-            border-radius: 0;
-            padding: 10px 0;
-            min-height: 0;
-          }
-
-          @media (max-width: 800px) {
-            .xaaj-about-hero,
-            .xaaj-about-hero-copy,
-            .xaaj-about-hero-visual {
-              min-height: auto;
-            }
-
-            .xaaj-about-hero {
-              grid-template-columns: 1fr;
-            }
-
-            .xaaj-about-hero-copy {
-              min-height: 560px;
-            }
-
-            .xaaj-about-hero-visual {
-              min-height: 470px;
-            }
-
-            .xaaj-about-intro {
-              width: calc(100% - 30px);
-              padding: 82px 0;
-              grid-template-columns: 1fr;
-              gap: 28px;
-            }
-
-            .xaaj-about-value {
-              grid-template-columns: 55px 1fr;
-            }
-
-            .xaaj-about-value p {
-              grid-column: 2;
-            }
-          }
-          /* Simple XAAJ Our Story layout */
-          .xaaj-about-simple {
-            background:#ffffff !important;
-            color:#2f2c28;
-          }
-
-          /* About / Our Story: keep the same horizontal breathing room as the main page. */
-          .xaaj-about-simple-story {
-            width:auto;
-            max-width:none;
-            margin:0;
-            min-height:calc(100vh - 190px);
-            padding:92px 3.45vw 110px;
-            box-sizing:border-box;
-            display:grid;
-            grid-template-columns:minmax(280px,.72fr) 1px minmax(0,1.28fr);
-            column-gap:clamp(48px,7vw,110px);
-            align-items:start;
-          }
-
-          .xaaj-about-simple-brand {
-            min-height:560px;
-            display:flex;
-            flex-direction:column;
-            align-items:center;
-            justify-content:flex-start;
-            padding-top:95px;
-            text-align:center;
-          }
-
-          .xaaj-about-simple-logo {
-            width:min(235px,70%);
-            height:auto;
-            object-fit:contain;
-            display:block;
-          }
-
-          .xaaj-about-simple-brand span {
-            margin-top:18px;
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size:10px;
-            line-height:1;
-            letter-spacing:3.2px;
-            color:#a84d35;
-            text-transform:uppercase;
-          }
-
-          .xaaj-about-simple-divider {
-            width:1px;
-            min-height:560px;
-            background:rgba(47,44,40,.14);
-          }
-
-          .xaaj-about-simple-copy {
-            max-width:790px;
-            padding:0 0 10px;
-          }
-
-          .xaaj-about-simple-eyebrow {
-            display:block;
-            margin:0 0 25px;
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size:10px;
-            line-height:1;
-            letter-spacing:3px;
-            color:#a84d35;
-            text-transform:uppercase;
-          }
-
-          .xaaj-about-simple-copy h1 {
-            margin:0 0 48px;
-            max-width:820px;
-            font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif;
-            font-size:clamp(43px,4.15vw,67px);
-            font-weight:400;
-            line-height:1.03;
-            letter-spacing:-.035em;
-            color:#26231f;
-          }
-
-          .xaaj-about-simple-copy p {
-            max-width:780px;
-            margin:0 0 31px;
-            font-family:'Gotham Book','Gotham',Arial,sans-serif;
-            font-size:15px;
-            font-weight:400;
-            line-height:1.95;
-            letter-spacing:.005em;
-            color:#514d47;
-          }
-
-          .xaaj-about-simple-signoff {
-            margin-top:52px;
-            padding-top:22px;
-            border-top:1px solid rgba(47,44,40,.12);
-            font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif;
-            font-size:25px;
-            font-style:italic;
-            color:#a84d35;
-          }
-
-          @media(max-width:900px){
-            .xaaj-about-simple-story {
-              width:auto;
-              padding:68px 18px 82px;
-              grid-template-columns:1fr;
-              row-gap:42px;
-            }
-
-            .xaaj-about-simple-brand {
-              min-height:auto;
-              padding-top:0;
-            }
-
-            .xaaj-about-simple-logo {
-              width:180px;
-            }
-
-            .xaaj-about-simple-brand span {
-              margin-top:13px;
-              font-size:8px;
-              letter-spacing:2.5px;
-            }
-
-            .xaaj-about-simple-divider {
-              width:100%;
-              min-height:1px;
-              height:1px;
-            }
-
-            .xaaj-about-simple-copy {
-              max-width:none;
-            }
-
-            .xaaj-about-simple-copy h1 {
-              margin-bottom:34px;
-              font-size:clamp(38px,8.5vw,54px);
-            }
-
-            .xaaj-about-simple-copy p {
-              font-size:14px;
-              line-height:1.9;
-            }
-          }
-
-          @media(max-width:520px){
-            .xaaj-about-simple-story {
-              width:auto;
-              padding:48px 12px 65px;
-              row-gap:30px;
-            }
-
-            .xaaj-about-simple-logo {
-              width:155px;
-            }
-
-            .xaaj-about-simple-eyebrow {
-              margin-bottom:18px;
-              font-size:9px;
-              letter-spacing:2.4px;
-            }
-
-            .xaaj-about-simple-copy h1 {
-              margin-bottom:30px;
-              font-size:clamp(35px,10vw,46px);
-              line-height:1.04;
-            }
-
-            .xaaj-about-simple-copy p {
-              font-size:13px;
-              line-height:1.85;
-              margin-bottom:25px;
-            }
-
-            .xaaj-about-simple-signoff {
-              margin-top:40px;
-              font-size:22px;
-            }
-          }
-
-        `}
-
-</style>
-
-        <main className="xaaj-about xaaj-about-simple">
-
-          <section className="xaaj-about-simple-story" aria-labelledby="xaaj-our-story-title">
-
-            <div className="xaaj-about-simple-brand">
-              <img
-                src={logoUrl}
-                alt="XAAJ"
-                className="xaaj-about-simple-logo"
-              />
-              <span>STORES CRAFTED IN EARTH</span>
-            </div>
-
-            <div className="xaaj-about-simple-divider" aria-hidden="true" />
-
-            <article className="xaaj-about-simple-copy">
-              <span className="xaaj-about-simple-eyebrow">OUR STORY</span>
-
-              <h1 id="xaaj-our-story-title">
-                Some things are designed to be seen. Some things are made to be felt. XAAJ is about the latter.
-              </h1>
-
-              <p>
-                Born from the love for beauty that exists in India&apos;s everyday life, XAAJ presents the Story of Clay, Craft, &amp; Colour to create the cultural richness that cozies up your home. Because India has never been short of stories. They live in the morning Chai shared across a balcony. In the grandmother&apos;s favourite bowl. In the plate brought out when guests arrive. In the table that gets a little louder during festivals. In the quiet dinner shared after a long day. We thrive to create something that could become part of these moments. And thus, XAAJ was born. Our journey begins in places where craft is still handcrafted. Khurja is one of them—a place that witnesses humble workshops where generations invested themselves in pottery. Here, clay is shaped slowly, patiently, and lovingly by hands that have learned the craft over generations. XAAJ nurtures the Story of Khurja and several other such place to showcase to the rest of India. At XAAJ, we don&apos;t create crockery for occasions.
-              </p>
-
-              <p>
-                We create pieces that quietly become part of your everyday life. Every collection is our way of discovering a little more of this country—its colours, its patterns, its forgotten crafts, its landscapes, its architecture, its traditions and, most importantly, its people. We take these inspirations and give them a new expression—something contemporary for today&apos;s homes, yet carrying a little piece of essence of where it came from. We want it to live on your table. In the things you use every day. A cup that becomes your morning ritual. A plate that witnesses family celebrations. A bowl that holds the meal that made a difficult day feel better. Over time, these objects become more than objects. They become ours. At XAAJ, we embrace that artistry. A brushstroke that isn&apos;t perfectly identical. A glaze that settles a little differently. A tiny variation that makes one piece unlike another. We don&apos;t see these as imperfections. We see the human hand. XAAJ is not just crockery, but pieces that slowly find their way into your life. Pieces that bring joy &amp; happiness today... and perhaps, years from now, carry memories of moments that made your house a home. Because ultimately, XAAJ is not about what we make. It is about what happens around it. The conversations. The celebrations. The ordinary evenings. The people we love. Every table has a story. XAAJ is here to become a part of yours.
-              </p>
-
-              <div className="xaaj-about-simple-signoff">
-                XAAJ Stories crafted in earth.
-              </div>
-            </article>
-
-          </section>
-
-        </main>
-
-        {/* Legacy standalone Newsletter preserved below; reference subscribe is now inside Footer. */}
-        <Footer />
-      </>
-    )
+    return <BrandStoryPage />
   }
 
 

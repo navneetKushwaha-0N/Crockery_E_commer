@@ -21,10 +21,9 @@ const router = Router()
 
 const PRODUCT_CATEGORIES = [
   'Dinnerware',
-  'Glassware',
+  'Drinkware',
   'Serveware',
   'Gifting',
-  'Horeca'
 ]
 
 const DINNERWARE_COLLECTIONS = [
