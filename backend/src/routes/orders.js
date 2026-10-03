@@ -595,16 +595,16 @@ router.post(
               })),
 
             payment_method:
-              'COD',
+                       'COD',
 
-            sub_total:
-              Number(subtotal),
+                     sub_total:
+                    Number(total),
 
-            cod_collectible:
-              Number(total),
+                      cod_collectible:
+                      Number(total),
 
-            length:
-              velocityPackage.length,
+length:
+  velocityPackage.length,
 
             breadth:
               velocityPackage.breadth,
