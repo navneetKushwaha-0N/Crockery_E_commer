@@ -83,7 +83,7 @@ export async function getVelocityToken(
               'application/json'
           },
 
-          timeout: 15000
+          timeout: 30000
         }
       )
 
