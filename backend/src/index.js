@@ -90,20 +90,147 @@ app.use(
 
 
 // ============================================================
-// 10. Rate Limiting
+// 10. Reverse Proxy / Real Client IP
 // ============================================================
+//
+// Production mein backend aksar reverse proxy ke peeche hota hai.
+// Rate limiter ko actual client IP pata hona chahiye.
+//
+// Agar production proxy use ho raha hai to 1 proxy hop trust karte hain.
 
-app.use(
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 300,
-    standardHeaders: 'draft-8'
-  })
-)
+if (env.nodeEnv === 'production') {
+  app.set('trust proxy', 1)
+}
 
 
 // ============================================================
-// 11. Body Parsers
+// 11. RATE LIMITING
+// ============================================================
+//
+// IMPORTANT:
+// Global low rate-limit nahi lagaya gaya hai.
+//
+// Homepage ek saath multiple GET requests karta hai:
+// products
+// blogs
+// announcement
+// category hero
+// brand story
+// horeca
+// hero CMS
+//
+// Isliye public read APIs ka separate generous limit hai.
+//
+// Auth / Order / Payment jaise sensitive endpoints par tighter
+// limits hain.
+//
+
+const rateLimitOptions = {
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+
+  handler: (_req, res) => {
+    res.status(429).json({
+      success: false,
+      message: 'Too many requests. Please try again later.'
+    })
+  }
+}
+
+
+// ============================================================
+// 11.1 Public Read Limiter
+// ============================================================
+//
+// Products / CMS / Blogs jaise GET requests ke liye.
+// Sirf GET count hoga.
+//
+// 1000 requests / 15 minutes / IP
+
+const publicReadLimiter = rateLimit({
+  ...rateLimitOptions,
+
+  windowMs: 15 * 60 * 1000,
+
+  limit: 1000,
+
+  skip: req => {
+    return req.method !== 'GET'
+  }
+})
+
+
+// ============================================================
+// 11.2 Authentication Limiter
+// ============================================================
+//
+// Login/register/verification etc.
+// Auth routes ke andar API endpoints ke hisaab se apply hoga.
+//
+// 20 requests / 15 minutes / IP
+
+const authLimiter = rateLimit({
+  ...rateLimitOptions,
+
+  windowMs: 15 * 60 * 1000,
+
+  limit: 20,
+
+  skip: req => {
+    return req.method === 'OPTIONS'
+  }
+})
+
+
+// ============================================================
+// 11.3 Normal Write Limiter
+// ============================================================
+//
+// Contact
+// Newsletter
+// Reviews
+// Commerce
+// Admin
+// Uploads
+//
+// 120 requests / 15 minutes / IP
+
+const writeLimiter = rateLimit({
+  ...rateLimitOptions,
+
+  windowMs: 15 * 60 * 1000,
+
+  limit: 120,
+
+  skip: req => {
+    return req.method === 'OPTIONS'
+  }
+})
+
+
+// ============================================================
+// 11.4 Sensitive Limiter
+// ============================================================
+//
+// Orders + Payment.
+//
+// 40 requests / 15 minutes / IP
+
+const sensitiveLimiter = rateLimit({
+  ...rateLimitOptions,
+
+  windowMs: 15 * 60 * 1000,
+
+  limit: 40,
+
+  skip: req => {
+    return req.method === 'OPTIONS'
+  }
+})
+
+
+// ============================================================
+// 12. Body Parsers
 // ============================================================
 
 app.use(
@@ -121,7 +248,7 @@ app.use(
 
 
 // ============================================================
-// 12. Cookie Parser
+// 13. Cookie Parser
 // ============================================================
 
 app.use(
@@ -130,7 +257,7 @@ app.use(
 
 
 // ============================================================
-// 13. Request Data Sanitization
+// 14. Request Data Sanitization
 // ============================================================
 
 app.use((req, _res, next) => {
@@ -166,7 +293,7 @@ app.use((req, _res, next) => {
 
 
 // ============================================================
-// 14. HTTP Request Logger
+// 15. HTTP Request Logger
 // ============================================================
 
 app.use(
@@ -179,7 +306,7 @@ app.use(
 
 
 // ============================================================
-// 15. Health Check
+// 16. Health Check
 // ============================================================
 
 app.get(
@@ -189,8 +316,7 @@ app.get(
     res.json({
       success: true,
       service: 'xaaj-api',
-      timestamp:
-        new Date().toISOString()
+      timestamp: new Date().toISOString()
     })
 
   }
@@ -198,182 +324,197 @@ app.get(
 
 
 // ============================================================
-// 16. API Routes
+// 17. API Routes
 // ============================================================
 
-// -------------------------
+
+// ============================================================
 // Authentication
-// -------------------------
+// ============================================================
+
 app.use(
   '/api/auth',
+  authLimiter,
   authRoutes
 )
 
 
-// -------------------------
+// ============================================================
 // Products
-// -------------------------
+// ============================================================
+
 app.use(
   '/api/products',
+  publicReadLimiter,
   productRoutes
 )
 
 
-// -------------------------
+// ============================================================
 // Commerce
-// -------------------------
+// ============================================================
+
 app.use(
   '/api/commerce',
+  writeLimiter,
   commerceRoutes
 )
 
 
-// -------------------------
+// ============================================================
 // Orders
-// -------------------------
+// ============================================================
+
 app.use(
   '/api/orders',
+  sensitiveLimiter,
   orderRoutes
 )
 
 
-// -------------------------
+// ============================================================
 // Velocity Test
-// -------------------------
-// Test Velocity API authentication
-//
-// GET /api/velocity/test
-// -------------------------
+// ============================================================
+
 app.use(
   '/api/velocity',
+  writeLimiter,
   velocityTestRoutes
 )
 
 
-// -------------------------
+// ============================================================
 // Reviews
-// -------------------------
-// Customer product reviews
-//
-// POST   /api/reviews
-// GET    /api/reviews/product/:productId
-// GET    /api/reviews/order/:orderId
-// -------------------------
+// ============================================================
+
 app.use(
   '/api/reviews',
+  writeLimiter,
   reviewRoutes
 )
 
 
-// -------------------------
+// ============================================================
 // CMS
-// -------------------------
+// ============================================================
+//
+// Homepage ke CMS GET requests publicReadLimiter use karenge.
+//
+// Example:
+// GET /api/cms/announcement
+// GET /api/cms/category-hero
+// GET /api/cms/brand-story
+// GET /api/cms/horeca-collection
+// GET /api/cms/hero
+//
+// Sirf GET requests count hongi.
+
 app.use(
   '/api/cms',
+  publicReadLimiter,
   cmsRoutes
 )
 
 
-// -------------------------
+// ============================================================
 // Blogs
-// -------------------------
+// ============================================================
+
 app.use(
   '/api/blogs',
+  publicReadLimiter,
   blogRoutes
 )
 
 
-// -------------------------
+// ============================================================
 // Newsletter
-// -------------------------
-// Customer newsletter subscription
-//
-// POST /api/newsletter/subscribe
-// -------------------------
+// ============================================================
+
 app.use(
   '/api/newsletter',
+  writeLimiter,
   newsletterRoutes
 )
 
 
-// -------------------------
+// ============================================================
 // Contact / B2B Enquiry
-// -------------------------
-// Customer contact form
-// B2B bulk-order enquiry form
-//
-// POST /api/contact
-//
-// This sends:
-// 1. Enquiry → XAAJ customer care
-// 2. Confirmation email → Customer
-// -------------------------
+// ============================================================
+
 app.use(
   '/api/contact',
+  writeLimiter,
   contactRoutes
 )
 
 
-// -------------------------
+// ============================================================
 // Admin
-// -------------------------
+// ============================================================
+
 app.use(
   '/api/admin',
+  writeLimiter,
   adminRoutes
 )
 
 
-// -------------------------
+// ============================================================
 // Payments
-// -------------------------
+// ============================================================
+
 app.use(
   '/api/payment',
+  sensitiveLimiter,
   paymentRoutes
 )
 
 
-// -------------------------
+// ============================================================
 // Uploads
-// -------------------------
+// ============================================================
+
 app.use(
   '/api/uploads',
+  writeLimiter,
   uploadRoutes
 )
 
 
 // ============================================================
-// 17. 404 Handler
+// 18. 404 Handler
 // ============================================================
 
 app.use(notFound)
 
 
 // ============================================================
-// 18. Global Error Handler
+// 19. Global Error Handler
 // ============================================================
 
 app.use(errorHandler)
 
 
 // ============================================================
-// 19. Connect Database & Start Server
+// 20. Connect Database & Start Server
 // ============================================================
-
-// Vercel/serverless environment mein
-// app.listen() use nahi hota.
-//
-// Database connection ko server start
-// hone se pehle initialize karna zaroori hai.
 
 await connectDatabase()
 
-const server = app.listen(env.port,() =>{
-  console.log('[XAAZ] API listening on port', env.port);
-});
+const server = app.listen(
+  env.port,
+  () => {
+    console.log(
+      '[XAAJ] API listening on port',
+      env.port
+    )
+  }
+)
 
 
 // ============================================================
-// 20. Graceful Shutdown
+// 21. Graceful Shutdown
 // ============================================================
 
 async function shutdown(signal) {
@@ -406,7 +547,7 @@ async function shutdown(signal) {
 
 
 // ============================================================
-// 21. Process Signals
+// 22. Process Signals
 // ============================================================
 
 process.on(
@@ -421,7 +562,7 @@ process.on(
 
 
 // ============================================================
-// 22. Export App
+// 23. Export App
 // ============================================================
 
 export default app

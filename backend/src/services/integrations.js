@@ -308,6 +308,7 @@ export const verifyRazorpaySignature = (
 
 const smtpConfigured = Boolean(
   process.env.SMTP_HOST &&
+  process.env.SMTP_PORT &&
   process.env.SMTP_USER &&
   process.env.SMTP_PASSWORD
 )
@@ -325,14 +326,12 @@ export const mailer =
 
         port:
           Number(
-            process.env.SMTP_PORT ||
-            587
+            process.env.SMTP_PORT
           ),
 
         secure:
           Number(
-            process.env.SMTP_PORT ||
-            587
+            process.env.SMTP_PORT
           ) === 465,
 
         auth: {

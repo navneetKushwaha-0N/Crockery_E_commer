@@ -26,7 +26,7 @@ const sendWelcomeEmail = async email => {
   await sendEmail({
     to: email,
 
-    subject: 'Welcome to XAAJ — We’re glad you’re here',
+    subject: 'Welcome to XAAJ | Stories Crafted in Earth',
 
     html: `
       <div style="
@@ -46,105 +46,153 @@ const sendWelcomeEmail = async email => {
           overflow:hidden;
         ">
 
-          <!-- HEADER -->
-
-          <div style="
-            padding:34px 30px;
-            text-align:center;
-            border-bottom:1px solid #eee8df;
-          ">
-
-            <div style="
-              font-size:13px;
-              letter-spacing:5px;
-              color:#b84d32;
-              font-weight:600;
-            ">
-              XAAJ
-            </div>
-
-            <div style="
-              margin-top:8px;
-              font-size:10px;
-              letter-spacing:3px;
-              color:#77736c;
-            ">
-              STORES CRAFTED IN EARTH
-            </div>
-
-          </div>
-
           <!-- CONTENT -->
 
           <div style="
-            padding:45px 35px;
+            padding:50px 40px;
             text-align:center;
           ">
 
-            <div style="
-              font-size:12px;
-              letter-spacing:4px;
-              text-transform:uppercase;
-              color:#b84d32;
-              font-weight:600;
-            ">
-              A little note from us
-            </div>
+            <!-- MAIN HEADING -->
 
             <h1 style="
-              margin:18px 0 16px;
+              margin:0 0 30px;
               font-family:Georgia,'Times New Roman',serif;
-              font-size:38px;
-              line-height:1.15;
+              font-size:36px;
+              line-height:1.2;
+              letter-spacing:0.5px;
               font-weight:400;
               color:#292824;
             ">
-              Welcome to XAAJ.
+              WELCOME TO XAAJ
             </h1>
 
+
+            <!-- OPENING -->
+
             <p style="
-              margin:0 auto;
-              max-width:470px;
-              font-size:16px;
-              line-height:1.8;
-              color:#706d67;
+              margin:0 auto 26px;
+              max-width:480px;
+              font-family:Georgia,'Times New Roman',serif;
+              font-size:19px;
+              line-height:1.65;
+              color:#4f4b45;
             ">
-              We’re happy to have you here.
-              Expect thoughtful collections, beautiful
-              tableware and little stories from XAAJ —
-              shared with care, never too often.
+              Some things are simply beautiful.<br />
+              Some become beautiful because of the memories they hold.
             </p>
 
+
+            <!-- DIVIDER -->
+
             <div style="
-              margin:32px auto;
-              width:70px;
+              width:50px;
               height:1px;
+              margin:32px auto;
               background:#d8d0c5;
             "></div>
 
+
+            <!-- BRAND STORY -->
+
             <p style="
-              margin:0;
+              margin:0 auto 26px;
+              max-width:480px;
               font-size:15px;
-              line-height:1.7;
-              color:#55514b;
+              line-height:1.9;
+              color:#68635c;
             ">
-              Here’s to making everyday moments
-              a little more beautiful.
+              At XAAJ, we are inspired by India — its colours, its craft,
+              and the everyday rituals that bring us closer to home.
             </p>
 
             <p style="
-              margin:30px 0 0;
+              margin:0 auto 26px;
+              max-width:480px;
+              font-size:15px;
+              line-height:1.9;
+              color:#68635c;
+            ">
+              We create pieces for everyday rituals, shared moments,
+              and the stories that unfold around them.
+            </p>
+
+
+            <!-- CLOSING THOUGHT -->
+
+            <p style="
+              margin:34px auto 0;
+              max-width:470px;
               font-family:Georgia,'Times New Roman',serif;
               font-size:20px;
+              line-height:1.6;
+              font-weight:400;
               color:#292824;
             ">
-              With warmth,<br />
-              <strong style="font-weight:400;">
-                Team XAAJ
-              </strong>
+              Because someday, these everyday moments become
+              the stories we remember.
             </p>
 
+
+            <!-- SIGN OFF -->
+
+            <div style="
+              margin-top:38px;
+              padding-top:30px;
+              border-top:1px solid #eee8df;
+            ">
+
+              <p style="
+                margin:0 0 8px;
+                font-size:14px;
+                line-height:1.7;
+                color:#68635c;
+              ">
+                Thank you for being here.
+              </p>
+
+              <p style="
+                margin:0;
+                font-size:14px;
+                line-height:1.7;
+                color:#68635c;
+              ">
+                We’re happy to be a part of your story.
+              </p>
+
+            </div>
+
+
+            <!-- XAAJ SIGNATURE -->
+
+            <div style="
+              margin-top:36px;
+            ">
+
+              <div style="
+                font-family:Georgia,'Times New Roman',serif;
+                font-size:24px;
+                line-height:1.2;
+                letter-spacing:2px;
+                color:#292824;
+              ">
+                XAAJ
+              </div>
+
+              <div style="
+                margin-top:8px;
+                font-size:9px;
+                line-height:1.4;
+                letter-spacing:3px;
+                color:#8a847b;
+              ">
+                STORIES CRAFTED IN EARTH
+              </div>
+
+            </div>
+
           </div>
+
 
           <!-- FOOTER -->
 
@@ -153,12 +201,18 @@ const sendWelcomeEmail = async email => {
             text-align:center;
             background:#f8f5ef;
             border-top:1px solid #eee8df;
-            font-size:12px;
-            line-height:1.6;
-            color:#8a857d;
           ">
-            You’re receiving this because you subscribed
-            to XAAJ updates.
+
+            <p style="
+              margin:0;
+              font-size:11px;
+              line-height:1.7;
+              color:#8a857d;
+            ">
+              You’re receiving this because you subscribed
+              to XAAJ updates.
+            </p>
+
           </div>
 
         </div>
